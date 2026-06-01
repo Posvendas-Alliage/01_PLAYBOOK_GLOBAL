@@ -2,7 +2,7 @@
 import epicModules from "../config/modules-config.js";
 
 const POWER_BI_URL =
-    "https://app.powerbi.com/view?r=eyJrIjoiZWJjZGJmODYtZmVmNC00ZjRkLWI1NDUtZTZkZDA0NDE1OTdhIiwidCI6ImE2NzRhMDgxLTBjNTMtNGQyZC1hZWQ2LWRiZjgwNmY5NWExYiJ9";
+    "https://app.powerbi.com/view?r=eyJrIjoiMDE3ZmQzZGEtNDEwYi00YzVhLWFmNzktMjJhM2RmMmYxNzk4IiwidCI6ImE2NzRhMDgxLTBjNTMtNGQyZC1hZWQ2LWRiZjgwNmY5NWExYiJ9";
 
 function getI18n() {
     return (

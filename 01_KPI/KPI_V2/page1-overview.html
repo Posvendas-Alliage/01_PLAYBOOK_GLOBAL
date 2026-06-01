@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Service Governance</title>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .page-grid-2col { display: grid; grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); gap: 18px; align-items: stretch; }
+        .right-stack { display: grid; gap: 14px; }
+        .right-stack .chart-card { min-height: 220px; }
+        .right-stack .chart-canvas-wrap { min-height: 160px; }
+        .region-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 14px; }
+        .region-legend-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface-2); font-size: 0.82rem; }
+        .region-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .backlog-row { display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: stretch; }
+        .backlog-headline { display: flex; flex-direction: column; justify-content: center; }
+        .backlog-headline .kpi-number { font-size: 3rem; }
+        @media (max-width: 980px) {
+            .page-grid-2col, .backlog-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" style="
+      display:none; position:fixed; inset:0;
+      background:rgba(13,17,23,0.85);
+      justify-content:center; align-items:center;
+      z-index:9998; flex-direction:column; gap:16px;
+    ">
+      <div class="loading-spinner spinner"></div>
+      <p style="color:#e6edf3;font-family:'DM Sans',sans-serif"
+         data-i18n="loading">Carregando dados...</p>
+    </div>
+
+    <!-- Error message -->
+    <div id="error-message" style="
+      display:none; background:#E31424;
+      color:#fff; padding:16px 24px;
+      border-radius:8px; margin:20px;
+      font-family:'DM Sans',sans-serif;
+    "></div>
+
+    <div class="dashboard-shell">
+        <header class="app-header">
+            <div class="app-header-inner">
+                <div class="app-brand">
+                    <p class="app-brand-title" data-tx="brand_title">Global Service Governance</p>
+                    <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                </div>
+                <div class="app-header-actions">
+                    <a href="../../index.html" class="back-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                        <span data-tx="back_to_playbook">Voltar</span>
+                    </a>
+                    <div class="lang-switch" role="group" aria-label="Language">
+                        <button type="button" data-lang="pt">PT</button>
+                        <button type="button" data-lang="en">EN</button>
+                        <button type="button" data-lang="es">ES</button>
+                    </div>
+                    <button id="btn-refresh" onclick="refreshData()" style="
+                      background:#1f6feb; color:#fff; border:none;
+                      padding:6px 14px; border-radius:6px; cursor:pointer;
+                      font-family:'DM Sans',sans-serif; font-size:13px;
+                      display:flex; align-items:center; gap:6px;
+                    ">
+                      <span>↻</span>
+                      <span data-i18n="btn_refresh">Atualizar</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="app-nav" aria-label="Dashboard pages">
+            <div class="app-nav-inner">
+                <a href="page1-overview.html" class="is-active" data-i18n="nav_overview">Visão Global</a>
+                <a href="page2-backlog.html" data-i18n="nav_backlog">Backlog</a>
+                <a href="page3-data-quality.html" data-i18n="nav_quality">Qualidade de Dados</a>
+                <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly Report</a>
+                <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly Report</a>
+            </div>
+        </nav>
+
+        <main class="app-main">
+            <section class="filter-bar" aria-label="Filtros">
+                <div class="filter-field">
+                    <label for="filter-region" data-i18n="filter_region">Região</label>
+                    <select id="filter-region" data-filter="region"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
+                    <select id="filter-priority" data-filter="priority"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-type" data-tx="filter_department">Departamento</label>
+                    <select id="filter-type" data-filter="type"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-product" data-tx="filter_status">Status</label>
+                    <select id="filter-product" data-filter="product"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-date-from" data-i18n="filter_period">Período</label>
+                    <input type="date" id="filter-date-from" data-filter="dateFrom" placeholder="dd/mm/aaaa">
+                </div>
+                <div class="filter-field">
+                    <label for="filter-date-to" data-tx="to_label">Até</label>
+                    <input type="date" id="filter-date-to" data-filter="dateTo" placeholder="dd/mm/aaaa">
+                </div>
+                <div class="filter-field">
+                    <label data-i18n="filter_agent_group">Grupo do Agente</label>
+                    <div id="filter-agent-groups" class="multi-select-group"
+                         style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply">Aplicar</button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="btn-clear" data-tx="btn_clear">Limpar</button>
+                </div>
+            </section>
+
+            <div id="error-banner" class="banner-error" style="display:none;">
+                <span id="error-banner-text"></span>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-retry" style="margin-left:12px" data-tx="btn_retry">Tentar novamente</button>
+            </div>
+
+            <div id="filter-warning" class="banner-error" style="display:none;background:rgba(228,191,20,.12);border-color:rgba(228,191,20,.35);color:#e6edf3;">
+                <span id="filter-warning-text"></span>
+            </div>
+
+            <div id="loading" class="loading-block">
+                <div class="spinner loading-spinner" aria-hidden="true"></div>
+                <p data-i18n="loading">Carregando dados...</p>
+            </div>
+
+            <div id="page-body" style="display:none;">
+                <section class="kpi-strip">
+                    <div class="card">
+                        <div class="kpi-label" data-i18n="kpi_sla">SLA Compliance</div>
+                        <div class="kpi-number mono" id="kpi-sla">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-i18n="kpi_mtts">MTTS</div>
+                        <div class="kpi-number mono" id="kpi-mtts">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-i18n="kpi_mtfc">MTFC</div>
+                        <div class="kpi-number mono" id="kpi-mtfc">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-i18n="kpi_tickets">Total Tickets</div>
+                        <div class="kpi-number mono" id="kpi-tickets">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_open_tickets">Abertos</div>
+                        <div class="kpi-number mono" id="kpi-open">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_closed_tickets">Fechados</div>
+                        <div class="kpi-number mono" id="kpi-closed">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_backlog_over_5">Backlog &gt; 5 dias</div>
+                        <div class="kpi-number mono" id="kpi-backlog">--</div>
+                    </div>
+                </section>
+
+                <section class="page-grid-2col" style="margin-top: 18px;">
+                    <article class="card chart-card">
+                        <h3 data-tx="globe_title">Mapa Global SLA</h3>
+                        <p class="text-muted" style="margin:0;font-size:.82rem" data-i18n="globe_hover">Passe o mouse sobre uma região</p>
+                        <div id="globe-container"></div>
+                        <div class="region-legend" id="region-legend"></div>
+                    </article>
+                    <div class="right-stack">
+                        <article class="card chart-card">
+                            <h3 data-tx="chart_sla_region">%SLA por Região</h3>
+                            <div class="chart-canvas-wrap"><canvas id="chart-sla-region"></canvas></div>
+                        </article>
+                        <article class="card chart-card">
+                            <h3 data-tx="chart_mtts">MTTS (Days)</h3>
+                            <div class="chart-canvas-wrap"><canvas id="chart-mtts"></canvas></div>
+                        </article>
+                        <article class="card chart-card">
+                            <h3 data-tx="chart_mtfc">MTFC (Hours)</h3>
+                            <div class="chart-canvas-wrap"><canvas id="chart-mtfc"></canvas></div>
+                        </article>
+                    </div>
+                </section>
+
+                <section style="margin-top:18px;">
+                    <div class="backlog-row">
+                        <article class="card backlog-headline">
+                            <div class="kpi-label" data-tx="open_backlog_all">Open Backlog (all time)</div>
+                            <div class="kpi-number mono" id="kpi-backlog-total">--</div>
+                            <p class="text-muted" id="kpi-backlog-meta" style="font-size:.8rem;margin:6px 0 0">--</p>
+                        </article>
+                        <article class="card chart-card">
+                            <h3 data-tx="chart_backlog">Backlog Total</h3>
+                            <div class="chart-canvas-wrap"><canvas id="chart-backlog"></canvas></div>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer class="app-footer" data-tx="footer">Playbook Global · Global Service · KPI</footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="../../config/supabase.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/globe.js"></script>
+    <script>
+        const EXTRA_I18N = {
+            pt: {
+                brand_title: 'Global Service Governance', brand_subtitle: 'Playbook Global | KPI',
+                back_to_playbook: 'Voltar', to_label: 'Até',
+                btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+                globe_title: 'Mapa Global SLA',
+                chart_sla_region: '%SLA por Região', chart_mtts: 'MTTS (Dias)',
+                chart_mtfc: 'MTFC (Horas)', chart_backlog: 'Backlog > 5 dias por Regiao',
+                open_backlog_all: 'Backlog Aberto (Total)',
+                kpi_backlog_over_5: 'Backlog > 5 dias',
+                kpi_open_tickets: 'Abertos',
+                kpi_closed_tickets: 'Fechados',
+                filter_department: 'Departamento',
+                filter_status: 'Status',
+                unsupported_bi_filters: 'Filtro de periodo por closed_time exige campos que ainda nao existem nos endpoints BI atuais.',
+                backlog_over5_unavailable: 'Backlog > 5 dias nao existe no bi-summary para filtros de departamento, prioridade ou status.',
+                footer: 'Playbook Global · Global Service · KPI',
+                backlog_meta: 'Com 1ª resposta + sem 1ª resposta'
+            },
+            en: {
+                brand_title: 'Global Service Governance', brand_subtitle: 'Global Playbook | KPI',
+                back_to_playbook: 'Back', to_label: 'To',
+                btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+                globe_title: 'Global SLA Map',
+                chart_sla_region: '%SLA by Region', chart_mtts: 'MTTS (Days)',
+                chart_mtfc: 'MTFC (Hours)', chart_backlog: 'Backlog > 5 days by Region',
+                open_backlog_all: 'Open Backlog (all time)',
+                kpi_backlog_over_5: 'Backlog > 5 days',
+                kpi_open_tickets: 'Open',
+                kpi_closed_tickets: 'Closed',
+                filter_department: 'Department',
+                filter_status: 'Status',
+                unsupported_bi_filters: 'The closed_time period filter requires fields that are not in the current BI endpoints yet.',
+                backlog_over5_unavailable: 'Backlog > 5 days is not available in bi-summary for department, priority or status filters.',
+                footer: 'Global Playbook · Global Service · KPI',
+                backlog_meta: 'With + without first response'
+            },
+            es: {
+                brand_title: 'Global Service Governance', brand_subtitle: 'Playbook Global | KPI',
+                back_to_playbook: 'Volver', to_label: 'Hasta',
+                btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+                globe_title: 'Mapa Global SLA',
+                chart_sla_region: '%SLA por Región', chart_mtts: 'MTTS (Días)',
+                chart_mtfc: 'MTFC (Horas)', chart_backlog: 'Backlog > 5 dias por Region',
+                open_backlog_all: 'Backlog Abierto (Total)',
+                kpi_backlog_over_5: 'Backlog > 5 dias',
+                kpi_open_tickets: 'Abiertos',
+                kpi_closed_tickets: 'Cerrados',
+                filter_department: 'Departamento',
+                filter_status: 'Estado',
+                unsupported_bi_filters: 'El filtro de periodo por closed_time requiere campos que aun no existen en los endpoints BI actuales.',
+                backlog_over5_unavailable: 'Backlog > 5 dias no existe en bi-summary para filtros de departamento, prioridad o estado.',
+                footer: 'Playbook Global · Global Service · KPI',
+                backlog_meta: 'Con + sin primera respuesta'
+            }
+        };
+
+        function tx(key) {
+            const lang = getLang();
+            return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || key;
+        }
+
+        function applyExtraI18n() {
+            document.querySelectorAll('[data-tx]').forEach(node => {
+                node.textContent = tx(node.getAttribute('data-tx'));
+            });
+        }
+
+        async function refreshData() {
+            clearCache();
+            rawData = [];
+            await init();
+        }
+
+        function slaColor(pct) {
+            if (pct >= 80) return 'green';
+            if (pct >= 50) return 'yellow';
+            return 'red';
+        }
+
+        function colorHex(name) {
+            const map = {
+                green: '#12DF34',
+                yellow: '#E4BF14',
+                red: '#E31424'
+            };
+            return map[name] || '#7d8590';
+        }
+
+        const AGENT_GROUPS = ['Suporte geral', 'Especialista', 'Instala\u00e7\u00e3o', 'Terceiro', 'Sem dono'];
+        const DEFAULT_AGENT_GROUPS = ['Suporte geral', 'Especialista', 'Sem dono'];
+
+        function renderAgentGroupFilter() {
+            const container = document.getElementById('filter-agent-groups');
+            if (!container) return;
+            const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
+            container.innerHTML = '';
+            AGENT_GROUPS.forEach(group => {
+                const checked = current.includes(group);
+                const btn = document.createElement('button');
+                btn.textContent = group;
+                btn.dataset.group = group;
+                btn.style.cssText = `
+                    padding:4px 10px; border-radius:20px; cursor:pointer;
+                    border:1px solid #30363d; font-size:12px;
+                    font-family:'DM Sans',sans-serif;
+                    background:${checked ? '#1f6feb' : '#161b22'};
+                    color:${checked ? '#fff' : '#7d8590'};
+                `;
+                btn.addEventListener('click', () => {
+                    const f = FilterState.get();
+                    const groups = Array.isArray(f.agentGroups) ? [...f.agentGroups] : [...DEFAULT_AGENT_GROUPS];
+                    const idx = groups.indexOf(group);
+                    if (idx >= 0) groups.splice(idx, 1);
+                    else groups.push(group);
+                    FilterState.update('agentGroups', groups);
+                    renderAgentGroupFilter();
+                    applyPage();
+                });
+                container.appendChild(btn);
+            });
+        }
+
+        const REGION_ORDER_PRIMARY = ['USA','Brasil','ROW','Argentina','México','LATAM'];
+        const BACKLOG_ORDER = ['Brasil','México','Argentina','USA','ROW','LATAM'];
+        const PRIORITY_OPTIONS = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
+
+        let rawData = [];
+
+        function showLoading(on) {
+            document.getElementById('loading').style.display = on ? '' : 'none';
+            document.getElementById('page-body').style.display = on ? 'none' : '';
+        }
+
+        function showError(msg) {
+            const banner = document.getElementById('error-banner');
+            document.getElementById('error-banner-text').textContent = msg || tx('btn_retry');
+            banner.style.display = '';
+            const overlayErr = document.getElementById('error-message');
+            if (overlayErr) { overlayErr.textContent = msg || tx('btn_retry'); overlayErr.style.display = 'block'; }
+            document.getElementById('page-body').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('error-banner').style.display = 'none';
+        }
+
+        function regionLabel(group) {
+            const map = { Brasil:'region_brazil', Argentina:'region_argentina', 'México':'region_mexico',
+                          LATAM:'region_latam', USA:'region_usa', ROW:'region_row' };
+            return t(map[group] || '') || group;
+        }
+
+        function buildSelectOptions(select, values, defaultLabel) {
+            const current = select.value;
+            select.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = 'all';
+            optAll.textContent = defaultLabel;
+            select.appendChild(optAll);
+            values.forEach(v => {
+                if (!v || v === '-Nenhum-') return;
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                select.appendChild(opt);
+            });
+            if (current && [...select.options].some(o => o.value === current)) select.value = current;
+        }
+
+        function populateFilterOptions(data) {
+            const regionsAvailable = new Set();
+            data.forEach(t => { const g = REGION_MAP[t.region]; if (g) regionsAvailable.add(g); });
+            const regionSelect = document.getElementById('filter-region');
+            const regionOrdered = REGION_GROUPS.filter(g => regionsAvailable.has(g));
+            regionSelect.innerHTML = '';
+            const allRegion = document.createElement('option');
+            allRegion.value = 'all'; allRegion.textContent = t('filter_all');
+            regionSelect.appendChild(allRegion);
+            regionOrdered.forEach(g => {
+                const o = document.createElement('option');
+                o.value = g; o.textContent = regionLabel(g);
+                regionSelect.appendChild(o);
+            });
+
+            const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
+                .sort((a, b) => (PRIORITY_OPTIONS.indexOf(a) + 99) - (PRIORITY_OPTIONS.indexOf(b) + 99));
+            buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
+
+            const types = [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort();
+            buildSelectOptions(document.getElementById('filter-type'), types, t('filter_all'));
+
+            const products = [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort();
+            buildSelectOptions(document.getElementById('filter-product'), products, t('filter_all'));
+
+            const state = FilterState.get();
+            ['region','priority','type','product','dateFrom','dateTo'].forEach(key => {
+                const input = document.querySelector(`[data-filter="${key}"]`);
+                if (input && state[key] !== undefined && [...input.options || []].some(o => o.value === state[key]) || input?.type === 'date') {
+                    input.value = state[key] || '';
+                }
+            });
+            renderAgentGroupFilter();
+        }
+
+        function bindFilterControls() {
+            document.getElementById('btn-apply').addEventListener('click', () => {
+                const next = {};
+                document.querySelectorAll('[data-filter]').forEach(input => {
+                    next[input.dataset.filter] = input.value;
+                });
+                next.agentGroups = FilterState.get().agentGroups;
+                FilterState.set(next);
+            });
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                FilterState.reset();
+                document.querySelectorAll('[data-filter]').forEach(input => {
+                    input.value = input.tagName === 'SELECT' ? 'all' : '';
+                });
+                renderAgentGroupFilter();
+            });
+            document.getElementById('btn-retry').addEventListener('click', () => {
+                hideError();
+                init();
+            });
+        }
+
+        function fmt(n, d) {
+            if (n === null || n === undefined || isNaN(n)) return '--';
+            return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+
+        function setKpi(id, value, color) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = value;
+            el.classList.remove('is-green','is-yellow','is-red');
+            if (color === 'green') el.classList.add('is-green');
+            else if (color === 'yellow') el.classList.add('is-yellow');
+            else if (color === 'red') el.classList.add('is-red');
+        }
+
+        function renderRegionLegend(byRegion) {
+            const wrap = document.getElementById('region-legend');
+            wrap.innerHTML = '';
+            REGION_GROUPS.forEach(g => {
+                const m = byRegion[g];
+                const color = m && m.eligible > 0 ? colorHex(m.slaColor) : '#7d8590';
+                const node = document.createElement('div');
+                node.className = 'region-legend-item';
+                node.innerHTML = `<span class="region-dot" style="background:${color}"></span>
+                                  <span>${regionLabel(g)}</span>
+                                  <span class="text-muted mono" style="margin-left:auto">${m && m.eligible ? m.slaCompliance.toFixed(0) + '%' : '--'}</span>`;
+                wrap.appendChild(node);
+            });
+        }
+
+        function legacyRenderPage() {}
+
+        function legacyApplyPage() {}
+
+        async function init() {
+            hideError();
+            showLoading(true);
+            bindFilterControls();
+            try {
+                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
+                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+                }
+                rawData = [];
+                console.log('[Dashboard] Tickets carregados:', rawData.length);
+                console.log('[Dashboard] Amostra:', rawData.slice(0, 3));
+                console.log('[Dashboard] Legacy renderer inactive.');
+                populateFilterOptions(rawData);
+                applyExtraI18n();
+                showLoading(false);
+                applyPage();
+            } catch (e) {
+                showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
+            }
+        }
+
+        // BI-compatible rendering path. Values below are mapped/formatted only;
+        // SLA, MTFC and MTTS are already calculated by dashboard-read.
+        const BI_REGION_ORDER = ['Brasil', 'USA', 'Argentina', 'M\u00e9xico', 'N\u00e3o classificado', 'ROW', 'LATAM'];
+
+        function normalizeBiRegion(value) {
+            const raw = String(value || '').trim();
+            const aliases = {
+                'Estados Unidos': 'USA',
+                'EUA': 'USA',
+                'Mexico': 'M\u00e9xico',
+                'M\u00c3\u00a9xico': 'M\u00e9xico',
+                'M\u00e9xico': 'M\u00e9xico',
+                'Nao classificado': 'N\u00e3o classificado',
+                'N\u00c3\u00a3o classificado': 'N\u00e3o classificado',
+                'N\u00e3o classificado': 'N\u00e3o classificado'
+            };
+            return aliases[raw] || raw || 'N\u00e3o classificado';
+        }
+
+        function regionLabel(group) {
+            const normalized = normalizeBiRegion(group);
+            const map = {
+                Brasil: 'region_brazil',
+                Argentina: 'region_argentina',
+                'M\u00e9xico': 'region_mexico',
+                LATAM: 'region_latam',
+                USA: 'region_usa',
+                ROW: 'region_row',
+                'N\u00e3o classificado': 'not_eligible'
+            };
+            return t(map[normalized] || '') || normalized;
+        }
+
+        function populateFilterOptions(data) {
+            const regionSelect = document.getElementById('filter-region');
+            regionSelect.innerHTML = '';
+            const allRegion = document.createElement('option');
+            allRegion.value = 'all';
+            allRegion.textContent = t('filter_all');
+            regionSelect.appendChild(allRegion);
+
+            const regionsAvailable = new Set((data.regionSummary || []).map(r => normalizeBiRegion(r.regiao_grupo)));
+            BI_REGION_ORDER.filter(g => regionsAvailable.has(g)).forEach(g => {
+                const o = document.createElement('option');
+                o.value = g;
+                o.textContent = regionLabel(g);
+                regionSelect.appendChild(o);
+            });
+
+            const priorities = [...new Set((data.summary || []).map(d => d.priority_standard).filter(Boolean))]
+                .sort((a, b) => (PRIORITY_OPTIONS.indexOf(a) + 99) - (PRIORITY_OPTIONS.indexOf(b) + 99));
+            buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
+
+            const departments = [...new Set((data.summary || []).map(d => d.department_name).filter(Boolean))].sort();
+            buildSelectOptions(document.getElementById('filter-type'), departments, t('filter_all'));
+
+            const statuses = [...new Set((data.summary || []).map(d => d.status).filter(Boolean))].sort();
+            buildSelectOptions(document.getElementById('filter-product'), statuses, t('filter_all'));
+
+            const state = FilterState.get();
+            ['region','priority','type','product','dateFrom','dateTo'].forEach(key => {
+                const input = document.querySelector(`[data-filter="${key}"]`);
+                if (!input) return;
+                if (input.type === 'date') input.value = state[key] || '';
+                else if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
+            });
+            ['filter-date-from', 'filter-date-to'].forEach(id => {
+                const input = document.getElementById(id);
+                if (!input) return;
+                input.disabled = true;
+                input.value = '';
+                input.title = tx('unsupported_bi_filters');
+            });
+            renderAgentGroupFilter();
+        }
+
+        function fmtPercent(value) {
+            return value === null || value === undefined || isNaN(value) ? '--' : fmt(value, 2) + '%';
+        }
+
+        function fmtDateTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (isNaN(date)) return '';
+            return date.toLocaleString('pt-BR');
+        }
+
+        function biSlaColor(row) {
+            if (!row || row.sla_compliance_pct === null || row.sla_compliance_pct === undefined) return 'gray';
+            return slaColor(Number(row.sla_compliance_pct));
+        }
+
+        function normalizeBiMetrics(row) {
+            row = row || {};
+            return {
+                region: normalizeBiRegion(row.regiao_grupo),
+                total: Number(row.total_tickets || 0),
+                open: Number(row.open_tickets || 0),
+                closed: Number(row.closed_tickets || 0),
+                openOver5: Number(row.open_tickets_over_5_days || 0),
+                avgMtfc: row.avg_mtfc_horas === null || row.avg_mtfc_horas === undefined ? null : Number(row.avg_mtfc_horas),
+                avgMtts: row.avg_mtts_dias === null || row.avg_mtts_dias === undefined ? null : Number(row.avg_mtts_dias),
+                within: Number(row.tickets_dentro_sla || 0),
+                eligible: Number(row.tickets_sla_elegiveis || 0),
+                slaCompliance: row.sla_compliance_pct === null || row.sla_compliance_pct === undefined ? null : Number(row.sla_compliance_pct),
+                slaColor: biSlaColor(row),
+                lastDataUpdate: row.last_data_update || null
+            };
+        }
+
+        function buildRegionMap(rows) {
+            return (rows || []).reduce((acc, row) => {
+                const metrics = normalizeBiMetrics(row);
+                acc[metrics.region] = metrics;
+                return acc;
+            }, {});
+        }
+
+        function selectedRegions(byRegion, filters) {
+            if (filters.region && filters.region !== 'all') {
+                const selected = normalizeBiRegion(filters.region);
+                return byRegion[selected] ? [selected] : [];
+            }
+            return BI_REGION_ORDER.filter(r => byRegion[r]);
+        }
+
+        function hasAgentGroupFilter(filters) {
+            if (!Array.isArray(filters.agentGroups)) return false;
+            const selected = [...filters.agentGroups].sort();
+            const defaults = [...DEFAULT_AGENT_GROUPS].sort();
+            return selected.length !== defaults.length || selected.some((group, index) => group !== defaults[index]);
+        }
+
+        function hasSummaryDimensionFilter(filters) {
+            return Boolean(
+                (filters.priority && filters.priority !== 'all') ||
+                (filters.type && filters.type !== 'all') ||
+                (filters.product && filters.product !== 'all') ||
+                hasAgentGroupFilter(filters)
+            );
+        }
+
+        function filterBiSummaryRows(rows, filters) {
+            const agentGroups = Array.isArray(filters.agentGroups) ? filters.agentGroups : DEFAULT_AGENT_GROUPS;
+            return (rows || []).filter(row => {
+                if (filters.region && filters.region !== 'all' &&
+                    normalizeBiRegion(row.regiao_grupo) !== normalizeBiRegion(filters.region)) return false;
+                if (filters.priority && filters.priority !== 'all' &&
+                    row.priority_standard !== filters.priority) return false;
+                if (filters.type && filters.type !== 'all' &&
+                    row.department_name !== filters.type) return false;
+                if (filters.product && filters.product !== 'all' &&
+                    row.status !== filters.product) return false;
+                if (!agentGroups.length) return false;
+                if (!agentGroups.includes(row.grupo_operacional_agente || '')) return false;
+                return true;
+            });
+        }
+
+        function aggregateBiSummaryRows(rows, region) {
+            const totals = (rows || []).reduce((acc, row) => {
+                const total = Number(row.total_tickets || 0);
+                const closed = Number(row.closed_tickets || 0);
+                const mtfc = row.avg_mtfc_horas === null || row.avg_mtfc_horas === undefined ? null : Number(row.avg_mtfc_horas);
+                const mtts = row.avg_mtts_dias === null || row.avg_mtts_dias === undefined ? null : Number(row.avg_mtts_dias);
+                acc.total += total;
+                acc.open += Number(row.open_tickets || 0);
+                acc.closed += closed;
+                acc.within += Number(row.tickets_dentro_sla || 0);
+                acc.eligible += Number(row.tickets_sla_elegiveis || 0);
+                if (mtfc !== null && !isNaN(mtfc)) {
+                    acc.mtfcNumerator += mtfc * total;
+                    acc.mtfcDenominator += total;
+                }
+                if (mtts !== null && !isNaN(mtts) && closed > 0) {
+                    acc.mttsNumerator += mtts * closed;
+                    acc.mttsDenominator += closed;
+                }
+                return acc;
+            }, {
+                total: 0, open: 0, closed: 0, within: 0, eligible: 0,
+                mtfcNumerator: 0, mtfcDenominator: 0, mttsNumerator: 0, mttsDenominator: 0
+            });
+
+            const slaCompliance = totals.eligible > 0 ? (totals.within / totals.eligible) * 100 : null;
+            return {
+                region: region || 'Global',
+                total: totals.total,
+                open: totals.open,
+                closed: totals.closed,
+                openOver5: null,
+                avgMtfc: totals.mtfcDenominator > 0 ? totals.mtfcNumerator / totals.mtfcDenominator : null,
+                avgMtts: totals.mttsDenominator > 0 ? totals.mttsNumerator / totals.mttsDenominator : null,
+                within: totals.within,
+                eligible: totals.eligible,
+                slaCompliance,
+                slaColor: slaCompliance === null ? 'gray' : slaColor(slaCompliance),
+                lastDataUpdate: null
+            };
+        }
+
+        function buildRegionMapFromSummary(rows) {
+            const grouped = {};
+            (rows || []).forEach(row => {
+                const region = normalizeBiRegion(row.regiao_grupo);
+                if (!grouped[region]) grouped[region] = [];
+                grouped[region].push(row);
+            });
+            return Object.keys(grouped).reduce((acc, region) => {
+                acc[region] = aggregateBiSummaryRows(grouped[region], region);
+                return acc;
+            }, {});
+        }
+
+        function buildFilteredBiState(data, filters) {
+            if (hasSummaryDimensionFilter(filters)) {
+                const rows = filterBiSummaryRows(data.summary || [], filters);
+                const byRegion = buildRegionMapFromSummary(rows);
+                return {
+                    metrics: aggregateBiSummaryRows(rows),
+                    byRegion,
+                    regions: selectedRegions(byRegion, filters),
+                    hasBacklogOver5: false
+                };
+            }
+
+            const byRegion = buildRegionMap(data.regionSummary || []);
+            const metrics = filters.region && filters.region !== 'all'
+                ? (byRegion[normalizeBiRegion(filters.region)] || normalizeBiMetrics(null))
+                : normalizeBiMetrics((data.kpis || [])[0]);
+            return {
+                metrics,
+                byRegion,
+                regions: selectedRegions(byRegion, filters),
+                hasBacklogOver5: true
+            };
+        }
+
+        function showFilterWarning(filters, hasBacklogOver5) {
+            const warning = document.getElementById('filter-warning');
+            const text = document.getElementById('filter-warning-text');
+            const messages = [];
+            if (filters.dateFrom || filters.dateTo) {
+                messages.push(tx('unsupported_bi_filters'));
+            }
+            if (!hasBacklogOver5) messages.push(tx('backlog_over5_unavailable'));
+            if (!messages.length) {
+                warning.style.display = 'none';
+                return;
+            }
+            text.textContent = messages.join(' ');
+            warning.style.display = '';
+        }
+
+        function renderRegionLegend(byRegion, regions) {
+            const wrap = document.getElementById('region-legend');
+            wrap.innerHTML = '';
+            regions.forEach(g => {
+                const m = byRegion[g];
+                const color = m ? colorHex(m.slaColor) : '#7d8590';
+                const node = document.createElement('div');
+                node.className = 'region-legend-item';
+                node.innerHTML = `<span class="region-dot" style="background:${color}"></span>
+                                  <span>${regionLabel(g)}</span>
+                                  <span class="text-muted mono" style="margin-left:auto">${m ? fmtPercent(m.slaCompliance) : '--'}</span>`;
+                wrap.appendChild(node);
+            });
+        }
+
+        function renderPage(data) {
+            const filters = FilterState.get();
+            const state = buildFilteredBiState(data, filters);
+            const byRegion = state.byRegion;
+            const regions = state.regions;
+            const metrics = state.metrics;
+            showFilterWarning(filters, state.hasBacklogOver5);
+
+            setKpi('kpi-sla', fmtPercent(metrics.slaCompliance), metrics.slaColor);
+            setKpi('kpi-mtts', metrics.avgMtts === null ? '--' : fmt(metrics.avgMtts, 2) + ' dias');
+            setKpi('kpi-mtfc', metrics.avgMtfc === null ? '--' : fmt(metrics.avgMtfc, 2) + 'h');
+            setKpi('kpi-tickets', fmt(metrics.total, 0));
+            setKpi('kpi-open', fmt(metrics.open, 0));
+            setKpi('kpi-closed', fmt(metrics.closed, 0));
+            setKpi('kpi-backlog', state.hasBacklogOver5 ? fmt(metrics.openOver5, 0) : '--');
+            setKpi('kpi-backlog-total', fmt(metrics.open, 0));
+
+            const updatedAt = fmtDateTime(metrics.lastDataUpdate);
+            document.getElementById('kpi-backlog-meta').textContent = updatedAt
+                ? `Atualizado em ${updatedAt}`
+                : tx('backlog_meta');
+
+            createBarChart('chart-sla-region',
+                regions.map(regionLabel),
+                regions.map(r => byRegion[r]?.slaCompliance ?? 0),
+                regions.map(r => colorHex(byRegion[r]?.slaColor || 'gray')),
+                tx('chart_sla_region')
+            );
+
+            const mttsOrder = [...regions].sort((a, b) =>
+                (byRegion[b]?.avgMtts || 0) - (byRegion[a]?.avgMtts || 0));
+            createBarChart('chart-mtts',
+                mttsOrder.map(regionLabel),
+                mttsOrder.map(r => byRegion[r]?.avgMtts || 0),
+                mttsOrder.map(r => colorHex(byRegion[r]?.avgMtts === null ? 'gray' : byRegion[r]?.slaColor)),
+                tx('chart_mtts')
+            );
+
+            const mtfcOrder = [...regions].sort((a, b) =>
+                (byRegion[b]?.avgMtfc || 0) - (byRegion[a]?.avgMtfc || 0));
+            createBarChart('chart-mtfc',
+                mtfcOrder.map(regionLabel),
+                mtfcOrder.map(r => byRegion[r]?.avgMtfc || 0),
+                mtfcOrder.map(() => '#1f6feb'),
+                tx('chart_mtfc')
+            );
+
+            if (state.hasBacklogOver5) {
+                createBarChart('chart-backlog',
+                    regions.map(regionLabel),
+                    regions.map(r => byRegion[r]?.openOver5 || 0),
+                    regions.map(() => '#E4BF14'),
+                    tx('chart_backlog')
+                );
+            } else {
+                destroyChart('chart-backlog');
+            }
+
+            renderRegionLegend(byRegion, regions);
+
+            if (typeof THREE !== 'undefined') {
+                if (!window._globe) {
+                    window._globe = initGlobe('globe-container', byRegion);
+                } else {
+                    updateGlobePins(window._globe, byRegion);
+                }
+            }
+        }
+
+        function applyPage() {
+            applyExtraI18n();
+            renderPage(rawData);
+        }
+
+        async function init() {
+            hideError();
+            showLoading(true);
+            bindFilterControls();
+            try {
+                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
+                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+                }
+                rawData = await fetchDashboardBiData();
+                console.log('[Dashboard] BI KPIs:', rawData.kpis[0]);
+                console.log('[Dashboard] BI Region Summary:', rawData.regionSummary);
+                console.log('[Dashboard] BI Summary rows:', rawData.summary.length);
+                populateFilterOptions(rawData);
+                applyExtraI18n();
+                showLoading(false);
+                applyPage();
+            } catch (e) {
+                showError((e && e.message) ? e.message + ' - ' + t('error_fetch') : t('error_fetch'));
+            }
+        }
+
+        document.addEventListener('filterschange', applyPage);
+        document.addEventListener('langchange', () => {
+            applyExtraI18n();
+            if (rawData && rawData.kpis) {
+                populateFilterOptions(rawData);
+                applyPage();
+            }
+        });
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

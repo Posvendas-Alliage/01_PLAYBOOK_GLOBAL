@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Backlog Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+    <div class="dashboard-shell">
+        <header class="app-header">
+            <div class="app-header-inner">
+                <div class="app-brand">
+                    <a href="../../index.html" class="back-link" data-tx="back_to_playbook">Voltar</a>
+                    <div>
+                        <p class="app-brand-title" data-tx="page_title">Daily Backlog Control</p>
+                        <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                    </div>
+                </div>
+                <div class="app-header-actions">
+                    <div class="lang-switch" role="group" aria-label="Language">
+                        <button type="button" class="lang-btn" data-lang="pt">PT</button>
+                        <button type="button" class="lang-btn" data-lang="en">EN</button>
+                        <button type="button" class="lang-btn" data-lang="es">ES</button>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm no-print" onclick="exportCurrentPagePdf()" data-i18n="btn_export_pdf">Exportar PDF</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="app-nav" aria-label="Dashboard pages">
+            <div class="app-nav-inner">
+                <a href="page2-backlog.html" class="is-active" data-i18n="nav_backlog">Daily</a>
+                <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
+                <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
+            </div>
+        </nav>
+
+        <main class="app-main">
+            <section class="filter-bar" aria-label="Filtros">
+                <div class="filter-field">
+                    <label for="filter-region" data-i18n="filter_region">Regiao</label>
+                    <select id="filter-region" data-filter="region"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
+                    <select id="filter-priority" data-filter="priority"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-type" data-tx="filter_department">Departamento</label>
+                    <select id="filter-type" data-filter="type"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-product" data-tx="filter_status">Status</label>
+                    <select id="filter-product" data-filter="product"></select>
+                </div>
+                <div class="filter-field">
+                    <label data-i18n="filter_agent_group">Grupo do Agente</label>
+                    <div id="filter-agent-groups" class="multi-select-group"
+                         style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply">Aplicar</button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="btn-clear" data-tx="btn_clear">Limpar</button>
+                </div>
+            </section>
+
+            <div id="error-banner" class="banner-error" style="display:none;">
+                <span id="error-banner-text"></span>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-retry" style="margin-left:12px" data-tx="btn_retry">Tentar novamente</button>
+            </div>
+
+            <div id="loading" class="loading-block">
+                <div class="spinner loading-spinner" aria-hidden="true"></div>
+                <p data-i18n="loading">Carregando dados...</p>
+            </div>
+
+            <div id="page-body" style="display:none;">
+                <section class="tier-heading">
+                    <div>
+                        <p class="tier-kicker" data-tx="daily_kicker">Daily</p>
+                        <h2 data-tx="daily_title">Controle diario de backlog</h2>
+                        <p class="tier-audience" data-i18n="audience_daily">Linha de frente + Coordenador</p>
+                    </div>
+                    <span class="badge badge-yellow" id="daily-risk-badge">--</span>
+                </section>
+
+                <section class="kpi-strip daily-kpi-strip">
+                    <article class="card">
+                        <div class="kpi-label" data-tx="kpi_open_total">Backlog atual</div>
+                        <div class="kpi-number mono" id="kpi-open-total">--</div>
+                    </article>
+                    <article class="card">
+                        <div class="kpi-label" data-tx="kpi_without_resp">Sem primeira resposta</div>
+                        <div class="kpi-number mono" id="kpi-without-resp">--</div>
+                    </article>
+                    <article class="card">
+                        <div class="kpi-label" data-tx="kpi_over_10">&gt; 10 dias</div>
+                        <div class="kpi-number mono" id="kpi-over-10">--</div>
+                    </article>
+                    <article class="card">
+                        <div class="kpi-label" data-tx="kpi_dependency">Dependencia externa</div>
+                        <div class="kpi-number mono" id="kpi-dependency">--</div>
+                    </article>
+                    <article class="card">
+                        <div class="kpi-label" data-tx="kpi_p12">P1/P2 abertos</div>
+                        <div class="kpi-number mono" id="kpi-p12">--</div>
+                    </article>
+                    <article class="card">
+                        <div class="kpi-label" data-tx="kpi_avg_aging">Aging medio</div>
+                        <div class="kpi-number mono" id="kpi-avg-aging">--</div>
+                    </article>
+                </section>
+
+                <section class="decision-grid">
+                    <article class="card daily-decision-card">
+                        <span class="decision-label" data-tx="decision_aging">Fila critica</span>
+                        <strong class="decision-value mono" id="decision-aging-value">--</strong>
+                        <span class="decision-note" id="decision-aging-note">--</span>
+                    </article>
+                    <article class="card daily-decision-card">
+                        <span class="decision-label" data-tx="decision_response">Primeira resposta</span>
+                        <strong class="decision-value mono" id="decision-response-value">--</strong>
+                        <span class="decision-note" id="decision-response-note">--</span>
+                    </article>
+                    <article class="card daily-decision-card">
+                        <span class="decision-label" data-tx="decision_dependency">Dependencias</span>
+                        <strong class="decision-value mono" id="decision-dependency-value">--</strong>
+                        <span class="decision-note" id="decision-dependency-note">--</span>
+                    </article>
+                </section>
+
+                <section class="page-grid-2col" style="margin-top:18px">
+                    <article class="card chart-card">
+                        <h3 data-tx="chart_status">Backlog por Status</h3>
+                        <div class="chart-canvas-wrap"><canvas id="chart-backlog-status"></canvas></div>
+                    </article>
+                    <article class="card chart-card">
+                        <h3 data-tx="chart_region">Backlog por Regiao</h3>
+                        <div class="chart-canvas-wrap"><canvas id="chart-backlog-region"></canvas></div>
+                    </article>
+                    <article class="card chart-card">
+                        <h3 data-tx="chart_aging">Aging Buckets</h3>
+                        <div class="chart-canvas-wrap"><canvas id="chart-aging-buckets"></canvas></div>
+                    </article>
+                    <article class="card chart-card">
+                        <h3 data-tx="chart_priority">Backlog por Prioridade</h3>
+                        <div class="chart-canvas-wrap"><canvas id="chart-backlog-priority"></canvas></div>
+                    </article>
+                </section>
+
+                <section class="card table-card" style="margin-top:18px">
+                    <div class="section-heading">
+                        <h3 data-tx="table_title">Tickets em Aberto</h3>
+                        <p class="text-muted" data-tx="table_note">Ordenado por risco operacional para decisao do dia.</p>
+                    </div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-tx="col_ticket">Ticket #</th>
+                                    <th data-tx="col_aging">Aging (dias)</th>
+                                    <th data-tx="col_priority">Prioridade</th>
+                                    <th data-tx="col_region">Regiao</th>
+                                    <th data-tx="col_status">Status</th>
+                                    <th data-tx="col_action">Acao</th>
+                                </tr>
+                            </thead>
+                            <tbody id="open-tickets-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <span id="pagination-info">--</span>
+                        <button type="button" class="btn btn-ghost btn-sm" id="page-prev" data-tx="prev">Anterior</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="page-next" data-tx="next">Proximo</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer class="app-footer" data-tx="footer">Playbook Global - Global Service - KPI</footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="../../config/supabase.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/export-page.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/business-rules.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        const EXTRA_I18N = {
+            pt: {
+                page_title: 'Daily Backlog Control', brand_subtitle: 'Playbook Global | KPI',
+                back_to_playbook: 'Voltar', to_label: 'Ate',
+                btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+                filter_department: 'Departamento', filter_status: 'Status',
+                daily_kicker: 'Daily', daily_title: 'Controle diario de backlog',
+                kpi_open_total: 'Backlog atual', kpi_without_resp: 'Sem primeira resposta',
+                kpi_avg_aging: 'Aging medio (dias)',
+                kpi_over_10: 'Tickets > 10 dias', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abertos',
+                decision_aging: 'Fila critica', decision_response: 'Primeira resposta', decision_dependency: 'Dependencias',
+                risk_ok: 'Estavel', risk_attention: 'Acao hoje',
+                note_aging: '{n} tickets acima de 10 dias',
+                note_response: '{n} tickets ainda sem primeira resposta',
+                note_dependency: '{n} tickets aguardando cliente, peca, terceiro ou visita',
+                chart_status: 'Backlog por Status', chart_region: 'Backlog por Regiao e resposta',
+                chart_aging: 'Aging Buckets', chart_priority: 'Backlog por Prioridade',
+                table_title: 'Tickets em Aberto',
+                table_note: 'Ordenado por risco operacional para decisao do dia.',
+                col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridade',
+                col_region: 'Regiao', col_status: 'Status', col_action: 'Acao',
+                action_first_response: 'Dar primeira resposta',
+                action_old_ticket: 'Revisar aging',
+                action_dependency: 'Follow-up dependencia',
+                action_p12: 'Priorizar P1/P2',
+                action_monitor: 'Monitorar',
+                prev: 'Anterior', next: 'Proximo',
+                page_info: 'Pagina {p} de {t} - {n} tickets',
+                endpoint_missing: 'Backlog real exige dashboard-read?type=bi-backlog. Endpoint antigo, mock e zoho_tickets foram desativados nesta pagina.',
+                footer: 'Playbook Global - Global Service - KPI'
+            },
+            en: {
+                page_title: 'Daily Backlog Control', brand_subtitle: 'Global Playbook | KPI',
+                back_to_playbook: 'Back', to_label: 'To',
+                btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+                filter_department: 'Department', filter_status: 'Status',
+                daily_kicker: 'Daily', daily_title: 'Daily backlog control',
+                kpi_open_total: 'Current backlog', kpi_without_resp: 'No first response',
+                kpi_avg_aging: 'Avg aging (days)',
+                kpi_over_10: 'Tickets > 10 days', kpi_dependency: 'External dependency', kpi_p12: 'Open P1/P2',
+                decision_aging: 'Critical queue', decision_response: 'First response', decision_dependency: 'Dependencies',
+                risk_ok: 'Stable', risk_attention: 'Action today',
+                note_aging: '{n} tickets over 10 days',
+                note_response: '{n} tickets without first response',
+                note_dependency: '{n} tickets waiting for customer, part, third party or visit',
+                chart_status: 'Backlog by Status', chart_region: 'Backlog by Region and response',
+                chart_aging: 'Aging Buckets', chart_priority: 'Backlog by Priority',
+                table_title: 'Open Tickets',
+                table_note: 'Sorted by operational risk for daily decisions.',
+                col_ticket: 'Ticket #', col_aging: 'Aging (days)', col_priority: 'Priority',
+                col_region: 'Region', col_status: 'Status', col_action: 'Action',
+                action_first_response: 'Send first response',
+                action_old_ticket: 'Review aging',
+                action_dependency: 'Dependency follow-up',
+                action_p12: 'Prioritize P1/P2',
+                action_monitor: 'Monitor',
+                prev: 'Previous', next: 'Next',
+                page_info: 'Page {p} of {t} - {n} tickets',
+                endpoint_missing: 'Real backlog requires dashboard-read?type=bi-backlog. The old endpoint, mock data and zoho_tickets were disabled on this page.',
+                footer: 'Global Playbook - Global Service - KPI'
+            },
+            es: {
+                page_title: 'Daily Backlog Control', brand_subtitle: 'Playbook Global | KPI',
+                back_to_playbook: 'Volver', to_label: 'Hasta',
+                btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+                filter_department: 'Departamento', filter_status: 'Estado',
+                daily_kicker: 'Daily', daily_title: 'Control diario de backlog',
+                kpi_open_total: 'Backlog actual', kpi_without_resp: 'Sin primera respuesta',
+                kpi_avg_aging: 'Aging medio (dias)',
+                kpi_over_10: 'Tickets > 10 dias', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abiertos',
+                decision_aging: 'Fila critica', decision_response: 'Primera respuesta', decision_dependency: 'Dependencias',
+                risk_ok: 'Estable', risk_attention: 'Accion hoy',
+                note_aging: '{n} tickets arriba de 10 dias',
+                note_response: '{n} tickets sin primera respuesta',
+                note_dependency: '{n} tickets esperando cliente, pieza, tercero o visita',
+                chart_status: 'Backlog por Estado', chart_region: 'Backlog por Region y respuesta',
+                chart_aging: 'Buckets de Aging', chart_priority: 'Backlog por Prioridad',
+                table_title: 'Tickets Abiertos',
+                table_note: 'Ordenado por riesgo operacional para decisiones diarias.',
+                col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridad',
+                col_region: 'Region', col_status: 'Estado', col_action: 'Accion',
+                action_first_response: 'Dar primera respuesta',
+                action_old_ticket: 'Revisar aging',
+                action_dependency: 'Follow-up dependencia',
+                action_p12: 'Priorizar P1/P2',
+                action_monitor: 'Monitorear',
+                prev: 'Anterior', next: 'Siguiente',
+                page_info: 'Pagina {p} de {t} - {n} tickets',
+                endpoint_missing: 'El backlog real requiere dashboard-read?type=bi-backlog. El endpoint antiguo, mock y zoho_tickets fueron desactivados en esta pagina.',
+                footer: 'Playbook Global - Global Service - KPI'
+            }
+        };
+
+        const PAGE_SIZE = 50;
+        let rawData = [];
+        let openTickets = [];
+        let currentPage = 1;
+
+        function tx(key) {
+            const lang = getLang();
+            return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || key;
+        }
+
+        function applyExtraI18n() {
+            document.querySelectorAll('[data-tx]').forEach(node => {
+                node.textContent = tx(node.getAttribute('data-tx'));
+            });
+        }
+
+        function showLoading(on) {
+            document.getElementById('loading').style.display = on ? '' : 'none';
+            document.getElementById('page-body').style.display = on ? 'none' : '';
+        }
+
+        function showError(msg) {
+            document.getElementById('error-banner-text').textContent = msg || tx('endpoint_missing');
+            document.getElementById('error-banner').style.display = '';
+            document.getElementById('page-body').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('error-banner').style.display = 'none';
+        }
+
+        function fmt(n, d) {
+            if (n === null || n === undefined || isNaN(n)) return '--';
+            return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+
+        function setKpi(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
+
+        function buildSelectOptions(select, values, defaultLabel) {
+            select.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = 'all';
+            optAll.textContent = defaultLabel;
+            select.appendChild(optAll);
+            values.forEach(v => {
+                if (!v) return;
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                select.appendChild(opt);
+            });
+        }
+
+        function populateFilterOptions(rows) {
+            const state = FilterState.get();
+            buildSelectOptions(document.getElementById('filter-region'),
+                [...new Set(rows.map(r => r.regiao_grupo || r.region_group || r.region).filter(Boolean))].sort(),
+                t('filter_all'));
+            buildSelectOptions(document.getElementById('filter-priority'),
+                [...new Set(rows.map(r => r.priority_standard || r.priority).filter(Boolean))].sort(),
+                t('filter_all'));
+            buildSelectOptions(document.getElementById('filter-type'),
+                [...new Set(rows.map(r => r.department_name || r.department).filter(Boolean))].sort(),
+                t('filter_all'));
+            buildSelectOptions(document.getElementById('filter-product'),
+                [...new Set(rows.map(r => r.status).filter(Boolean))].sort(),
+                t('filter_all'));
+            ['region','priority','type','product'].forEach(key => {
+                const input = document.querySelector(`[data-filter="${key}"]`);
+                if (input && [...input.options].some(o => o.value === state[key])) input.value = state[key];
+            });
+            renderAgentGroupFilter();
+        }
+
+        function renderAgentGroupFilter() {
+            const container = document.getElementById('filter-agent-groups');
+            if (!container) return;
+            const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
+            container.innerHTML = '';
+            AGENT_GROUPS.forEach(group => {
+                const checked = current.includes(group);
+                const btn = document.createElement('button');
+                btn.textContent = group;
+                btn.dataset.group = group;
+                btn.style.cssText = `padding:4px 10px;border-radius:20px;border:1px solid #30363d;font-size:12px;background:${checked ? '#1f6feb' : '#161b22'};color:${checked ? '#fff' : '#7d8590'};cursor:pointer`;
+                btn.addEventListener('click', () => {
+                    const f = FilterState.get();
+                    const groups = Array.isArray(f.agentGroups) ? [...f.agentGroups] : [...DEFAULT_AGENT_GROUPS];
+                    const idx = groups.indexOf(group);
+                    if (idx >= 0) groups.splice(idx, 1);
+                    else groups.push(group);
+                    FilterState.update('agentGroups', groups);
+                    renderAgentGroupFilter();
+                    applyPage();
+                });
+                container.appendChild(btn);
+            });
+        }
+
+        function metricValue(rows, keys) {
+            for (const row of rows) {
+                for (const key of keys) {
+                    if (row[key] !== null && row[key] !== undefined) return Number(row[key]);
+                }
+            }
+            return null;
+        }
+
+        function agingDays(row) {
+            return Number(row.aging_backlog_dias ?? row.aging_days ?? row.aging_dias ?? 0);
+        }
+
+        function hasFirstResponse(row) {
+            return Number.isFinite(metricNumber(row.mtfc_horas_bi, row.mtfc_horas));
+        }
+
+        function isDependencyStatusText(value) {
+            const status = normalizeStatus(value);
+            return status.includes('aguardando') ||
+                status.includes('waiting') ||
+                status.includes('terceiro') ||
+                status.includes('third') ||
+                status.includes('peca') ||
+                status.includes('cliente') ||
+                status.includes('customer') ||
+                status.includes('visita');
+        }
+
+        function isP12(row) {
+            const priority = normalizeStatus(row.priority_standard || row.priority);
+            return priority.includes('urgente') ||
+                priority.includes('urgent') ||
+                priority.includes('alta') ||
+                priority.includes('high') ||
+                priority === 'p1' ||
+                priority === 'p2';
+        }
+
+        function riskScore(row) {
+            let score = agingDays(row);
+            if (!hasFirstResponse(row)) score += 40;
+            if (isP12(row)) score += 25;
+            if (isDependencyStatusText(row.status)) score += 10;
+            return score;
+        }
+
+        function actionFor(row) {
+            if (!hasFirstResponse(row)) return tx('action_first_response');
+            if (agingDays(row) > 10) return tx('action_old_ticket');
+            if (isDependencyStatusText(row.status)) return tx('action_dependency');
+            if (isP12(row)) return tx('action_p12');
+            return tx('action_monitor');
+        }
+
+        function groupCounts(rows, labelFn) {
+            const counts = new Map();
+            rows.forEach(row => {
+                const label = labelFn(row) || '--';
+                counts.set(label, (counts.get(label) || 0) + 1);
+            });
+            return [...counts.entries()]
+                .map(([label, value]) => ({ label, value }))
+                .sort((a, b) => b.value - a.value);
+        }
+
+        function renderCountBar(canvasId, rows, labelFn, title, colorFn) {
+            const groups = groupCounts(rows, labelFn).slice(0, 10);
+            if (!groups.length) {
+                destroyChart(canvasId);
+                return;
+            }
+            createBarChart(
+                canvasId,
+                groups.map(g => g.label),
+                groups.map(g => g.value),
+                groups.map(g => colorFn ? colorFn(g.label, g.value) : '#1f6feb'),
+                title
+            );
+        }
+
+        function renderBacklogByRegion(rows) {
+            const labels = REGION_GROUPS.filter(region =>
+                rows.some(row => getTicketRegionGroup(row) === region)
+            );
+            createStackedBarChart('chart-backlog-region', labels, [
+                {
+                    label: t('with_first_response'),
+                    data: labels.map(region => rows.filter(row => getTicketRegionGroup(row) === region && hasFirstResponse(row)).length),
+                    backgroundColor: colorHex('green'),
+                    borderRadius: 6,
+                    borderSkipped: false
+                },
+                {
+                    label: t('without_first_response'),
+                    data: labels.map(region => rows.filter(row => getTicketRegionGroup(row) === region && !hasFirstResponse(row)).length),
+                    backgroundColor: colorHex('red'),
+                    borderRadius: 6,
+                    borderSkipped: false
+                }
+            ], tx('chart_region'));
+        }
+
+        function applyBacklogFilters(rows, filters) {
+            return rows.filter(row => {
+                if (filters.region && filters.region !== 'all' && getTicketRegionGroup(row) !== filters.region) return false;
+                if (filters.priority && filters.priority !== 'all' && getTicketPriority(row) !== filters.priority) return false;
+                if (filters.type && filters.type !== 'all' && (row.department_name || row.department || '') !== filters.type) return false;
+                if (filters.product && filters.product !== 'all' && (row.status || '') !== filters.product) return false;
+                if (filters.agentGroups && filters.agentGroups.length && !filters.agentGroups.includes(getTicketAgentGroup(row))) return false;
+                return true;
+            });
+        }
+
+        function chartRows(rows, groupKeys, valueKeys) {
+            return rows
+                .map(row => ({
+                    label: groupKeys.map(k => row[k]).find(Boolean),
+                    value: metricValue([row], valueKeys)
+                }))
+                .filter(row => row.label && row.value !== null);
+        }
+
+        function renderMappedBar(canvasId, rows, groupKeys, valueKeys, title, color) {
+            const mapped = chartRows(rows, groupKeys, valueKeys);
+            if (!mapped.length) {
+                destroyChart(canvasId);
+                return;
+            }
+            createBarChart(canvasId,
+                mapped.map(r => r.label),
+                mapped.map(r => r.value),
+                mapped.map(() => color || '#1f6feb'),
+                title
+            );
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('open-tickets-body');
+            const total = openTickets.length;
+            const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+            if (currentPage > totalPages) currentPage = totalPages;
+            const start = (currentPage - 1) * PAGE_SIZE;
+            const slice = openTickets.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = '';
+            if (!slice.length) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="6" class="text-muted" style="text-align:center;padding:18px">--</td>';
+                tbody.appendChild(tr);
+            } else {
+                slice.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="mono">${row.ticket_number || row.id || '--'}</td>
+                        <td class="mono">${fmt(agingDays(row), 1)}</td>
+                        <td>${row.priority_standard || row.priority || '--'}</td>
+                        <td>${row.regiao_grupo || row.region_group || row.region || '--'}</td>
+                        <td>${row.status || '--'}</td>
+                        <td>${actionFor(row)}</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('pagination-info').textContent =
+                tx('page_info').replace('{p}', currentPage).replace('{t}', totalPages).replace('{n}', total);
+        }
+
+        function renderPage(rows) {
+            const noResponse = rows.filter(row => !hasFirstResponse(row));
+            const over10 = rows.filter(row => agingDays(row) > 10);
+            const dependencies = rows.filter(row => isDependencyStatusText(row.status));
+            const p12 = rows.filter(isP12);
+            const avgAging = rows.length ? rows.reduce((sum, row) => sum + agingDays(row), 0) / rows.length : 0;
+
+            setKpi('kpi-open-total', fmt(rows.length, 0));
+            setKpi('kpi-without-resp', fmt(noResponse.length, 0));
+            setKpi('kpi-over-10', fmt(over10.length, 0));
+            setKpi('kpi-dependency', fmt(dependencies.length, 0));
+            setKpi('kpi-p12', fmt(p12.length, 0));
+            setKpi('kpi-avg-aging', fmt(avgAging, 1));
+
+            document.getElementById('daily-risk-badge').textContent =
+                (over10.length || noResponse.length || p12.length) ? tx('risk_attention') : tx('risk_ok');
+            document.getElementById('daily-risk-badge').className =
+                (over10.length || noResponse.length || p12.length) ? 'badge badge-yellow' : 'badge badge-green';
+            setKpi('decision-aging-value', fmt(over10.length, 0));
+            setKpi('decision-response-value', fmt(noResponse.length, 0));
+            setKpi('decision-dependency-value', fmt(dependencies.length, 0));
+            setKpi('decision-aging-note', tx('note_aging').replace('{n}', fmt(over10.length, 0)));
+            setKpi('decision-response-note', tx('note_response').replace('{n}', fmt(noResponse.length, 0)));
+            setKpi('decision-dependency-note', tx('note_dependency').replace('{n}', fmt(dependencies.length, 0)));
+
+            renderCountBar('chart-backlog-status', rows, row => row.status || '--', tx('chart_status'));
+            renderBacklogByRegion(rows);
+            renderCountBar('chart-aging-buckets', rows, row => row.aging_bucket || `${Math.floor(agingDays(row))}d`, tx('chart_aging'), label => label.includes('+') ? colorHex('red') : '#E4BF14');
+            renderCountBar('chart-backlog-priority', rows, row => row.priority_standard || row.priority || '--', tx('chart_priority'), label => (normalizeStatus(label).includes('urgent') || normalizeStatus(label).includes('urgente')) ? colorHex('red') : '#1f6feb');
+
+            openTickets = rows
+                .filter(row => row.ticket_number || row.id)
+                .sort((a, b) => riskScore(b) - riskScore(a));
+            currentPage = 1;
+            renderTable();
+        }
+
+        function bindFilterControls() {
+            document.getElementById('btn-apply').addEventListener('click', () => {
+                const next = {};
+                document.querySelectorAll('[data-filter]').forEach(input => {
+                    next[input.dataset.filter] = input.value;
+                });
+                next.agentGroups = FilterState.get().agentGroups;
+                FilterState.set(next);
+            });
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                FilterState.reset();
+                document.querySelectorAll('[data-filter]').forEach(input => {
+                    input.value = input.tagName === 'SELECT' ? 'all' : '';
+                });
+                renderAgentGroupFilter();
+                applyPage();
+            });
+            document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+            document.getElementById('page-prev').addEventListener('click', () => {
+                if (currentPage > 1) { currentPage--; renderTable(); }
+            });
+            document.getElementById('page-next').addEventListener('click', () => {
+                const total = Math.max(1, Math.ceil(openTickets.length / PAGE_SIZE));
+                if (currentPage < total) { currentPage++; renderTable(); }
+            });
+        }
+
+        function applyPage() {
+            applyExtraI18n();
+            const filters = { ...FilterState.get(), dateFrom: '', dateTo: '' };
+            renderPage(applyBacklogFilters(rawData, filters));
+        }
+
+        async function init() {
+            hideError();
+            showLoading(true);
+            bindFilterControls();
+            try {
+                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
+                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+                }
+                rawData = (await fetchDashboardBiBacklog()).backlog;
+                populateFilterOptions(rawData);
+                applyExtraI18n();
+                showLoading(false);
+                applyPage();
+            } catch (e) {
+                showError(`${tx('endpoint_missing')} ${e && e.message ? '(' + e.message + ')' : ''}`);
+            }
+        }
+
+        document.addEventListener('filterschange', applyPage);
+        document.addEventListener('langchange', () => {
+            applyExtraI18n();
+            populateFilterOptions(rawData);
+            applyPage();
+        });
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualidade de Dados</title>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+        .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--color-border); }
+        .data-table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); }
+        .table-wrap { overflow: auto; max-height: 420px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-2); }
+        .quality-2col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        @media (max-width: 880px) { .quality-2col { grid-template-columns: 1fr; } }
+        .no-region-card { display: grid; grid-template-columns: 200px 1fr; gap: 18px; align-items: stretch; }
+        .no-region-headline { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+        @media (max-width: 880px) { .no-region-card { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" style="
+      display:none; position:fixed; inset:0;
+      background:rgba(13,17,23,0.85);
+      justify-content:center; align-items:center;
+      z-index:9998; flex-direction:column; gap:16px;
+    ">
+      <div class="loading-spinner spinner"></div>
+      <p style="color:#e6edf3;font-family:'DM Sans',sans-serif"
+         data-i18n="loading">Carregando dados...</p>
+    </div>
+
+    <!-- Error message -->
+    <div id="error-message" style="
+      display:none; background:#E31424;
+      color:#fff; padding:16px 24px;
+      border-radius:8px; margin:20px;
+      font-family:'DM Sans',sans-serif;
+    "></div>
+
+    <div class="dashboard-shell">
+        <header class="app-header">
+            <div class="app-header-inner">
+                <div class="app-brand">
+                    <p class="app-brand-title" data-i18n="nav_quality">Qualidade de Dados</p>
+                    <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                </div>
+                <div class="app-header-actions">
+                    <a href="../../index.html" class="back-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                        <span data-tx="back_to_playbook">Voltar</span>
+                    </a>
+                    <div class="lang-switch" role="group" aria-label="Language">
+                        <button type="button" data-lang="pt">PT</button>
+                        <button type="button" data-lang="en">EN</button>
+                        <button type="button" data-lang="es">ES</button>
+                    </div>
+                    <button id="btn-refresh" onclick="refreshData()" style="
+                      background:#1f6feb; color:#fff; border:none;
+                      padding:6px 14px; border-radius:6px; cursor:pointer;
+                      font-family:'DM Sans',sans-serif; font-size:13px;
+                      display:flex; align-items:center; gap:6px;
+                    ">
+                      <span>↻</span>
+                      <span data-i18n="btn_refresh">Atualizar</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="app-nav" aria-label="Dashboard pages">
+            <div class="app-nav-inner">
+                <a href="page1-overview.html" data-i18n="nav_overview">Visão Global</a>
+                <a href="page2-backlog.html" data-i18n="nav_backlog">Backlog</a>
+                <a href="page3-data-quality.html" class="is-active" data-i18n="nav_quality">Qualidade de Dados</a>
+                <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly Report</a>
+                <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly Report</a>
+            </div>
+        </nav>
+
+        <main class="app-main">
+            <section class="filter-bar" aria-label="Filtros">
+                <div class="filter-field">
+                    <label for="filter-region" data-i18n="filter_region">Região</label>
+                    <select id="filter-region" data-filter="region"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
+                    <select id="filter-priority" data-filter="priority"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-type" data-i18n="filter_type">Tipo</label>
+                    <select id="filter-type" data-filter="type"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-product" data-i18n="filter_product">Produto</label>
+                    <select id="filter-product" data-filter="product"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-date-from" data-i18n="filter_period">Período</label>
+                    <input type="date" id="filter-date-from" data-filter="dateFrom" placeholder="dd/mm/aaaa">
+                </div>
+                <div class="filter-field">
+                    <label for="filter-date-to" data-tx="to_label">Até</label>
+                    <input type="date" id="filter-date-to" data-filter="dateTo" placeholder="dd/mm/aaaa">
+                </div>
+                <div class="filter-field">
+                    <label for="filter-created-month" data-tx="filter_created_month">Mês de criação</label>
+                    <select id="filter-created-month"></select>
+                </div>
+                <div class="filter-field">
+                    <label data-i18n="filter_agent_group">Grupo do Agente</label>
+                    <div id="filter-agent-groups" class="multi-select-group"
+                         style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply">Aplicar</button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="btn-clear" data-tx="btn_clear">Limpar</button>
+                </div>
+            </section>
+
+            <div id="error-banner" class="banner-error" style="display:none;">
+                <span id="error-banner-text"></span>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-retry" style="margin-left:12px" data-tx="btn_retry">Tentar novamente</button>
+            </div>
+
+            <div id="loading" class="loading-block">
+                <div class="spinner loading-spinner" aria-hidden="true"></div>
+                <p data-i18n="loading">Carregando dados...</p>
+            </div>
+
+            <div id="page-body" style="display:none;">
+                <section class="kpi-strip">
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_total">Tickets no período</div>
+                        <div class="kpi-number mono" id="kpi-total">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_complete">Dados completos</div>
+                        <div class="kpi-number mono" id="kpi-complete">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_completeness">% Completude</div>
+                        <div class="kpi-number mono" id="kpi-completeness">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_errors">Com erros</div>
+                        <div class="kpi-number mono" id="kpi-errors">--</div>
+                    </div>
+                    <div class="card">
+                        <div class="kpi-label" data-tx="kpi_no_region">Sem região</div>
+                        <div class="kpi-number mono" id="kpi-no-region">--</div>
+                    </div>
+                </section>
+
+                <section class="card" style="margin-top:18px;">
+                    <h3 data-tx="chart_fields">Completude por Campo</h3>
+                    <div class="chart-canvas-wrap" style="min-height:280px"><canvas id="chart-fields"></canvas></div>
+                </section>
+
+                <section class="quality-2col" style="margin-top:18px;">
+                    <article class="card chart-card">
+                        <h3 data-tx="chart_quality_month">% Qualidade por Mês</h3>
+                        <div class="chart-canvas-wrap"><canvas id="chart-quality-month"></canvas></div>
+                    </article>
+                    <article class="card chart-card">
+                        <h3 data-tx="chart_quality_region">Qualidade por Região</h3>
+                        <div class="chart-canvas-wrap"><canvas id="chart-quality-region"></canvas></div>
+                    </article>
+                </section>
+
+                <section class="card no-region-card" style="margin-top:18px;">
+                    <div class="no-region-headline">
+                        <div class="kpi-label" data-tx="no_region_title">Tickets sem Região</div>
+                        <div class="kpi-number mono is-red" id="no-region-count">--</div>
+                        <p class="text-muted" style="font-size:.8rem;margin:6px 0 0" data-tx="no_region_meta">Últimos 20 tickets</p>
+                    </div>
+                    <div class="table-wrap" style="max-height:280px">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th data-tx="col_ticket">Ticket #</th>
+                                    <th data-tx="col_date">Data</th>
+                                    <th data-tx="col_status">Status</th>
+                                    <th data-tx="col_assignee">Assignee</th>
+                                </tr>
+                            </thead>
+                            <tbody id="no-region-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer class="app-footer" data-tx="footer">Playbook Global · Global Service · KPI</footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="../../config/supabase.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/business-rules.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        const EXTRA_I18N = {
+            pt: {
+                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
+                btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+                filter_created_month: 'Mês de criação', filter_all: 'Todos',
+                kpi_total: 'Tickets no período', kpi_complete: 'Com dados completos',
+                kpi_completeness: '% Completude média', kpi_errors: 'Com erros',
+                kpi_no_region: 'Sem região',
+                chart_fields: 'Completude por Campo Obrigatório',
+                chart_quality_month: '% Qualidade por Mês', chart_quality_region: 'Qualidade por Região',
+                no_region_title: 'Tickets sem Região', no_region_meta: 'Últimos 20 tickets',
+                col_ticket: 'Ticket #', col_date: 'Data', col_status: 'Status', col_assignee: 'Assignee',
+                footer: 'Playbook Global · Global Service · KPI',
+                field_source_region: 'Região', field_priority: 'Prioridade', field_assignee_id: 'Responsável',
+                field_categoria_custom: 'Categoria', field_marca_produto: 'Marca/Produto',
+                field_solicitante: 'Solicitante'
+            },
+            en: {
+                brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
+                btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+                filter_created_month: 'Created month', filter_all: 'All',
+                kpi_total: 'Tickets in period', kpi_complete: 'Complete data',
+                kpi_completeness: 'Avg completeness %', kpi_errors: 'With errors',
+                kpi_no_region: 'No region',
+                chart_fields: 'Completeness by Required Field',
+                chart_quality_month: 'Quality % by Month', chart_quality_region: 'Quality by Region',
+                no_region_title: 'Tickets without Region', no_region_meta: 'Last 20 tickets',
+                col_ticket: 'Ticket #', col_date: 'Date', col_status: 'Status', col_assignee: 'Assignee',
+                footer: 'Global Playbook · Global Service · KPI',
+                field_source_region: 'Region', field_priority: 'Priority', field_assignee_id: 'Assignee',
+                field_categoria_custom: 'Category', field_marca_produto: 'Product Brand',
+                field_solicitante: 'Requester'
+            },
+            es: {
+                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
+                btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+                filter_created_month: 'Mes de creación', filter_all: 'Todos',
+                kpi_total: 'Tickets en el período', kpi_complete: 'Datos completos',
+                kpi_completeness: '% Completitud promedio', kpi_errors: 'Con errores',
+                kpi_no_region: 'Sin región',
+                chart_fields: 'Completitud por Campo Obligatorio',
+                chart_quality_month: '% Calidad por Mes', chart_quality_region: 'Calidad por Región',
+                no_region_title: 'Tickets sin Región', no_region_meta: 'Últimos 20 tickets',
+                col_ticket: 'Ticket #', col_date: 'Fecha', col_status: 'Estado', col_assignee: 'Asignado',
+                footer: 'Playbook Global · Global Service · KPI',
+                field_source_region: 'Región', field_priority: 'Prioridad', field_assignee_id: 'Asignado',
+                field_categoria_custom: 'Categoría', field_marca_produto: 'Marca/Producto',
+                field_solicitante: 'Solicitante'
+            }
+        };
+
+        function tx(key) {
+            const lang = getLang();
+            return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || key;
+        }
+        function applyExtraI18n() {
+            document.querySelectorAll('[data-tx]').forEach(node => {
+                node.textContent = tx(node.getAttribute('data-tx'));
+            });
+        }
+
+        async function refreshData() {
+            clearCache();
+            rawData = [];
+            await init();
+        }
+
+        function renderAgentGroupFilter() {
+            const container = document.getElementById('filter-agent-groups');
+            if (!container) return;
+            const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
+            container.innerHTML = '';
+            AGENT_GROUPS.forEach(group => {
+                const checked = current.includes(group);
+                const btn = document.createElement('button');
+                btn.textContent = group;
+                btn.dataset.group = group;
+                btn.style.cssText = `
+                    padding:4px 10px; border-radius:20px; cursor:pointer;
+                    border:1px solid #30363d; font-size:12px;
+                    font-family:'DM Sans',sans-serif;
+                    background: ${checked ? '#1f6feb' : '#161b22'};
+                    color: ${checked ? '#fff' : '#7d8590'};
+                `;
+                btn.addEventListener('click', () => {
+                    const f = FilterState.get();
+                    const groups = f.agentGroups || [...DEFAULT_AGENT_GROUPS];
+                    const idx = groups.indexOf(group);
+                    if (idx >= 0) groups.splice(idx, 1);
+                    else groups.push(group);
+                    FilterState.update('agentGroups', groups);
+                    renderAgentGroupFilter();
+                    applyPage();
+                });
+                container.appendChild(btn);
+            });
+        }
+
+        const REQUIRED_FIELDS = ['source_region','priority','assignee_id','categoria_custom','marca_produto','solicitante'];
+        const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
+
+        let rawData = [];
+
+        function hasQualityValue(ticket, field) {
+            const value = String(ticket[field] || '').trim();
+            if (!value || value === '-Nenhum-') return false;
+            if (field === 'source_region' && ticket.regiao_grupo === 'Não classificado') return false;
+            if (field === 'priority' && value === 'Sem prioridade') return false;
+            return true;
+        }
+
+        function isComplete(ticket) {
+            return REQUIRED_FIELDS.every(f => hasQualityValue(ticket, f));
+        }
+
+        function regionLabel(group) {
+            const map = { Brasil:'region_brazil', Argentina:'region_argentina', 'México':'region_mexico',
+                          LATAM:'region_latam', USA:'region_usa', ROW:'region_row' };
+            return t(map[group] || '') || group || '--';
+        }
+
+        function showLoading(on) {
+            document.getElementById('loading').style.display = on ? '' : 'none';
+            document.getElementById('page-body').style.display = on ? 'none' : '';
+        }
+        function showError(msg) {
+            document.getElementById('error-banner-text').textContent = msg || tx('btn_retry');
+            document.getElementById('error-banner').style.display = '';
+            const overlayErr = document.getElementById('error-message');
+            if (overlayErr) { overlayErr.textContent = msg || tx('btn_retry'); overlayErr.style.display = 'block'; }
+            document.getElementById('page-body').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        }
+        function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+        function fmt(n, d) {
+            if (n === null || n === undefined || isNaN(n)) return '--';
+            return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+        function setKpi(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+
+        function buildSelectOptions(select, values, defaultLabel) {
+            const current = select.value;
+            select.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = 'all'; optAll.textContent = defaultLabel;
+            select.appendChild(optAll);
+            values.forEach(v => {
+                if (!v || v === '-Nenhum-') return;
+                const opt = document.createElement('option');
+                opt.value = v; opt.textContent = v;
+                select.appendChild(opt);
+            });
+            if (current && [...select.options].some(o => o.value === current)) select.value = current;
+        }
+
+        function populateFilterOptions(data) {
+            const regionsAvailable = new Set();
+            data.forEach(d => { const g = REGION_MAP[d.region]; if (g) regionsAvailable.add(g); });
+            const regionSelect = document.getElementById('filter-region');
+            regionSelect.innerHTML = '';
+            const optAllR = document.createElement('option');
+            optAllR.value = 'all'; optAllR.textContent = t('filter_all');
+            regionSelect.appendChild(optAllR);
+            REGION_GROUPS.filter(g => regionsAvailable.has(g)).forEach(g => {
+                const o = document.createElement('option'); o.value = g; o.textContent = regionLabel(g);
+                regionSelect.appendChild(o);
+            });
+
+            const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
+                .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
+            buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
+            buildSelectOptions(document.getElementById('filter-type'),
+                [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
+            buildSelectOptions(document.getElementById('filter-product'),
+                [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
+
+            const months = [...new Set(data.map(d => (d.created_time || '').substring(0, 7)).filter(Boolean))]
+                .sort().reverse();
+            buildSelectOptions(document.getElementById('filter-created-month'), months, t('filter_all'));
+
+            const state = FilterState.get();
+            ['region','priority','type','product','dateFrom','dateTo'].forEach(key => {
+                const input = document.querySelector(`[data-filter="${key}"]`);
+                if (!input) return;
+                if (input.type === 'date') input.value = state[key] || '';
+                else if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
+            });
+            renderAgentGroupFilter();
+        }
+
+        function bindFilterControls() {
+            document.getElementById('btn-apply').addEventListener('click', () => {
+                const next = {};
+                document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
+                FilterState.set(next);
+                applyPage();
+            });
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                FilterState.reset();
+                document.querySelectorAll('[data-filter]').forEach(i => {
+                    i.value = i.tagName === 'SELECT' ? 'all' : '';
+                });
+                document.getElementById('filter-created-month').value = 'all';
+                applyPage();
+            });
+            document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+            document.getElementById('filter-created-month').addEventListener('change', applyPage);
+        }
+
+        function applyCreatedMonth(tickets) {
+            const m = document.getElementById('filter-created-month').value;
+            if (!m || m === 'all') return tickets;
+            return tickets.filter(t => (t.created_time || '').substring(0, 7) === m);
+        }
+
+        function renderPage(filtered) {
+            const total = filtered.length;
+            const completeArr = filtered.filter(isComplete);
+            const completePct = total ? (completeArr.length / total) * 100 : 0;
+            const errors = total - completeArr.length;
+            const noRegion = filtered.filter(t => !hasQualityValue(t, 'source_region')).length;
+
+            setKpi('kpi-total', fmt(total, 0));
+            setKpi('kpi-complete', fmt(completeArr.length, 0));
+            const cn = document.getElementById('kpi-completeness');
+            cn.textContent = total ? fmt(completePct, 1) + '%' : '--';
+            cn.classList.remove('is-green','is-yellow','is-red');
+            cn.classList.add(completePct >= 95 ? 'is-green' : completePct >= 80 ? 'is-yellow' : 'is-red');
+            setKpi('kpi-errors', fmt(errors, 0));
+            setKpi('kpi-no-region', fmt(noRegion, 0));
+
+            const fieldLabels = REQUIRED_FIELDS.map(f => tx('field_' + f));
+            const fieldPcts = REQUIRED_FIELDS.map(f => {
+                if (!total) return 0;
+                const filled = filtered.filter(t => hasQualityValue(t, f)).length;
+                return (filled / total) * 100;
+            });
+            const fieldColors = fieldPcts.map(p => p >= 95 ? colorHex('green') : p >= 80 ? colorHex('yellow') : colorHex('red'));
+            createBarChart('chart-fields', fieldLabels, fieldPcts.map(p => +p.toFixed(2)), fieldColors, tx('chart_fields'));
+
+            const monthMap = {};
+            filtered.forEach(t => {
+                const key = (t.created_time || '').substring(0, 7);
+                if (!key) return;
+                if (!monthMap[key]) monthMap[key] = { total: 0, complete: 0 };
+                monthMap[key].total++;
+                if (isComplete(t)) monthMap[key].complete++;
+            });
+            const monthKeys = Object.keys(monthMap).sort();
+            const monthValues = monthKeys.map(k => monthMap[k].total ? (monthMap[k].complete / monthMap[k].total) * 100 : 0);
+            createLineChart('chart-quality-month',
+                monthKeys,
+                [{
+                    label: tx('chart_quality_month'),
+                    data: monthValues.map(v => +v.toFixed(2)),
+                    borderColor: '#388bfd',
+                    backgroundColor: 'rgba(31,111,235,.18)',
+                    tension: 0.25, fill: true
+                }],
+                tx('chart_quality_month')
+            );
+
+            const regionAvailable = REGION_GROUPS.filter(g => filtered.some(t => REGION_MAP[t.region] === g));
+            const regionPcts = regionAvailable.map(g => {
+                const list = filtered.filter(t => REGION_MAP[t.region] === g);
+                if (!list.length) return 0;
+                return (list.filter(isComplete).length / list.length) * 100;
+            });
+            const regionColors = regionPcts.map(p => p >= 95 ? colorHex('green') : p >= 80 ? colorHex('yellow') : colorHex('red'));
+            createBarChart('chart-quality-region',
+                regionAvailable.map(regionLabel),
+                regionPcts.map(p => +p.toFixed(2)),
+                regionColors,
+                tx('chart_quality_region')
+            );
+
+            const noRegionTickets = filtered
+                .filter(t => !hasQualityValue(t, 'source_region'))
+                .sort((a, b) => new Date(b.created_time) - new Date(a.created_time))
+                .slice(0, 20);
+            document.getElementById('no-region-count').textContent = fmt(noRegion, 0);
+            const tbody = document.getElementById('no-region-body');
+            tbody.innerHTML = '';
+            if (!noRegionTickets.length) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="4" class="text-muted" style="text-align:center;padding:18px">--</td>`;
+                tbody.appendChild(tr);
+            } else {
+                noRegionTickets.forEach(t => {
+                    const tr = document.createElement('tr');
+                    const date = t.created_time ? new Date(t.created_time).toLocaleDateString(getLang() === 'en' ? 'en-US' : 'pt-BR') : '--';
+                    tr.innerHTML = `
+                        <td class="mono">${t.ticket_number || t.id || '--'}</td>
+                        <td>${date}</td>
+                        <td>${t.status || '--'}</td>
+                        <td>${t.assignee_id || '--'}</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function applyPage() {
+            applyExtraI18n();
+            const filters = FilterState.get();
+            renderPage(applyCreatedMonth(applyFilters(rawData, filters)));
+        }
+
+        async function init() {
+            hideError();
+            showLoading(true);
+            bindFilterControls();
+            try {
+                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
+                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+                }
+                rawData = (await fetchDashboardBiTickets()).tickets;
+                populateFilterOptions(rawData);
+                applyExtraI18n();
+                showLoading(false);
+                applyPage();
+            } catch (e) {
+                showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
+            }
+        }
+
+        document.addEventListener('filterschange', applyPage);
+        document.addEventListener('langchange', () => {
+            applyExtraI18n();
+            if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
+        });
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
