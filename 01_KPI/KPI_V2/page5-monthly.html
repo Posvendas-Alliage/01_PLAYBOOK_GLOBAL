@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Report</title>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+        .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--color-border); }
+        .data-table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); }
+        .data-table tbody tr:hover { background: rgba(31, 111, 235, 0.06); }
+        .region-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; margin-top: 12px; }
+        .region-card { display: flex; flex-direction: column; gap: 12px; }
+        .region-card-head { display: flex; align-items: center; gap: 10px; }
+        .region-flag { font-size: 1.6rem; line-height: 1; }
+        .region-card h4 { margin: 0; font-size: 1rem; }
+        .region-summary, .region-trend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+        .region-cell { display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); }
+        .region-cell-label { font-size: 0.66rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .region-cell-value { font-family: var(--font-mono); font-size: 0.96rem; font-weight: 600; }
+        .delta-up { color: var(--color-red); }
+        .delta-down { color: var(--color-green); }
+        .delta-neutral { color: var(--color-text-muted); }
+        .section-title { margin: 22px 0 10px; font-size: 1.05rem; }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" style="
+      display:none; position:fixed; inset:0;
+      background:rgba(13,17,23,0.85);
+      justify-content:center; align-items:center;
+      z-index:9998; flex-direction:column; gap:16px;
+    ">
+      <div class="loading-spinner spinner"></div>
+      <p style="color:#e6edf3;font-family:'DM Sans',sans-serif"
+         data-i18n="loading">Carregando dados...</p>
+    </div>
+
+    <!-- Error message -->
+    <div id="error-message" style="
+      display:none; background:#E31424;
+      color:#fff; padding:16px 24px;
+      border-radius:8px; margin:20px;
+      font-family:'DM Sans',sans-serif;
+    "></div>
+
+    <div class="dashboard-shell">
+        <header class="app-header">
+            <div class="app-header-inner">
+                <div class="app-brand">
+                    <p class="app-brand-title" data-i18n="nav_monthly">Monthly Report</p>
+                    <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                </div>
+                <div class="app-header-actions">
+                    <a href="../../index.html" class="back-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                        <span data-tx="back_to_playbook">Voltar</span>
+                    </a>
+                    <div class="lang-switch" role="group" aria-label="Language">
+                        <button type="button" data-lang="pt">PT</button>
+                        <button type="button" data-lang="en">EN</button>
+                        <button type="button" data-lang="es">ES</button>
+                    </div>
+                    <button id="btn-refresh" onclick="refreshData()" style="
+                      background:#1f6feb; color:#fff; border:none;
+                      padding:6px 14px; border-radius:6px; cursor:pointer;
+                      font-family:'DM Sans',sans-serif; font-size:13px;
+                      display:flex; align-items:center; gap:6px;
+                    ">
+                      <span>↻</span>
+                      <span data-i18n="btn_refresh">Atualizar</span>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-sm no-print" onclick="exportCurrentPagePdf()" data-i18n="btn_export_pdf">Exportar PDF</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="app-nav" aria-label="Dashboard pages">
+            <div class="app-nav-inner">
+                <a href="page2-backlog.html" data-i18n="nav_backlog">Daily</a>
+                <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
+                <a href="page5-monthly.html" class="is-active" data-i18n="nav_monthly">Monthly</a>
+            </div>
+        </nav>
+
+        <main class="app-main">
+            <section class="filter-bar" aria-label="Filtros">
+                <div class="filter-field">
+                    <label for="filter-region" data-i18n="filter_region">Região</label>
+                    <select id="filter-region" data-filter="region"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
+                    <select id="filter-priority" data-filter="priority"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-type" data-i18n="filter_type">Tipo</label>
+                    <select id="filter-type" data-filter="type"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-product" data-i18n="filter_product">Produto</label>
+                    <select id="filter-product" data-filter="product"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-date-from" data-i18n="filter_period">Período</label>
+                    <input type="date" id="filter-date-from" data-filter="dateFrom" placeholder="dd/mm/aaaa">
+                </div>
+                <div class="filter-field">
+                    <label for="filter-date-to" data-tx="to_label">Até</label>
+                    <input type="date" id="filter-date-to" data-filter="dateTo" placeholder="dd/mm/aaaa">
+                </div>
+                <div class="filter-field">
+                    <label for="filter-month-year" data-tx="filter_month_year">Mês/Ano</label>
+                    <select id="filter-month-year"></select>
+                </div>
+                <div class="filter-field">
+                    <label data-i18n="filter_agent_group">Grupo do Agente</label>
+                    <div id="filter-agent-groups" class="multi-select-group"
+                         style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply">Aplicar</button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="btn-clear" data-tx="btn_clear">Limpar</button>
+                </div>
+            </section>
+
+            <div id="error-banner" class="banner-error" style="display:none;">
+                <span id="error-banner-text"></span>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-retry" style="margin-left:12px" data-tx="btn_retry">Tentar novamente</button>
+            </div>
+
+            <div id="loading" class="loading-block">
+                <div class="spinner loading-spinner" aria-hidden="true"></div>
+                <p data-i18n="loading">Carregando dados...</p>
+            </div>
+
+            <div id="page-body" style="display:none;">
+                <section class="tier-heading">
+                    <div>
+                        <p class="tier-kicker" data-tx="monthly_kicker">Monthly</p>
+                        <h2 data-tx="monthly_title">Resumo executivo do mes <span id="month-title">--</span></h2>
+                        <p class="tier-audience" data-i18n="audience_monthly">Gerente + Diretor</p>
+                    </div>
+                    <span class="badge" id="monthly-sla-badge">--</span>
+                </section>
+
+                <section class="kpi-strip executive-kpi-grid">
+                    <article class="card executive-kpi-card">
+                        <div class="kpi-label" data-tx="kpi_sla">SLA Compliance</div>
+                        <div class="kpi-number mono" id="monthly-kpi-sla">--</div>
+                    </article>
+                    <article class="card executive-kpi-card">
+                        <div class="kpi-label" data-tx="kpi_closed">Tickets fechados</div>
+                        <div class="kpi-number mono" id="monthly-kpi-closed">--</div>
+                    </article>
+                    <article class="card executive-kpi-card">
+                        <div class="kpi-label" data-tx="kpi_mtfc">MTFC</div>
+                        <div class="kpi-number mono" id="monthly-kpi-mtfc">--</div>
+                    </article>
+                    <article class="card executive-kpi-card">
+                        <div class="kpi-label" data-tx="kpi_mtts">MTTS</div>
+                        <div class="kpi-number mono" id="monthly-kpi-mtts">--</div>
+                    </article>
+                    <article class="card executive-kpi-card">
+                        <div class="kpi-label" data-tx="kpi_backlog">Backlog atual</div>
+                        <div class="kpi-number mono" id="monthly-kpi-backlog">--</div>
+                    </article>
+                </section>
+
+                <section class="executive-layout">
+                    <article class="card chart-card executive-backlog-card">
+                        <h3 data-tx="sec_backlog">Backlog por regiao</h3>
+                        <div class="chart-canvas-wrap" style="min-height: 300px"><canvas id="chart-monthly-backlog"></canvas></div>
+                    </article>
+                </section>
+
+                <div class="monthly-legacy" style="display:none;">
+                <h3 class="section-title" data-tx="sec_table">Resumo por Região — <span id="month-title-legacy">--</span></h3>
+                <section class="card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-tx="col_region">Região</th>
+                                <th data-tx="col_sla">SLA %</th>
+                                <th data-tx="col_closed">Fechados</th>
+                                <th data-tx="col_mtfc">MTFC</th>
+                                <th data-tx="col_mtts">MTTS</th>
+                                <th data-tx="col_delta_sla">Δ SLA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthly-summary-tbody"></tbody>
+                    </table>
+                </section>
+
+                <h3 class="section-title" data-tx="sec_cards">Cards por Região</h3>
+                <section class="region-cards-grid" id="monthly-region-cards"></section>
+
+                <h3 class="section-title" data-tx="sec_trend">Tendência Global — últimos 6 meses</h3>
+                <section class="card chart-card">
+                    <div class="chart-canvas-wrap" style="min-height: 320px"><canvas id="chart-monthly-trend"></canvas></div>
+                </section>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer" data-tx="footer">Playbook Global · Global Service · KPI</footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="../../config/supabase.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/export-page.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/business-rules.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        const EXTRA_I18N = {
+            pt: {
+                monthly_kicker: 'Monthly', monthly_title: 'Resumo executivo do mes',
+                kpi_sla: 'SLA Compliance', kpi_closed: 'Tickets fechados',
+                kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Backlog atual',
+                sec_backlog: 'Backlog por regiao',
+                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
+                btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+                filter_month_year: 'Mês/Ano',
+                sec_table: 'Resumo por Região', sec_cards: 'Cards por Região',
+                sec_trend: 'Tendência Global — últimos 6 meses',
+                col_region: 'Região', col_sla: 'SLA %', col_closed: 'Fechados',
+                col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+                cell_created: 'Criados', cell_closed: 'Fechados', cell_backlog: 'Backlog',
+                cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
+                cell_delta_mtfc: 'Δ MTFC mês', cell_avg_aging: 'Aging médio backlog', cell_delta_mtts: 'Δ MTTS mês',
+                trend_sla: 'SLA %', trend_mtts: 'MTTS (dias)', trend_mtfc: 'MTFC (horas)',
+                region_global: 'Global', no_data: 'Sem dados suficientes',
+                badge_on_target: 'ON TARGET', badge_attention: 'Atenção', badge_critical: 'Crítico',
+                footer: 'Playbook Global · Global Service · KPI'
+            },
+            en: {
+                monthly_kicker: 'Monthly', monthly_title: 'Executive monthly summary',
+                kpi_sla: 'SLA Compliance', kpi_closed: 'Closed tickets',
+                kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Current backlog',
+                sec_backlog: 'Backlog by region',
+                brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
+                btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+                filter_month_year: 'Month/Year',
+                sec_table: 'Region Summary', sec_cards: 'Region Cards',
+                sec_trend: 'Global Trend — last 6 months',
+                col_region: 'Region', col_sla: 'SLA %', col_closed: 'Closed',
+                col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+                cell_created: 'Created', cell_closed: 'Closed', cell_backlog: 'Backlog',
+                cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
+                cell_delta_mtfc: 'Δ MTFC month', cell_avg_aging: 'Avg backlog aging', cell_delta_mtts: 'Δ MTTS month',
+                trend_sla: 'SLA %', trend_mtts: 'MTTS (days)', trend_mtfc: 'MTFC (hours)',
+                region_global: 'Global', no_data: 'Not enough data',
+                badge_on_target: 'ON TARGET', badge_attention: 'Attention', badge_critical: 'Critical',
+                footer: 'Global Playbook · Global Service · KPI'
+            },
+            es: {
+                monthly_kicker: 'Monthly', monthly_title: 'Resumen ejecutivo del mes',
+                kpi_sla: 'SLA Compliance', kpi_closed: 'Tickets cerrados',
+                kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Backlog actual',
+                sec_backlog: 'Backlog por region',
+                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
+                btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+                filter_month_year: 'Mes/Año',
+                sec_table: 'Resumen por Región', sec_cards: 'Tarjetas por Región',
+                sec_trend: 'Tendencia Global — últimos 6 meses',
+                col_region: 'Región', col_sla: 'SLA %', col_closed: 'Cerrados',
+                col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+                cell_created: 'Creados', cell_closed: 'Cerrados', cell_backlog: 'Backlog',
+                cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
+                cell_delta_mtfc: 'Δ MTFC mes', cell_avg_aging: 'Antigüedad media', cell_delta_mtts: 'Δ MTTS mes',
+                trend_sla: 'SLA %', trend_mtts: 'MTTS (días)', trend_mtfc: 'MTFC (horas)',
+                region_global: 'Global', no_data: 'Sin datos suficientes',
+                badge_on_target: 'ON TARGET', badge_attention: 'Atención', badge_critical: 'Crítico',
+                footer: 'Playbook Global · Global Service · KPI'
+            }
+        };
+
+        function tx(key) {
+            const lang = getLang();
+            return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || key;
+        }
+        function applyExtraI18n() {
+            document.querySelectorAll('[data-tx]').forEach(node => {
+                if (node.getAttribute('data-tx') === 'monthly_title') {
+                    let monthTitle = document.getElementById('month-title');
+                    if (!monthTitle) {
+                        monthTitle = document.createElement('span');
+                        monthTitle.id = 'month-title';
+                        monthTitle.textContent = '--';
+                    }
+                    node.textContent = '';
+                    node.appendChild(document.createTextNode(tx('monthly_title') + ' '));
+                    node.appendChild(monthTitle);
+                    return;
+                }
+                node.textContent = tx(node.getAttribute('data-tx'));
+            });
+        }
+
+        async function refreshData() {
+            clearCache();
+            rawData = [];
+            await init();
+        }
+
+        function renderAgentGroupFilter() {
+            const container = document.getElementById('filter-agent-groups');
+            if (!container) return;
+            const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
+            container.innerHTML = '';
+            AGENT_GROUPS.forEach(group => {
+                const checked = current.includes(group);
+                const btn = document.createElement('button');
+                btn.textContent = group;
+                btn.dataset.group = group;
+                btn.style.cssText = `
+                    padding:4px 10px; border-radius:20px; cursor:pointer;
+                    border:1px solid #30363d; font-size:12px;
+                    font-family:'DM Sans',sans-serif;
+                    background: ${checked ? '#1f6feb' : '#161b22'};
+                    color: ${checked ? '#fff' : '#7d8590'};
+                `;
+                btn.addEventListener('click', () => {
+                    const f = FilterState.get();
+                    const groups = f.agentGroups || [...DEFAULT_AGENT_GROUPS];
+                    const idx = groups.indexOf(group);
+                    if (idx >= 0) groups.splice(idx, 1);
+                    else groups.push(group);
+                    FilterState.update('agentGroups', groups);
+                    renderAgentGroupFilter();
+                    applyPage();
+                });
+                container.appendChild(btn);
+            });
+        }
+
+        const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
+        const REGION_FLAGS = {
+            Global: '🌐', Brasil: '🇧🇷', Argentina: '🇦🇷', 'México': '🇲🇽',
+            LATAM: '🌎', USA: '🇺🇸', ROW: '🌍'
+        };
+        const REGION_CARD_ORDER = ['Global','Brasil','Argentina','México','LATAM','USA','ROW'];
+
+        let rawData = [];
+
+        function showLoading(on) {
+            document.getElementById('loading').style.display = on ? '' : 'none';
+            document.getElementById('page-body').style.display = on ? 'none' : '';
+        }
+        function showError(msg) {
+            document.getElementById('error-banner-text').textContent = msg || tx('btn_retry');
+            document.getElementById('error-banner').style.display = '';
+            const overlayErr = document.getElementById('error-message');
+            if (overlayErr) { overlayErr.textContent = msg || tx('btn_retry'); overlayErr.style.display = 'block'; }
+            document.getElementById('page-body').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        }
+        function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+        function fmt(n, d) {
+            if (n === null || n === undefined || isNaN(n)) return '--';
+            return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+        function regionLabel(group) {
+            const map = { Brasil:'region_brazil', Argentina:'region_argentina', 'México':'region_mexico',
+                          LATAM:'region_latam', USA:'region_usa', ROW:'region_row' };
+            if (group === 'Global') return tx('region_global');
+            return t(map[group] || '') || group || '--';
+        }
+
+        function groupByMonth(tickets) {
+            const groups = {};
+            tickets.forEach(t => {
+                if (!t.closed_time) return;
+                const key = String(t.closed_time).substring(0, 7);
+                if (!key) return;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(t);
+            });
+            return groups;
+        }
+
+        function buildSelectOptions(select, values, defaultLabel) {
+            const current = select.value;
+            select.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = 'all'; optAll.textContent = defaultLabel;
+            select.appendChild(optAll);
+            values.forEach(v => {
+                if (!v || v === '-Nenhum-') return;
+                const opt = document.createElement('option');
+                opt.value = v; opt.textContent = v;
+                select.appendChild(opt);
+            });
+            if (current && [...select.options].some(o => o.value === current)) select.value = current;
+        }
+
+        function populateFilterOptions(data) {
+            const regionsAvailable = new Set();
+            data.forEach(d => { const g = REGION_MAP[d.region]; if (g) regionsAvailable.add(g); });
+            const regionSelect = document.getElementById('filter-region');
+            regionSelect.innerHTML = '';
+            const optAllR = document.createElement('option');
+            optAllR.value = 'all'; optAllR.textContent = t('filter_all');
+            regionSelect.appendChild(optAllR);
+            REGION_GROUPS.filter(g => regionsAvailable.has(g)).forEach(g => {
+                const o = document.createElement('option'); o.value = g; o.textContent = regionLabel(g);
+                regionSelect.appendChild(o);
+            });
+
+            const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
+                .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
+            buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
+            buildSelectOptions(document.getElementById('filter-type'),
+                [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
+            buildSelectOptions(document.getElementById('filter-product'),
+                [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
+
+            const months = Object.keys(groupByMonth(data)).sort().reverse();
+            const monthSelect = document.getElementById('filter-month-year');
+            const currentMonth = monthSelect.value;
+            monthSelect.innerHTML = '';
+            months.forEach(m => {
+                const o = document.createElement('option');
+                o.value = m; o.textContent = m;
+                monthSelect.appendChild(o);
+            });
+            if (currentMonth && months.includes(currentMonth)) {
+                monthSelect.value = currentMonth;
+            } else if (months.length) {
+                monthSelect.value = months[0];
+            }
+
+            const state = FilterState.get();
+            ['region','priority','type','product','dateFrom','dateTo'].forEach(key => {
+                const input = document.querySelector(`[data-filter="${key}"]`);
+                if (!input) return;
+                if (input.type === 'date') input.value = state[key] || '';
+                else if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
+            });
+            renderAgentGroupFilter();
+        }
+
+        function bindFilterControls() {
+            document.getElementById('btn-apply').addEventListener('click', () => {
+                const next = {};
+                document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
+                FilterState.set(next);
+                applyPage();
+            });
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                FilterState.reset();
+                document.querySelectorAll('[data-filter]').forEach(i => {
+                    i.value = i.tagName === 'SELECT' ? 'all' : '';
+                });
+                applyPage();
+            });
+            document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+            document.getElementById('filter-month-year').addEventListener('change', applyPage);
+        }
+
+        function prevMonthKey(key) {
+            const [y, m] = key.split('-').map(Number);
+            const d = new Date(Date.UTC(y, m - 2, 1));
+            const yy = d.getUTCFullYear();
+            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+            return `${yy}-${mm}`;
+        }
+
+        function deltaCell(curr, prev, inverted) {
+            if (!isFinite(curr) || !isFinite(prev) || prev === 0) {
+                return { html: '<span class="delta-neutral">--</span>', delta: null };
+            }
+            const delta = ((curr - prev) / prev) * 100;
+            const improved = inverted ? delta < 0 : delta > 0;
+            if (Math.abs(delta) < 0.5) return { html: `<span class="delta-neutral">±${fmt(delta, 2)}%</span>`, delta };
+            const cls = improved ? 'delta-down' : 'delta-up';
+            const arrow = delta > 0 ? '▲' : '▼';
+            return { html: `<span class="${cls}">${arrow} ${fmt(delta, 2)}%</span>`, delta };
+        }
+
+        function regionTicketsInMonth(tickets, regionGroup, monthKey) {
+            return tickets.filter(t => {
+                if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+                if (!t.closed_time) return false;
+                return String(t.closed_time).substring(0, 7) === monthKey;
+            });
+        }
+
+        function regionOpenBacklog(tickets, regionGroup) {
+            const now = new Date();
+            return tickets.filter(t => {
+                if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+                return !t.closed_time;
+            }).map(t => ({ ...t, _aging: (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24) }));
+        }
+
+        function regionCreatedInMonth(tickets, regionGroup, monthKey) {
+            return tickets.filter(t => {
+                if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+                return String(t.created_time || '').substring(0, 7) === monthKey;
+            });
+        }
+
+        function buildRegionCard(regionGroup, filteredAll, monthKey) {
+            const monthData = regionTicketsInMonth(filteredAll, regionGroup, monthKey);
+            const prevMonthData = regionTicketsInMonth(filteredAll, regionGroup, prevMonthKey(monthKey));
+            const created = regionCreatedInMonth(filteredAll, regionGroup, monthKey);
+            const open = regionOpenBacklog(filteredAll, regionGroup);
+            const m = computeMetrics(monthData);
+            const mp = computeMetrics(prevMonthData);
+
+            const slaCell = m.eligible ? `<span style="color:${colorHex(m.slaColor)}">${fmt(m.slaCompliance, 2)}%</span>` : '--';
+            const dMtfc = deltaCell(m.avgMtfc, mp.avgMtfc, true);
+            const dMtts = deltaCell(m.avgMtts, mp.avgMtts, true);
+            const avgAging = open.length ? open.reduce((s, t) => s + t._aging, 0) / open.length : 0;
+
+            const card = document.createElement('article');
+            card.className = 'card region-card';
+            card.innerHTML = `
+                <div class="region-card-head">
+                    <span class="region-flag" aria-hidden="true">${REGION_FLAGS[regionGroup] || '·'}</span>
+                    <h4>${regionLabel(regionGroup)}</h4>
+                </div>
+                <div class="region-summary">
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_created')}</span><span class="region-cell-value">${fmt(created.length, 0)}</span></div>
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_closed')}</span><span class="region-cell-value">${fmt(m.closed, 0)}</span></div>
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_backlog')}</span><span class="region-cell-value">${fmt(open.length, 0)}</span></div>
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_sla')}</span><span class="region-cell-value">${slaCell}</span></div>
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_mtfc')}</span><span class="region-cell-value">${m.closed ? fmt(m.avgMtfc, 2) + ' h' : '--'}</span></div>
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_mtts')}</span><span class="region-cell-value">${m.closed ? fmt(m.avgMtts, 2) + ' d' : '--'}</span></div>
+                </div>
+                <div class="region-trend">
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_delta_mtfc')}</span><span class="region-cell-value">${dMtfc.html}</span></div>
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_avg_aging')}</span><span class="region-cell-value">${open.length ? fmt(avgAging, 1) + ' d' : '--'}</span></div>
+                    <div class="region-cell"><span class="region-cell-label">${tx('cell_delta_mtts')}</span><span class="region-cell-value">${dMtts.html}</span></div>
+                </div>`;
+            return card;
+        }
+
+        function renderPage(filtered) {
+            const monthKey = document.getElementById('filter-month-year').value;
+            if (!monthKey) {
+                document.getElementById('month-title').textContent = '--';
+                destroyChart('chart-monthly-backlog');
+                return;
+            }
+            document.getElementById('month-title').textContent = monthKey;
+
+            const monthData = regionTicketsInMonth(filtered, 'Global', monthKey);
+            const metrics = computeMetrics(monthData);
+            const openBacklog = regionOpenBacklog(filtered, 'Global');
+            const noResponse = openBacklog.filter(ticket =>
+                !Number.isFinite(metricNumber(ticket.mtfc_horas_bi, ticket.mtfc_horas))
+            );
+
+            document.getElementById('monthly-kpi-sla').textContent =
+                metrics.eligible ? `${fmt(metrics.slaCompliance, 2)}%` : '--';
+            document.getElementById('monthly-kpi-closed').textContent = fmt(metrics.closed, 0);
+            document.getElementById('monthly-kpi-mtfc').textContent =
+                metrics.closed ? `${fmt(metrics.avgMtfc, 2)} h` : '--';
+            document.getElementById('monthly-kpi-mtts').textContent =
+                metrics.closed ? `${fmt(metrics.avgMtts, 2)} d` : '--';
+            document.getElementById('monthly-kpi-backlog').textContent = fmt(openBacklog.length, 0);
+
+            const badge = document.getElementById('monthly-sla-badge');
+            badge.textContent = metrics.eligible
+                ? (metrics.slaCompliance >= 80 ? tx('badge_on_target') : metrics.slaCompliance >= 50 ? tx('badge_attention') : tx('badge_critical'))
+                : '--';
+            badge.className = `badge ${
+                metrics.slaCompliance >= 80 ? 'badge-green' :
+                metrics.slaCompliance >= 50 ? 'badge-yellow' :
+                'badge-red'
+            }`;
+
+            const labels = REGION_GROUPS.filter(region =>
+                openBacklog.some(ticket => getTicketRegionGroup(ticket) === region)
+            );
+            createStackedBarChart('chart-monthly-backlog', labels, [
+                {
+                    label: t('with_first_response'),
+                    data: labels.map(region => openBacklog.filter(ticket =>
+                        getTicketRegionGroup(ticket) === region &&
+                        Number.isFinite(metricNumber(ticket.mtfc_horas_bi, ticket.mtfc_horas))
+                    ).length),
+                    backgroundColor: colorHex('green'),
+                    borderRadius: 6,
+                    borderSkipped: false
+                },
+                {
+                    label: t('without_first_response'),
+                    data: labels.map(region => noResponse.filter(ticket =>
+                        getTicketRegionGroup(ticket) === region
+                    ).length),
+                    backgroundColor: colorHex('red'),
+                    borderRadius: 6,
+                    borderSkipped: false
+                }
+            ], tx('sec_backlog'));
+        }
+
+        function applyPage() {
+            applyExtraI18n();
+            if (!rawData.length) return;
+            const filters = { ...FilterState.get(), dateFrom: '', dateTo: '' };
+            renderPage(applyFilters(rawData, filters));
+        }
+
+        async function init() {
+            hideError();
+            showLoading(true);
+            bindFilterControls();
+            try {
+                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
+                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+                }
+                rawData = (await fetchDashboardBiTickets()).tickets;
+                populateFilterOptions(rawData);
+                applyExtraI18n();
+                showLoading(false);
+                applyPage();
+            } catch (e) {
+                showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
+            }
+        }
+
+        document.addEventListener('filterschange', applyPage);
+        document.addEventListener('langchange', () => {
+            applyExtraI18n();
+            if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
+        });
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
