@@ -49,6 +49,37 @@ const MTTS_TARGET_BY_REGION = {
 const MTFC_TARGET_DEFAULT = 3;
 const MTTS_DEFAULT_TARGET = 7 * 24;
 
+const EXCLUDED_DEPARTMENTS = ['1128522000008788112']; // Oficina — nunca mostrar
+
+// ─────────────────────────────────────────────────────
+// EXCLUDED_CONTACT_DOMAINS
+// Domínios de email do SOLICITANTE (campo email do ticket) que devem ser
+// excluídos de todos os cálculos de backlog e KPIs.
+// Motivo: são distribuidores/parceiros externos que não representam
+// atendimento operacional da Alliage.
+//   - unicorndenmart.com → distribuidor Índia (Unicorn Denmart)
+//   - webpeak.com.br     → fornecedor de TI (Webpeak)
+// Validado em 01/jun/2026: apenas 1 ticket aberto afetado (#237565).
+// ─────────────────────────────────────────────────────
+const EXCLUDED_CONTACT_DOMAINS = [
+    'unicorndenmart.com',
+    'webpeak.com.br'
+];
+
+// ─────────────────────────────────────────────────────
+// EXCLUDED_TICKET_NUMBERS
+// Tickets específicos excluídos manualmente por decisão operacional.
+//   - 220822 → ticket de teste/anomalia identificado em 01/jun/2026
+// ─────────────────────────────────────────────────────
+const EXCLUDED_TICKET_NUMBERS = ['220822'];
+
+function isExcludedTicket(ticket) {
+    if (EXCLUDED_TICKET_NUMBERS.includes(String(ticket.ticket_number || ''))) return true;
+    const email = (ticket.email || ticket.contact_email || '').toLowerCase().trim();
+    if (EXCLUDED_CONTACT_DOMAINS.some(domain => email.endsWith('@' + domain) || email.includes('@' + domain))) return true;
+    return false;
+}
+
 function slaColor(pct) {
     if (pct >= 80) return 'green';
     if (pct >= 50) return 'yellow';
@@ -212,12 +243,34 @@ function getTicketProduct(ticket) {
     return ticket.marca_produto || ticket.produtos || ticket.product || '';
 }
 
+function getTicketOperationalGroup(ticket, agent) {
+    const categoria = (ticket.categoria_custom || ticket.categoria || '').toLowerCase().trim();
+    const tipoAtend = (ticket.tipo_atendimento || '').toLowerCase().trim();
+    const agenteName = (agent?.first_name || '').trim();
+
+    if (categoria.includes('instala') || tipoAtend.includes('instala')) return 'Instalação';
+    if (agenteName === 'Geovana') return 'Instalação';
+
+    if (!agenteName || agenteName === '') return 'Sem dono';
+    if (['Alliage', 'Norberto'].includes(agenteName)) return 'Sem dono';
+
+    if (['Danielly', 'Contato'].includes(agenteName)) return 'Terceiro';
+
+    if (['Camila', 'Ademar'].includes(agenteName)) return 'Especialista';
+
+    return 'Suporte geral';
+}
+
 function getTicketAgentGroup(ticket) {
-    return ticket.grupo_operacional_agente || '';
+    if (ticket.grupo_operacional_agente) return ticket.grupo_operacional_agente;
+    const rawAgentName = ticket.agent_name || '';
+    const firstName = rawAgentName.split(' ')[0].trim();
+    return getTicketOperationalGroup(ticket, { first_name: firstName });
 }
 
 function applyFilters(tickets, filters) {
     return tickets.filter(t => {
+        if (isExcludedTicket(t)) return false;
         if (filters.region && filters.region !== 'all') {
             if (getTicketRegionGroup(t) !== filters.region) return false;
         }

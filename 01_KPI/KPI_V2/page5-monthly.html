@@ -7,45 +7,72 @@
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/layout.css">
     <style>
+        /* ── Local overrides ─────────────────────────────── */
         .data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-        .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--color-border); }
-        .data-table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); }
-        .data-table tbody tr:hover { background: rgba(31, 111, 235, 0.06); }
-        .region-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; margin-top: 12px; }
-        .region-card { display: flex; flex-direction: column; gap: 12px; }
-        .region-card-head { display: flex; align-items: center; gap: 10px; }
-        .region-flag { font-size: 1.6rem; line-height: 1; }
-        .region-card h4 { margin: 0; font-size: 1rem; }
-        .region-summary, .region-trend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-        .region-cell { display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); }
-        .region-cell-label { font-size: 0.66rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-        .region-cell-value { font-family: var(--font-mono); font-size: 0.96rem; font-weight: 600; }
+        .data-table th, .data-table td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--color-border); }
+        .data-table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); }
+        .data-table tbody tr:hover { background: rgba(31,111,235,0.05); }
         .delta-up { color: var(--color-red); }
         .delta-down { color: var(--color-green); }
         .delta-neutral { color: var(--color-text-muted); }
         .section-title { margin: 22px 0 10px; font-size: 1.05rem; }
+
+        /* ── Country filter ──────────────────────────────── */
+        .country-filter-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+        .country-btn {
+            padding: 4px 11px; border-radius: 20px; cursor: pointer;
+            border: 1px solid var(--color-border); background: var(--color-surface);
+            color: var(--color-text-muted); font-size: 12px;
+            font-family: var(--font-display); transition: background 0.15s, color 0.15s, border-color 0.15s;
+            white-space: nowrap;
+        }
+        .country-btn:hover { border-color: var(--color-primary); color: var(--color-text); }
+        .country-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+        .filter-field-countries { width: 100%; min-width: 100%; }
+
+        /* ── Charts grid ─────────────────────────────────── */
+        .charts-full { margin-top: 14px; }
+        .charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+        @media (max-width: 768px) { .charts-2col { grid-template-columns: 1fr; } }
+        .chart-card-sm { min-height: 280px; }
+        .chart-card-lg { min-height: 320px; }
+
+        /* ── Priority badges ─────────────────────────────── */
+        .badge-orange { background: rgba(229,111,29,.14); border: 1px solid rgba(229,111,29,.4); color: #e56f1d; }
+        .badge-blue   { background: rgba(56,139,253,.14);  border: 1px solid rgba(56,139,253,.4);  color: #388bfd; }
+        .badge-muted  { background: rgba(125,133,144,.10); border: 1px solid rgba(125,133,144,.22); color: #7d8590; }
+
+        /* ── Sortable columns ────────────────────────────── */
+        .data-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .data-table th.sortable:hover { color: var(--color-text); background: rgba(31,111,235,0.08); }
+        .data-table th.sortable .sort-icon { margin-left: 4px; font-size: 10px; color: var(--color-text-muted); }
+        .data-table th.sortable.sort-active .sort-icon { color: #1f6feb; }
+
+        /* ── Ticket link ─────────────────────────────────── */
+        .ticket-link { color: #388bfd; text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 2px; }
+        .ticket-link:hover { color: #58a6ff; text-decoration: underline; }
+
+        /* ── Print ───────────────────────────────────────── */
+        .print-only { display: none; }
+        @media print {
+            .print-only { display: block !important; margin-bottom: 18px; border-bottom: 1px solid #ccc; padding-bottom: 12px; }
+            .print-only h1 { font-size: 1.3rem; margin: 0 0 4px; color: #111; }
+            .print-only p  { font-size: 0.82rem; color: #555; margin: 0; }
+            .no-print { display: none !important; }
+            .banner-validity { display: flex !important; }
+            body { background: #fff !important; color: #111 !important; }
+            .card { background: #fff !important; border: 1px solid #ccc !important; }
+        }
     </style>
 </head>
 <body>
     <!-- Loading overlay -->
-    <div id="loading-overlay" style="
-      display:none; position:fixed; inset:0;
-      background:rgba(13,17,23,0.85);
-      justify-content:center; align-items:center;
-      z-index:9998; flex-direction:column; gap:16px;
-    ">
-      <div class="loading-spinner spinner"></div>
-      <p style="color:#e6edf3;font-family:'DM Sans',sans-serif"
-         data-i18n="loading">Carregando dados...</p>
+    <div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.85);justify-content:center;align-items:center;z-index:9998;flex-direction:column;gap:16px;">
+        <div class="loading-spinner spinner"></div>
+        <p style="color:#e6edf3;font-family:'DM Sans',sans-serif" data-i18n="loading">Carregando dados...</p>
     </div>
-
     <!-- Error message -->
-    <div id="error-message" style="
-      display:none; background:#E31424;
-      color:#fff; padding:16px 24px;
-      border-radius:8px; margin:20px;
-      font-family:'DM Sans',sans-serif;
-    "></div>
+    <div id="error-message" style="display:none;background:#E31424;color:#fff;padding:16px 24px;border-radius:8px;margin:20px;font-family:'DM Sans',sans-serif;"></div>
 
     <div class="dashboard-shell">
         <header class="app-header">
@@ -53,10 +80,11 @@
                 <div class="app-brand">
                     <p class="app-brand-title" data-i18n="nav_monthly">Monthly Report</p>
                     <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                    <p id="last-sync" style="font-size:0.7rem;color:var(--color-text-muted);margin:2px 0 0;opacity:.8;">--</p>
                 </div>
                 <div class="app-header-actions">
                     <a href="../../index.html" class="back-link">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                         <span data-tx="back_to_playbook">Voltar</span>
                     </a>
                     <div class="lang-switch" role="group" aria-label="Language">
@@ -64,15 +92,10 @@
                         <button type="button" data-lang="en">EN</button>
                         <button type="button" data-lang="es">ES</button>
                     </div>
-                    <button id="btn-refresh" onclick="refreshData()" style="
-                      background:#1f6feb; color:#fff; border:none;
-                      padding:6px 14px; border-radius:6px; cursor:pointer;
-                      font-family:'DM Sans',sans-serif; font-size:13px;
-                      display:flex; align-items:center; gap:6px;
-                    ">
-                      <span>↻</span>
-                      <span data-i18n="btn_refresh">Atualizar</span>
+                    <button id="btn-refresh" onclick="refreshData()" style="background:#1f6feb;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;display:flex;align-items:center;gap:6px;">
+                        <span>↻</span><span data-i18n="btn_refresh">Atualizar</span>
                     </button>
+                    <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-sm" title="Toggle theme" style="padding:6px 10px;font-size:15px;line-height:1;">🌙</button>
                     <button type="button" class="btn btn-ghost btn-sm no-print" onclick="exportCurrentPagePdf()" data-i18n="btn_export_pdf">Exportar PDF</button>
                 </div>
             </div>
@@ -85,12 +108,24 @@
                 <a href="page5-monthly.html" class="is-active" data-i18n="nav_monthly">Monthly</a>
             </div>
         </nav>
+        <div id="banner-validity" class="banner-validity">
+            <span class="banner-validity-icon" aria-hidden="true">⚠️</span>
+            <span id="banner-validity-text" class="banner-validity-text"></span>
+            <button class="banner-validity-close" aria-label="Fechar">×</button>
+        </div>
+
+        <!-- Print-only report header -->
+        <div class="print-only" id="print-header">
+            <h1 id="print-title">Monthly Report</h1>
+            <p id="print-meta"></p>
+        </div>
 
         <main class="app-main">
             <section class="filter-bar" aria-label="Filtros">
-                <div class="filter-field">
-                    <label for="filter-region" data-i18n="filter_region">Região</label>
-                    <select id="filter-region" data-filter="region"></select>
+                <!-- Country / Region filter (replaces region select) -->
+                <div class="filter-field filter-field-countries">
+                    <label data-tx="filter_country">País / Região</label>
+                    <div id="country-filter" class="country-filter-btns"></div>
                 </div>
                 <div class="filter-field">
                     <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
@@ -118,8 +153,7 @@
                 </div>
                 <div class="filter-field">
                     <label data-i18n="filter_agent_group">Grupo do Agente</label>
-                    <div id="filter-agent-groups" class="multi-select-group"
-                         style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+                    <div id="filter-agent-groups" class="multi-select-group" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
                 </div>
                 <div class="filter-actions">
                     <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply">Aplicar</button>
@@ -138,6 +172,7 @@
             </div>
 
             <div id="page-body" style="display:none;">
+                <!-- Tier heading -->
                 <section class="tier-heading">
                     <div>
                         <p class="tier-kicker" data-tx="monthly_kicker">Monthly</p>
@@ -147,6 +182,7 @@
                     <span class="badge" id="monthly-sla-badge">--</span>
                 </section>
 
+                <!-- KPI strip -->
                 <section class="kpi-strip executive-kpi-grid">
                     <article class="card executive-kpi-card">
                         <div class="kpi-label" data-tx="kpi_sla">SLA Compliance</div>
@@ -170,38 +206,80 @@
                     </article>
                 </section>
 
-                <section class="executive-layout">
-                    <article class="card chart-card executive-backlog-card">
-                        <h3 data-tx="sec_backlog">Backlog por regiao</h3>
-                        <div class="chart-canvas-wrap" style="min-height: 300px"><canvas id="chart-monthly-backlog"></canvas></div>
+                <!-- Chart 1: SLA% by region (full width) -->
+                <div class="charts-full">
+                    <article class="card chart-card chart-card-lg">
+                        <h3 data-tx="sec_sla_region">SLA Compliance por Região</h3>
+                        <div class="chart-canvas-wrap" style="min-height:300px"><canvas id="chart-monthly-sla"></canvas></div>
                     </article>
+                </div>
+
+                <!-- Charts 2+3: MTFC + MTTS side by side -->
+                <div class="charts-2col">
+                    <article class="card chart-card chart-card-sm">
+                        <h3 data-tx="sec_mtfc_region">MTFC Médio por Região (horas)</h3>
+                        <div class="chart-canvas-wrap" style="min-height:240px"><canvas id="chart-monthly-mtfc"></canvas></div>
+                    </article>
+                    <article class="card chart-card chart-card-sm">
+                        <h3 data-tx="sec_mtts_region">MTTS Médio por Região (dias)</h3>
+                        <div class="chart-canvas-wrap" style="min-height:240px"><canvas id="chart-monthly-mtts"></canvas></div>
+                    </article>
+                </div>
+
+                <!-- Chart 4: Backlog (full width) -->
+                <div class="charts-full" style="margin-top:14px;">
+                    <article class="card chart-card executive-backlog-card">
+                        <h3 data-tx="sec_backlog">Backlog por Região</h3>
+                        <div class="chart-canvas-wrap" style="min-height:300px"><canvas id="chart-monthly-backlog"></canvas></div>
+                    </article>
+                </div>
+
+                <!-- Closed tickets table (no-print) -->
+                <section class="card no-print" id="closed-tickets-section" style="margin-top:18px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                        <div>
+                            <h3 id="closed-tickets-title" style="margin:0 0 2px">Tickets Fechados</h3>
+                            <span id="closed-tickets-count" class="text-muted" style="font-size:0.82rem;"></span>
+                        </div>
+                        <input type="text" id="ticket-search"
+                               style="padding:7px 12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);font-size:0.84rem;width:220px;"
+                               data-tx-placeholder="search_ticket_placeholder" placeholder="Buscar ticket #..."
+                               oninput="updateTicketSearch(this.value)">
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="ticket_number" data-tx="col_ticket_n">Ticket #<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="regiao_grupo" data-tx="col_country">País/Região<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="priority_standard" data-tx="col_priority">Prioridade<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="mtfc_horas_bi" data-tx="col_mtfc_h">MTFC<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="mtts_dias_bi" data-tx="col_mtts_d">MTTS<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="sla_status_bi" data-tx="col_sla_status">SLA<span class="sort-icon">↕</span></th>
+                                    <th class="sortable sort-active" data-sort="closed_time" data-tx="col_closed_date">Data Fechamento<span class="sort-icon">↓</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="closed-tickets-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <span id="closed-pagination-info">--</span>
+                        <button type="button" class="btn btn-ghost btn-sm" id="closed-prev">Anterior</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="closed-next">Próximo</button>
+                    </div>
                 </section>
 
+                <!-- Legacy sections (hidden) -->
                 <div class="monthly-legacy" style="display:none;">
-                <h3 class="section-title" data-tx="sec_table">Resumo por Região — <span id="month-title-legacy">--</span></h3>
-                <section class="card">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th data-tx="col_region">Região</th>
-                                <th data-tx="col_sla">SLA %</th>
-                                <th data-tx="col_closed">Fechados</th>
-                                <th data-tx="col_mtfc">MTFC</th>
-                                <th data-tx="col_mtts">MTTS</th>
-                                <th data-tx="col_delta_sla">Δ SLA</th>
-                            </tr>
-                        </thead>
-                        <tbody id="monthly-summary-tbody"></tbody>
-                    </table>
-                </section>
-
-                <h3 class="section-title" data-tx="sec_cards">Cards por Região</h3>
-                <section class="region-cards-grid" id="monthly-region-cards"></section>
-
-                <h3 class="section-title" data-tx="sec_trend">Tendência Global — últimos 6 meses</h3>
-                <section class="card chart-card">
-                    <div class="chart-canvas-wrap" style="min-height: 320px"><canvas id="chart-monthly-trend"></canvas></div>
-                </section>
+                    <section class="card">
+                        <table class="data-table"><thead><tr>
+                            <th data-tx="col_region">Região</th><th data-tx="col_sla">SLA %</th>
+                            <th data-tx="col_closed">Fechados</th><th data-tx="col_mtfc">MTFC</th>
+                            <th data-tx="col_mtts">MTTS</th><th data-tx="col_delta_sla">Δ SLA</th>
+                        </tr></thead><tbody id="monthly-summary-tbody"></tbody></table>
+                    </section>
+                    <section class="region-cards-grid" id="monthly-region-cards"></section>
+                    <section class="card chart-card"><div class="chart-canvas-wrap" style="min-height:320px"><canvas id="chart-monthly-trend"></canvas></div></section>
                 </div>
             </div>
         </main>
@@ -218,423 +296,705 @@
     <script src="js/business-rules.js"></script>
     <script src="js/charts.js"></script>
     <script>
-        const EXTRA_I18N = {
-            pt: {
-                monthly_kicker: 'Monthly', monthly_title: 'Resumo executivo do mes',
-                kpi_sla: 'SLA Compliance', kpi_closed: 'Tickets fechados',
-                kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Backlog atual',
-                sec_backlog: 'Backlog por regiao',
-                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
-                btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
-                filter_month_year: 'Mês/Ano',
-                sec_table: 'Resumo por Região', sec_cards: 'Cards por Região',
-                sec_trend: 'Tendência Global — últimos 6 meses',
-                col_region: 'Região', col_sla: 'SLA %', col_closed: 'Fechados',
-                col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
-                cell_created: 'Criados', cell_closed: 'Fechados', cell_backlog: 'Backlog',
-                cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
-                cell_delta_mtfc: 'Δ MTFC mês', cell_avg_aging: 'Aging médio backlog', cell_delta_mtts: 'Δ MTTS mês',
-                trend_sla: 'SLA %', trend_mtts: 'MTTS (dias)', trend_mtfc: 'MTFC (horas)',
-                region_global: 'Global', no_data: 'Sem dados suficientes',
-                badge_on_target: 'ON TARGET', badge_attention: 'Atenção', badge_critical: 'Crítico',
-                footer: 'Playbook Global · Global Service · KPI'
-            },
-            en: {
-                monthly_kicker: 'Monthly', monthly_title: 'Executive monthly summary',
-                kpi_sla: 'SLA Compliance', kpi_closed: 'Closed tickets',
-                kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Current backlog',
-                sec_backlog: 'Backlog by region',
-                brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
-                btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
-                filter_month_year: 'Month/Year',
-                sec_table: 'Region Summary', sec_cards: 'Region Cards',
-                sec_trend: 'Global Trend — last 6 months',
-                col_region: 'Region', col_sla: 'SLA %', col_closed: 'Closed',
-                col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
-                cell_created: 'Created', cell_closed: 'Closed', cell_backlog: 'Backlog',
-                cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
-                cell_delta_mtfc: 'Δ MTFC month', cell_avg_aging: 'Avg backlog aging', cell_delta_mtts: 'Δ MTTS month',
-                trend_sla: 'SLA %', trend_mtts: 'MTTS (days)', trend_mtfc: 'MTFC (hours)',
-                region_global: 'Global', no_data: 'Not enough data',
-                badge_on_target: 'ON TARGET', badge_attention: 'Attention', badge_critical: 'Critical',
-                footer: 'Global Playbook · Global Service · KPI'
-            },
-            es: {
-                monthly_kicker: 'Monthly', monthly_title: 'Resumen ejecutivo del mes',
-                kpi_sla: 'SLA Compliance', kpi_closed: 'Tickets cerrados',
-                kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Backlog actual',
-                sec_backlog: 'Backlog por region',
-                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
-                btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
-                filter_month_year: 'Mes/Año',
-                sec_table: 'Resumen por Región', sec_cards: 'Tarjetas por Región',
-                sec_trend: 'Tendencia Global — últimos 6 meses',
-                col_region: 'Región', col_sla: 'SLA %', col_closed: 'Cerrados',
-                col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
-                cell_created: 'Creados', cell_closed: 'Cerrados', cell_backlog: 'Backlog',
-                cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
-                cell_delta_mtfc: 'Δ MTFC mes', cell_avg_aging: 'Antigüedad media', cell_delta_mtts: 'Δ MTTS mes',
-                trend_sla: 'SLA %', trend_mtts: 'MTTS (días)', trend_mtfc: 'MTFC (horas)',
-                region_global: 'Global', no_data: 'Sin datos suficientes',
-                badge_on_target: 'ON TARGET', badge_attention: 'Atención', badge_critical: 'Crítico',
-                footer: 'Playbook Global · Global Service · KPI'
-            }
-        };
-
-        function tx(key) {
-            const lang = getLang();
-            return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || key;
+    // ──────────────────────────────────────────────────────────
+    // TRANSLATIONS
+    // ──────────────────────────────────────────────────────────
+    const EXTRA_I18N = {
+        pt: {
+            monthly_kicker: 'Monthly', monthly_title: 'Resumo executivo do mes',
+            kpi_sla: 'SLA Compliance', kpi_closed: 'Tickets fechados',
+            kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Backlog atual',
+            sec_sla_region: 'SLA Compliance por Região',
+            sec_mtfc_region: 'MTFC Médio por Região (horas)',
+            sec_mtts_region: 'MTTS Médio por Região (dias)',
+            sec_backlog: 'Backlog por Região',
+            sec_closed_tickets: 'Tickets Fechados',
+            search_ticket_placeholder: 'Buscar ticket #...',
+            brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
+            btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+            filter_month_year: 'Mês/Ano', filter_country: 'País / Região', country_all: 'Todos',
+            col_ticket_n: 'Ticket #', col_country: 'País/Região', col_priority: 'Prioridade',
+            col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Data Fechamento',
+            sla_within: '✓ Dentro', sla_outside: '✗ Fora', sla_na: '— N/A',
+            badge_on_target: 'ON TARGET', badge_attention: 'Atenção', badge_critical: 'Crítico',
+            region_global: 'Global', no_data: 'Sem dados suficientes',
+            sec_table: 'Resumo por Região', sec_cards: 'Cards por Região',
+            sec_trend: 'Tendência Global', col_region: 'Região', col_sla: 'SLA %',
+            col_closed: 'Fechados', col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+            cell_created: 'Criados', cell_closed: 'Fechados', cell_backlog: 'Backlog',
+            cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
+            cell_delta_mtfc: 'Δ MTFC mês', cell_avg_aging: 'Aging médio backlog', cell_delta_mtts: 'Δ MTTS mês',
+            trend_sla: 'SLA %', trend_mtts: 'MTTS (dias)', trend_mtfc: 'MTFC (horas)',
+            footer: 'Playbook Global · Global Service · KPI',
+            target_label: 'Meta 80%'
+        },
+        en: {
+            monthly_kicker: 'Monthly', monthly_title: 'Executive monthly summary',
+            kpi_sla: 'SLA Compliance', kpi_closed: 'Closed tickets',
+            kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Current backlog',
+            sec_sla_region: 'SLA Compliance by Region',
+            sec_mtfc_region: 'Average MTFC by Region (hours)',
+            sec_mtts_region: 'Average MTTS by Region (days)',
+            sec_backlog: 'Backlog by Region',
+            sec_closed_tickets: 'Closed Tickets',
+            search_ticket_placeholder: 'Search ticket #...',
+            brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
+            btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+            filter_month_year: 'Month/Year', filter_country: 'Country / Region', country_all: 'All',
+            col_ticket_n: 'Ticket #', col_country: 'Country/Region', col_priority: 'Priority',
+            col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Close Date',
+            sla_within: '✓ Within', sla_outside: '✗ Outside', sla_na: '— N/A',
+            badge_on_target: 'ON TARGET', badge_attention: 'Attention', badge_critical: 'Critical',
+            region_global: 'Global', no_data: 'Not enough data',
+            sec_table: 'Region Summary', sec_cards: 'Region Cards', sec_trend: 'Global Trend',
+            col_region: 'Region', col_sla: 'SLA %', col_closed: 'Closed',
+            col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+            cell_created: 'Created', cell_closed: 'Closed', cell_backlog: 'Backlog',
+            cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
+            cell_delta_mtfc: 'Δ MTFC month', cell_avg_aging: 'Avg backlog aging', cell_delta_mtts: 'Δ MTTS month',
+            trend_sla: 'SLA %', trend_mtts: 'MTTS (days)', trend_mtfc: 'MTFC (hours)',
+            footer: 'Global Playbook · Global Service · KPI',
+            target_label: 'Target 80%'
+        },
+        es: {
+            monthly_kicker: 'Monthly', monthly_title: 'Resumen ejecutivo del mes',
+            kpi_sla: 'SLA Compliance', kpi_closed: 'Tickets cerrados',
+            kpi_mtfc: 'MTFC', kpi_mtts: 'MTTS', kpi_backlog: 'Backlog actual',
+            sec_sla_region: 'SLA Compliance por Región',
+            sec_mtfc_region: 'MTFC Promedio por Región (horas)',
+            sec_mtts_region: 'MTTS Promedio por Región (días)',
+            sec_backlog: 'Backlog por Región',
+            sec_closed_tickets: 'Tickets Cerrados',
+            search_ticket_placeholder: 'Buscar ticket #...',
+            brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
+            btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+            filter_month_year: 'Mes/Año', filter_country: 'País / Región', country_all: 'Todos',
+            col_ticket_n: 'Ticket #', col_country: 'País/Región', col_priority: 'Prioridad',
+            col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Fecha Cierre',
+            sla_within: '✓ Dentro', sla_outside: '✗ Fuera', sla_na: '— N/A',
+            badge_on_target: 'ON TARGET', badge_attention: 'Atención', badge_critical: 'Crítico',
+            region_global: 'Global', no_data: 'Sin datos suficientes',
+            sec_table: 'Resumen por Región', sec_cards: 'Tarjetas por Región', sec_trend: 'Tendencia Global',
+            col_region: 'Región', col_sla: 'SLA %', col_closed: 'Cerrados',
+            col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+            cell_created: 'Creados', cell_closed: 'Cerrados', cell_backlog: 'Backlog',
+            cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
+            cell_delta_mtfc: 'Δ MTFC mes', cell_avg_aging: 'Antigüedad media', cell_delta_mtts: 'Δ MTTS mes',
+            trend_sla: 'SLA %', trend_mtts: 'MTTS (días)', trend_mtfc: 'MTFC (horas)',
+            footer: 'Playbook Global · Global Service · KPI',
+            target_label: 'Meta 80%'
         }
-        function applyExtraI18n() {
-            document.querySelectorAll('[data-tx]').forEach(node => {
-                if (node.getAttribute('data-tx') === 'monthly_title') {
-                    let monthTitle = document.getElementById('month-title');
-                    if (!monthTitle) {
-                        monthTitle = document.createElement('span');
-                        monthTitle.id = 'month-title';
-                        monthTitle.textContent = '--';
-                    }
-                    node.textContent = '';
-                    node.appendChild(document.createTextNode(tx('monthly_title') + ' '));
-                    node.appendChild(monthTitle);
-                    return;
-                }
-                node.textContent = tx(node.getAttribute('data-tx'));
-            });
-        }
+    };
 
-        async function refreshData() {
-            clearCache();
-            rawData = [];
-            await init();
-        }
+    // ──────────────────────────────────────────────────────────
+    // I18N HELPERS
+    // ──────────────────────────────────────────────────────────
+    function tx(key) {
+        const lang = getLang();
+        return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || t(key) || key;
+    }
 
-        function renderAgentGroupFilter() {
-            const container = document.getElementById('filter-agent-groups');
-            if (!container) return;
-            const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
-            container.innerHTML = '';
-            AGENT_GROUPS.forEach(group => {
-                const checked = current.includes(group);
-                const btn = document.createElement('button');
-                btn.textContent = group;
-                btn.dataset.group = group;
-                btn.style.cssText = `
-                    padding:4px 10px; border-radius:20px; cursor:pointer;
-                    border:1px solid #30363d; font-size:12px;
-                    font-family:'DM Sans',sans-serif;
-                    background: ${checked ? '#1f6feb' : '#161b22'};
-                    color: ${checked ? '#fff' : '#7d8590'};
-                `;
-                btn.addEventListener('click', () => {
-                    const f = FilterState.get();
-                    const groups = f.agentGroups || [...DEFAULT_AGENT_GROUPS];
-                    const idx = groups.indexOf(group);
-                    if (idx >= 0) groups.splice(idx, 1);
-                    else groups.push(group);
-                    FilterState.update('agentGroups', groups);
-                    renderAgentGroupFilter();
-                    applyPage();
-                });
-                container.appendChild(btn);
-            });
-        }
-
-        const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
-        const REGION_FLAGS = {
-            Global: '🌐', Brasil: '🇧🇷', Argentina: '🇦🇷', 'México': '🇲🇽',
-            LATAM: '🌎', USA: '🇺🇸', ROW: '🌍'
-        };
-        const REGION_CARD_ORDER = ['Global','Brasil','Argentina','México','LATAM','USA','ROW'];
-
-        let rawData = [];
-
-        function showLoading(on) {
-            document.getElementById('loading').style.display = on ? '' : 'none';
-            document.getElementById('page-body').style.display = on ? 'none' : '';
-        }
-        function showError(msg) {
-            document.getElementById('error-banner-text').textContent = msg || tx('btn_retry');
-            document.getElementById('error-banner').style.display = '';
-            const overlayErr = document.getElementById('error-message');
-            if (overlayErr) { overlayErr.textContent = msg || tx('btn_retry'); overlayErr.style.display = 'block'; }
-            document.getElementById('page-body').style.display = 'none';
-            document.getElementById('loading').style.display = 'none';
-        }
-        function hideError() { document.getElementById('error-banner').style.display = 'none'; }
-        function fmt(n, d) {
-            if (n === null || n === undefined || isNaN(n)) return '--';
-            return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-        }
-        function regionLabel(group) {
-            const map = { Brasil:'region_brazil', Argentina:'region_argentina', 'México':'region_mexico',
-                          LATAM:'region_latam', USA:'region_usa', ROW:'region_row' };
-            if (group === 'Global') return tx('region_global');
-            return t(map[group] || '') || group || '--';
-        }
-
-        function groupByMonth(tickets) {
-            const groups = {};
-            tickets.forEach(t => {
-                if (!t.closed_time) return;
-                const key = String(t.closed_time).substring(0, 7);
-                if (!key) return;
-                if (!groups[key]) groups[key] = [];
-                groups[key].push(t);
-            });
-            return groups;
-        }
-
-        function buildSelectOptions(select, values, defaultLabel) {
-            const current = select.value;
-            select.innerHTML = '';
-            const optAll = document.createElement('option');
-            optAll.value = 'all'; optAll.textContent = defaultLabel;
-            select.appendChild(optAll);
-            values.forEach(v => {
-                if (!v || v === '-Nenhum-') return;
-                const opt = document.createElement('option');
-                opt.value = v; opt.textContent = v;
-                select.appendChild(opt);
-            });
-            if (current && [...select.options].some(o => o.value === current)) select.value = current;
-        }
-
-        function populateFilterOptions(data) {
-            const regionsAvailable = new Set();
-            data.forEach(d => { const g = REGION_MAP[d.region]; if (g) regionsAvailable.add(g); });
-            const regionSelect = document.getElementById('filter-region');
-            regionSelect.innerHTML = '';
-            const optAllR = document.createElement('option');
-            optAllR.value = 'all'; optAllR.textContent = t('filter_all');
-            regionSelect.appendChild(optAllR);
-            REGION_GROUPS.filter(g => regionsAvailable.has(g)).forEach(g => {
-                const o = document.createElement('option'); o.value = g; o.textContent = regionLabel(g);
-                regionSelect.appendChild(o);
-            });
-
-            const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
-                .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
-            buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
-            buildSelectOptions(document.getElementById('filter-type'),
-                [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
-            buildSelectOptions(document.getElementById('filter-product'),
-                [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
-
-            const months = Object.keys(groupByMonth(data)).sort().reverse();
-            const monthSelect = document.getElementById('filter-month-year');
-            const currentMonth = monthSelect.value;
-            monthSelect.innerHTML = '';
-            months.forEach(m => {
-                const o = document.createElement('option');
-                o.value = m; o.textContent = m;
-                monthSelect.appendChild(o);
-            });
-            if (currentMonth && months.includes(currentMonth)) {
-                monthSelect.value = currentMonth;
-            } else if (months.length) {
-                monthSelect.value = months[0];
-            }
-
-            const state = FilterState.get();
-            ['region','priority','type','product','dateFrom','dateTo'].forEach(key => {
-                const input = document.querySelector(`[data-filter="${key}"]`);
-                if (!input) return;
-                if (input.type === 'date') input.value = state[key] || '';
-                else if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
-            });
-            renderAgentGroupFilter();
-        }
-
-        function bindFilterControls() {
-            document.getElementById('btn-apply').addEventListener('click', () => {
-                const next = {};
-                document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
-                FilterState.set(next);
-                applyPage();
-            });
-            document.getElementById('btn-clear').addEventListener('click', () => {
-                FilterState.reset();
-                document.querySelectorAll('[data-filter]').forEach(i => {
-                    i.value = i.tagName === 'SELECT' ? 'all' : '';
-                });
-                applyPage();
-            });
-            document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
-            document.getElementById('filter-month-year').addEventListener('change', applyPage);
-        }
-
-        function prevMonthKey(key) {
-            const [y, m] = key.split('-').map(Number);
-            const d = new Date(Date.UTC(y, m - 2, 1));
-            const yy = d.getUTCFullYear();
-            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-            return `${yy}-${mm}`;
-        }
-
-        function deltaCell(curr, prev, inverted) {
-            if (!isFinite(curr) || !isFinite(prev) || prev === 0) {
-                return { html: '<span class="delta-neutral">--</span>', delta: null };
-            }
-            const delta = ((curr - prev) / prev) * 100;
-            const improved = inverted ? delta < 0 : delta > 0;
-            if (Math.abs(delta) < 0.5) return { html: `<span class="delta-neutral">±${fmt(delta, 2)}%</span>`, delta };
-            const cls = improved ? 'delta-down' : 'delta-up';
-            const arrow = delta > 0 ? '▲' : '▼';
-            return { html: `<span class="${cls}">${arrow} ${fmt(delta, 2)}%</span>`, delta };
-        }
-
-        function regionTicketsInMonth(tickets, regionGroup, monthKey) {
-            return tickets.filter(t => {
-                if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
-                if (!t.closed_time) return false;
-                return String(t.closed_time).substring(0, 7) === monthKey;
-            });
-        }
-
-        function regionOpenBacklog(tickets, regionGroup) {
-            const now = new Date();
-            return tickets.filter(t => {
-                if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
-                return !t.closed_time;
-            }).map(t => ({ ...t, _aging: (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24) }));
-        }
-
-        function regionCreatedInMonth(tickets, regionGroup, monthKey) {
-            return tickets.filter(t => {
-                if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
-                return String(t.created_time || '').substring(0, 7) === monthKey;
-            });
-        }
-
-        function buildRegionCard(regionGroup, filteredAll, monthKey) {
-            const monthData = regionTicketsInMonth(filteredAll, regionGroup, monthKey);
-            const prevMonthData = regionTicketsInMonth(filteredAll, regionGroup, prevMonthKey(monthKey));
-            const created = regionCreatedInMonth(filteredAll, regionGroup, monthKey);
-            const open = regionOpenBacklog(filteredAll, regionGroup);
-            const m = computeMetrics(monthData);
-            const mp = computeMetrics(prevMonthData);
-
-            const slaCell = m.eligible ? `<span style="color:${colorHex(m.slaColor)}">${fmt(m.slaCompliance, 2)}%</span>` : '--';
-            const dMtfc = deltaCell(m.avgMtfc, mp.avgMtfc, true);
-            const dMtts = deltaCell(m.avgMtts, mp.avgMtts, true);
-            const avgAging = open.length ? open.reduce((s, t) => s + t._aging, 0) / open.length : 0;
-
-            const card = document.createElement('article');
-            card.className = 'card region-card';
-            card.innerHTML = `
-                <div class="region-card-head">
-                    <span class="region-flag" aria-hidden="true">${REGION_FLAGS[regionGroup] || '·'}</span>
-                    <h4>${regionLabel(regionGroup)}</h4>
-                </div>
-                <div class="region-summary">
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_created')}</span><span class="region-cell-value">${fmt(created.length, 0)}</span></div>
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_closed')}</span><span class="region-cell-value">${fmt(m.closed, 0)}</span></div>
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_backlog')}</span><span class="region-cell-value">${fmt(open.length, 0)}</span></div>
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_sla')}</span><span class="region-cell-value">${slaCell}</span></div>
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_mtfc')}</span><span class="region-cell-value">${m.closed ? fmt(m.avgMtfc, 2) + ' h' : '--'}</span></div>
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_mtts')}</span><span class="region-cell-value">${m.closed ? fmt(m.avgMtts, 2) + ' d' : '--'}</span></div>
-                </div>
-                <div class="region-trend">
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_delta_mtfc')}</span><span class="region-cell-value">${dMtfc.html}</span></div>
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_avg_aging')}</span><span class="region-cell-value">${open.length ? fmt(avgAging, 1) + ' d' : '--'}</span></div>
-                    <div class="region-cell"><span class="region-cell-label">${tx('cell_delta_mtts')}</span><span class="region-cell-value">${dMtts.html}</span></div>
-                </div>`;
-            return card;
-        }
-
-        function renderPage(filtered) {
-            const monthKey = document.getElementById('filter-month-year').value;
-            if (!monthKey) {
-                document.getElementById('month-title').textContent = '--';
-                destroyChart('chart-monthly-backlog');
+    function applyExtraI18n() {
+        document.querySelectorAll('[data-tx]').forEach(node => {
+            if (node.getAttribute('data-tx') === 'monthly_title') {
+                let span = document.getElementById('month-title');
+                if (!span) { span = document.createElement('span'); span.id = 'month-title'; span.textContent = '--'; }
+                node.textContent = '';
+                node.appendChild(document.createTextNode(tx('monthly_title') + ' '));
+                node.appendChild(span);
                 return;
             }
-            document.getElementById('month-title').textContent = monthKey;
-
-            const monthData = regionTicketsInMonth(filtered, 'Global', monthKey);
-            const metrics = computeMetrics(monthData);
-            const openBacklog = regionOpenBacklog(filtered, 'Global');
-            const noResponse = openBacklog.filter(ticket =>
-                !Number.isFinite(metricNumber(ticket.mtfc_horas_bi, ticket.mtfc_horas))
-            );
-
-            document.getElementById('monthly-kpi-sla').textContent =
-                metrics.eligible ? `${fmt(metrics.slaCompliance, 2)}%` : '--';
-            document.getElementById('monthly-kpi-closed').textContent = fmt(metrics.closed, 0);
-            document.getElementById('monthly-kpi-mtfc').textContent =
-                metrics.closed ? `${fmt(metrics.avgMtfc, 2)} h` : '--';
-            document.getElementById('monthly-kpi-mtts').textContent =
-                metrics.closed ? `${fmt(metrics.avgMtts, 2)} d` : '--';
-            document.getElementById('monthly-kpi-backlog').textContent = fmt(openBacklog.length, 0);
-
-            const badge = document.getElementById('monthly-sla-badge');
-            badge.textContent = metrics.eligible
-                ? (metrics.slaCompliance >= 80 ? tx('badge_on_target') : metrics.slaCompliance >= 50 ? tx('badge_attention') : tx('badge_critical'))
-                : '--';
-            badge.className = `badge ${
-                metrics.slaCompliance >= 80 ? 'badge-green' :
-                metrics.slaCompliance >= 50 ? 'badge-yellow' :
-                'badge-red'
-            }`;
-
-            const labels = REGION_GROUPS.filter(region =>
-                openBacklog.some(ticket => getTicketRegionGroup(ticket) === region)
-            );
-            createStackedBarChart('chart-monthly-backlog', labels, [
-                {
-                    label: t('with_first_response'),
-                    data: labels.map(region => openBacklog.filter(ticket =>
-                        getTicketRegionGroup(ticket) === region &&
-                        Number.isFinite(metricNumber(ticket.mtfc_horas_bi, ticket.mtfc_horas))
-                    ).length),
-                    backgroundColor: colorHex('green'),
-                    borderRadius: 6,
-                    borderSkipped: false
-                },
-                {
-                    label: t('without_first_response'),
-                    data: labels.map(region => noResponse.filter(ticket =>
-                        getTicketRegionGroup(ticket) === region
-                    ).length),
-                    backgroundColor: colorHex('red'),
-                    borderRadius: 6,
-                    borderSkipped: false
-                }
-            ], tx('sec_backlog'));
-        }
-
-        function applyPage() {
-            applyExtraI18n();
-            if (!rawData.length) return;
-            const filters = { ...FilterState.get(), dateFrom: '', dateTo: '' };
-            renderPage(applyFilters(rawData, filters));
-        }
-
-        async function init() {
-            hideError();
-            showLoading(true);
-            bindFilterControls();
-            try {
-                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
-                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-                }
-                rawData = (await fetchDashboardBiTickets()).tickets;
-                populateFilterOptions(rawData);
-                applyExtraI18n();
-                showLoading(false);
-                applyPage();
-            } catch (e) {
-                showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
-            }
-        }
-
-        document.addEventListener('filterschange', applyPage);
-        document.addEventListener('langchange', () => {
-            applyExtraI18n();
-            if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
+            node.textContent = tx(node.getAttribute('data-tx'));
         });
-        window.addEventListener('load', init);
+        document.querySelectorAll('[data-tx-placeholder]').forEach(node => {
+            node.placeholder = tx(node.getAttribute('data-tx-placeholder'));
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // CONSTANTS & STATE
+    // ──────────────────────────────────────────────────────────
+    const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
+    const REGION_FLAGS = { Global: '🌐', Brasil: '🇧🇷', Argentina: '🇦🇷', 'México': '🇲🇽', LATAM: '🌎', USA: '🇺🇸', ROW: '🌍' };
+    const COUNTRY_BUTTONS = [
+        { key: 'all', emoji: '🌐' },
+        { key: 'Brasil', emoji: '🇧🇷' },
+        { key: 'USA', emoji: '🇺🇸' },
+        { key: 'Argentina', emoji: '🇦🇷' },
+        { key: 'México', emoji: '🇲🇽' },
+        { key: 'LATAM', emoji: '🌎' },
+        { key: 'ROW', emoji: '🌍' }
+    ];
+
+    let rawData = [];
+    let closedTicketsList = [];
+    let closedTicketsFiltered = [];
+    let closedTicketsPage = 1;
+    const CLOSED_PAGE_SIZE = 50;
+    let ticketSearchQuery = '';
+    let sortState = { column: 'closed_time', direction: 'desc' };
+
+    // ──────────────────────────────────────────────────────────
+    // UI HELPERS
+    // ──────────────────────────────────────────────────────────
+    function showLoading(on) {
+        document.getElementById('loading').style.display = on ? '' : 'none';
+        document.getElementById('page-body').style.display = on ? 'none' : '';
+    }
+    function showError(msg) {
+        document.getElementById('error-banner-text').textContent = msg || tx('btn_retry');
+        document.getElementById('error-banner').style.display = '';
+        const overlayErr = document.getElementById('error-message');
+        if (overlayErr) { overlayErr.textContent = msg; overlayErr.style.display = 'block'; }
+        document.getElementById('page-body').style.display = 'none';
+        document.getElementById('loading').style.display = 'none';
+    }
+    function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+    function fmt(n, d) {
+        if (n === null || n === undefined || isNaN(n)) return '--';
+        return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+    function regionLabel(group) {
+        const map = { Brasil: 'region_brazil', Argentina: 'region_argentina', 'México': 'region_mexico', LATAM: 'region_latam', USA: 'region_usa', ROW: 'region_row' };
+        if (group === 'Global') return tx('region_global');
+        return t(map[group] || '') || group || '--';
+    }
+
+    function colorKpiTopBar(kpiId, colorName) {
+        const el = document.getElementById(kpiId);
+        if (!el) return;
+        const card = el.closest('.card');
+        if (!card) return;
+        let bar = card.querySelector('.kpi-top-bar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.className = 'kpi-top-bar';
+            bar.style.cssText = 'height:3px;margin:-20px -20px 12px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;transition:background .2s;';
+            card.insertBefore(bar, card.firstChild);
+        }
+        bar.style.background = colorHex(colorName);
+    }
+
+    function priorityBadge(priority) {
+        const cls = { 'Urgente': 'badge-red', 'Alta': 'badge-orange', 'Média': 'badge-yellow', 'Baixa': 'badge-blue', 'Muito Baixa': 'badge-muted' };
+        return `<span class="badge ${cls[priority] || 'badge-muted'}">${priority || '--'}</span>`;
+    }
+
+    function slaStatusBadge(status) {
+        if (status === 'Dentro SLA') return `<span class="badge badge-green">${tx('sla_within')}</span>`;
+        if (status === 'Fora SLA')   return `<span class="badge badge-red">${tx('sla_outside')}</span>`;
+        return `<span class="badge badge-muted">${tx('sla_na')}</span>`;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // COUNTRY FILTER
+    // ──────────────────────────────────────────────────────────
+    function renderCountryFilter() {
+        const container = document.getElementById('country-filter');
+        if (!container) return;
+        const current = FilterState.get().region || 'all';
+        container.innerHTML = '';
+        COUNTRY_BUTTONS.forEach(({ key, emoji }) => {
+            const label = key === 'all' ? `${emoji} ${tx('country_all')}` : `${emoji} ${key}`;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.className = 'country-btn' + (current === key ? ' active' : '');
+            btn.addEventListener('click', () => {
+                FilterState.update('region', key);
+                renderCountryFilter();
+                applyPage();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // AGENT GROUP FILTER
+    // ──────────────────────────────────────────────────────────
+    function renderAgentGroupFilter() {
+        const container = document.getElementById('filter-agent-groups');
+        if (!container) return;
+        const current = FilterState.get().agentGroups || [...AGENT_GROUPS];
+        container.innerHTML = '';
+        AGENT_GROUPS.forEach(group => {
+            const checked = current.includes(group);
+            const btn = document.createElement('button');
+            btn.textContent = group;
+            btn.dataset.group = group;
+            btn.style.cssText = `padding:4px 10px;border-radius:20px;cursor:pointer;border:1px solid #30363d;font-size:12px;font-family:'DM Sans',sans-serif;background:${checked ? '#1f6feb' : '#161b22'};color:${checked ? '#fff' : '#7d8590'};`;
+            btn.addEventListener('click', () => {
+                const f = FilterState.get();
+                const groups = f.agentGroups || [...AGENT_GROUPS];
+                const idx = groups.indexOf(group);
+                if (idx >= 0) groups.splice(idx, 1); else groups.push(group);
+                FilterState.update('agentGroups', groups);
+                renderAgentGroupFilter();
+                applyPage();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // FILTER POPULATION
+    // ──────────────────────────────────────────────────────────
+    function groupByMonth(tickets) {
+        const groups = {};
+        tickets.forEach(t => {
+            if (!t.closed_time) return;
+            const key = String(t.closed_time).substring(0, 7);
+            if (!key) return;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(t);
+        });
+        return groups;
+    }
+
+    function buildSelectOptions(select, values, defaultLabel) {
+        const current = select.value;
+        select.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = 'all'; optAll.textContent = defaultLabel;
+        select.appendChild(optAll);
+        values.forEach(v => {
+            if (!v || v === '-Nenhum-') return;
+            const opt = document.createElement('option');
+            opt.value = v; opt.textContent = v;
+            select.appendChild(opt);
+        });
+        if (current && [...select.options].some(o => o.value === current)) select.value = current;
+    }
+
+    function populateFilterOptions(data) {
+        renderCountryFilter();
+
+        const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
+            .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
+        buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
+        buildSelectOptions(document.getElementById('filter-type'),
+            [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
+        buildSelectOptions(document.getElementById('filter-product'),
+            [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
+
+        const months = Object.keys(groupByMonth(data)).sort().reverse();
+        const monthSelect = document.getElementById('filter-month-year');
+        const currentMonth = monthSelect.value;
+        monthSelect.innerHTML = '';
+        months.forEach(m => {
+            const o = document.createElement('option'); o.value = m; o.textContent = m;
+            monthSelect.appendChild(o);
+        });
+        if (currentMonth && months.includes(currentMonth)) monthSelect.value = currentMonth;
+        else if (months.length) monthSelect.value = months[0];
+
+        const state = FilterState.get();
+        ['priority','type','product','dateFrom','dateTo'].forEach(key => {
+            const input = document.querySelector(`[data-filter="${key}"]`);
+            if (!input) return;
+            if (input.type === 'date') input.value = state[key] || '';
+            else if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
+        });
+        renderAgentGroupFilter();
+    }
+
+    function bindFilterControls() {
+        document.getElementById('btn-apply').addEventListener('click', () => {
+            const next = {};
+            document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
+            next.region = FilterState.get().region || 'all';
+            next.agentGroups = FilterState.get().agentGroups || [...AGENT_GROUPS];
+            FilterState.set(next);
+            applyPage();
+        });
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            FilterState.reset();
+            FilterState.update('agentGroups', [...AGENT_GROUPS]);
+            FilterState.update('region', 'all');
+            document.querySelectorAll('[data-filter]').forEach(i => {
+                i.value = i.tagName === 'SELECT' ? 'all' : '';
+            });
+            renderCountryFilter();
+            renderAgentGroupFilter();
+            applyPage();
+        });
+        document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+        document.getElementById('filter-month-year').addEventListener('change', applyPage);
+        document.getElementById('closed-prev').addEventListener('click', () => {
+            if (closedTicketsPage > 1) { closedTicketsPage--; renderClosedTickets(); }
+        });
+        document.getElementById('closed-next').addEventListener('click', () => {
+            const total = Math.ceil((closedTicketsFiltered.length || closedTicketsList.length) / CLOSED_PAGE_SIZE);
+            if (closedTicketsPage < total) { closedTicketsPage++; renderClosedTickets(); }
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // REGION / DATE HELPERS
+    // ──────────────────────────────────────────────────────────
+    function prevMonthKey(key) {
+        const [y, m] = key.split('-').map(Number);
+        const d = new Date(Date.UTC(y, m - 2, 1));
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function deltaCell(curr, prev, inverted) {
+        if (!isFinite(curr) || !isFinite(prev) || prev === 0)
+            return { html: '<span class="delta-neutral">--</span>', delta: null };
+        const delta = ((curr - prev) / prev) * 100;
+        const improved = inverted ? delta < 0 : delta > 0;
+        if (Math.abs(delta) < 0.5) return { html: `<span class="delta-neutral">±${fmt(delta, 2)}%</span>`, delta };
+        const cls = improved ? 'delta-down' : 'delta-up';
+        return { html: `<span class="${cls}">${delta > 0 ? '▲' : '▼'} ${fmt(Math.abs(delta), 2)}%</span>`, delta };
+    }
+
+    function regionTicketsInMonth(tickets, regionGroup, monthKey) {
+        return tickets.filter(t => {
+            if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+            if (!t.closed_time) return false;
+            return String(t.closed_time).substring(0, 7) === monthKey;
+        });
+    }
+
+    function regionOpenBacklog(tickets, regionGroup) {
+        const now = new Date();
+        return tickets.filter(t => {
+            if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+            return !t.closed_time;
+        }).map(t => ({ ...t, _aging: (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24) }));
+    }
+
+    function regionCreatedInMonth(tickets, regionGroup, monthKey) {
+        return tickets.filter(t => {
+            if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+            return String(t.created_time || '').substring(0, 7) === monthKey;
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // CHART RENDERING
+    // ──────────────────────────────────────────────────────────
+    function renderCharts(monthData) {
+        const byRegion = REGION_GROUPS.map(r => {
+            const data = monthData.filter(t => getTicketRegionGroup(t) === r);
+            return { region: r, m: computeMetrics(data, r) };
+        }).filter(r => r.m.closed > 0 || r.m.eligible > 0);
+
+        if (!byRegion.length) {
+            ['chart-monthly-sla', 'chart-monthly-mtfc', 'chart-monthly-mtts'].forEach(destroyChart);
+            return;
+        }
+
+        const labels = byRegion.map(r => regionLabel(r.region));
+
+        // SLA% with 80% target line
+        createBarChartWithTarget(
+            'chart-monthly-sla', labels,
+            byRegion.map(r => r.m.eligible ? +r.m.slaCompliance.toFixed(1) : 0),
+            byRegion.map(r => colorHex(r.m.eligible ? r.m.slaColor : 'gray')),
+            tx('sec_sla_region'), 80, tx('target_label'), 105
+        );
+
+        // MTFC (green<=8h, yellow<=16h, red>16h)
+        createBarChart(
+            'chart-monthly-mtfc', labels,
+            byRegion.map(r => r.m.closed ? +r.m.avgMtfc.toFixed(1) : 0),
+            byRegion.map(r => {
+                const v = r.m.avgMtfc;
+                return colorHex(v <= 8 ? 'green' : v <= 16 ? 'yellow' : 'red');
+            }),
+            tx('sec_mtfc_region')
+        );
+
+        // MTTS (per-region target)
+        createBarChart(
+            'chart-monthly-mtts', labels,
+            byRegion.map(r => r.m.closed ? +r.m.avgMtts.toFixed(1) : 0),
+            byRegion.map(r => {
+                const target = MTTS_TARGET[r.region] || 7;
+                const v = r.m.avgMtts;
+                return colorHex(v <= target ? 'green' : v <= target * 2 ? 'yellow' : 'red');
+            }),
+            tx('sec_mtts_region')
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // CLOSED TICKETS TABLE
+    // ──────────────────────────────────────────────────────────
+    function renderClosedTickets() {
+        const searched = ticketSearchQuery
+            ? closedTicketsList.filter(t => String(t.ticket_number || '').toLowerCase().includes(ticketSearchQuery.toLowerCase()))
+            : closedTicketsList;
+        const filtered = sortTickets(searched, sortState.column, sortState.direction);
+        closedTicketsFiltered = filtered;
+
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / CLOSED_PAGE_SIZE));
+        if (closedTicketsPage > totalPages) closedTicketsPage = totalPages;
+        const start = (closedTicketsPage - 1) * CLOSED_PAGE_SIZE;
+        const slice = filtered.slice(start, start + CLOSED_PAGE_SIZE);
+
+        const countEl = document.getElementById('closed-tickets-count');
+        if (countEl) countEl.textContent = `(${total})`;
+
+        const tbody = document.getElementById('closed-tickets-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!slice.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${t('no_filter_data')}</td></tr>`;
+        } else {
+            slice.forEach(ticket => {
+                const region = getTicketRegionGroup(ticket);
+                const priority = getTicketPriority(ticket);
+                const mtfc = metricNumber(ticket.mtfc_horas_bi, ticket.mtfc_horas);
+                const mttsD = metricNumber(ticket.mtts_dias_bi, ticket.mtts_dias);
+                const mtfcTarget = MTFC_TARGET[priority] || MTFC_TARGET_DEFAULT;
+                const mttsTarget = MTTS_TARGET[region] || 7;
+                const mtfcColor = Number.isFinite(mtfc) ? (mtfc <= mtfcTarget ? 'green' : 'red') : 'gray';
+                const mttsColor = Number.isFinite(mttsD) ? (mttsD <= mttsTarget ? 'green' : 'red') : 'gray';
+
+                const mtfcStr = Number.isFinite(mtfc)
+                    ? `<span style="color:${colorHex(mtfcColor)}">${fmt(mtfc, 1)} h</span>` : '--';
+                const mttsStr = Number.isFinite(mttsD)
+                    ? `<span style="color:${colorHex(mttsColor)}">${fmt(mttsD, 1)} d</span>` : '--';
+                const closedDate = ticket.closed_time
+                    ? new Date(ticket.closed_time).toLocaleDateString('pt-BR') : '--';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><a href="${getZohoTicketUrl(ticket)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Abrir #${ticket.ticket_number} no Zoho Desk">#${ticket.ticket_number || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
+                    <td>${(REGION_FLAGS[region] || '')} ${regionLabel(region)}</td>
+                    <td>${priorityBadge(priority)}</td>
+                    <td>${mtfcStr}</td>
+                    <td>${mttsStr}</td>
+                    <td>${slaStatusBadge(ticket.sla_status_bi)}</td>
+                    <td style="white-space:nowrap;font-size:.83rem">${closedDate}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const info = document.getElementById('closed-pagination-info');
+        if (info) info.textContent = `Página ${closedTicketsPage} de ${totalPages} — ${total} tickets`;
+
+        const prev = document.getElementById('closed-prev');
+        const next = document.getElementById('closed-next');
+        if (prev) prev.disabled = closedTicketsPage <= 1;
+        if (next) next.disabled = closedTicketsPage >= totalPages;
+
+        // Update sort icons
+        document.querySelectorAll('#closed-tickets-section th.sortable').forEach(th => {
+            const col = th.dataset.sort;
+            const icon = th.querySelector('.sort-icon');
+            if (!icon) return;
+            if (col === sortState.column) {
+                icon.textContent = sortState.direction === 'asc' ? ' ↑' : ' ↓';
+                th.classList.add('sort-active');
+            } else {
+                icon.textContent = ' ↕';
+                th.classList.remove('sort-active');
+            }
+        });
+    }
+
+    function updateTicketSearch(query) {
+        ticketSearchQuery = String(query || '').trim();
+        closedTicketsPage = 1;
+        renderClosedTickets();
+    }
+
+    const SORT_PRIORITY_ORDER = { 'Urgente': 1, 'Alta': 2, 'Média': 3, 'Baixa': 4, 'Muito Baixa': 5 };
+    const SORT_SLA_ORDER = { 'Dentro SLA': 1, 'Não elegível': 2, 'Fora SLA': 3 };
+
+    function sortTickets(tickets, column, direction) {
+        return [...tickets].sort((a, b) => {
+            let valA, valB;
+            switch (column) {
+                case 'ticket_number':
+                    valA = Number(a.ticket_number) || 0;
+                    valB = Number(b.ticket_number) || 0;
+                    break;
+                case 'regiao_grupo':
+                    valA = (getTicketRegionGroup(a) || '').toLowerCase();
+                    valB = (getTicketRegionGroup(b) || '').toLowerCase();
+                    break;
+                case 'priority_standard':
+                    valA = SORT_PRIORITY_ORDER[getTicketPriority(a)] || 9;
+                    valB = SORT_PRIORITY_ORDER[getTicketPriority(b)] || 9;
+                    break;
+                case 'mtfc_horas_bi':
+                    valA = Number.isFinite(metricNumber(a.mtfc_horas_bi, a.mtfc_horas)) ? metricNumber(a.mtfc_horas_bi, a.mtfc_horas) : 9999;
+                    valB = Number.isFinite(metricNumber(b.mtfc_horas_bi, b.mtfc_horas)) ? metricNumber(b.mtfc_horas_bi, b.mtfc_horas) : 9999;
+                    break;
+                case 'mtts_dias_bi':
+                    valA = Number.isFinite(metricNumber(a.mtts_dias_bi, a.mtts_dias)) ? metricNumber(a.mtts_dias_bi, a.mtts_dias) : 9999;
+                    valB = Number.isFinite(metricNumber(b.mtts_dias_bi, b.mtts_dias)) ? metricNumber(b.mtts_dias_bi, b.mtts_dias) : 9999;
+                    break;
+                case 'sla_status_bi':
+                    valA = SORT_SLA_ORDER[a.sla_status_bi] || 9;
+                    valB = SORT_SLA_ORDER[b.sla_status_bi] || 9;
+                    break;
+                case 'closed_time':
+                default:
+                    valA = new Date(a.closed_time || 0).getTime();
+                    valB = new Date(b.closed_time || 0).getTime();
+                    break;
+            }
+            if (valA < valB) return direction === 'asc' ? -1 : 1;
+            if (valA > valB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function handleColumnClick(column) {
+        if (sortState.column === column) {
+            if (sortState.direction === 'asc') {
+                sortState.direction = 'desc';
+            } else {
+                sortState = { column: 'closed_time', direction: 'desc' };
+            }
+        } else {
+            sortState = { column, direction: 'asc' };
+        }
+        closedTicketsPage = 1;
+        renderClosedTickets();
+    }
+
+    function getZohoTicketUrl(ticket) {
+        const org = 'alliage';
+        const id = ticket.ticket_id || ticket.id;
+        if (id) return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/dv/${id}`;
+        return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/search/${ticket.ticket_number}`;
+    }
+
+    function bindTableSort() {
+        document.querySelectorAll('#closed-tickets-section th.sortable').forEach(th => {
+            th.addEventListener('click', () => handleColumnClick(th.dataset.sort));
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // MAIN RENDER
+    // ──────────────────────────────────────────────────────────
+    function renderPage(filtered) {
+        const monthKey = document.getElementById('filter-month-year').value;
+        if (!monthKey) {
+            document.getElementById('month-title').textContent = '--';
+            ['chart-monthly-sla','chart-monthly-mtfc','chart-monthly-mtts','chart-monthly-backlog'].forEach(destroyChart);
+            return;
+        }
+        document.getElementById('month-title').textContent = monthKey;
+
+        const monthData = regionTicketsInMonth(filtered, 'Global', monthKey);
+        const metrics = computeMetrics(monthData);
+        const openBacklog = regionOpenBacklog(filtered, 'Global');
+        const noResponse = openBacklog.filter(t => !Number.isFinite(metricNumber(t.mtfc_horas_bi, t.mtfc_horas)));
+
+        // KPI values
+        document.getElementById('monthly-kpi-sla').textContent    = metrics.eligible ? `${fmt(metrics.slaCompliance, 2)}%` : '--';
+        document.getElementById('monthly-kpi-closed').textContent = fmt(metrics.closed, 0);
+        document.getElementById('monthly-kpi-mtfc').textContent   = metrics.closed ? `${fmt(metrics.avgMtfc, 2)} h` : '--';
+        document.getElementById('monthly-kpi-mtts').textContent   = metrics.closed ? `${fmt(metrics.avgMtts, 2)} d` : '--';
+        document.getElementById('monthly-kpi-backlog').textContent = fmt(openBacklog.length, 0);
+
+        // KPI top bars
+        colorKpiTopBar('monthly-kpi-sla',     metrics.eligible ? (metrics.slaCompliance >= 80 ? 'green' : metrics.slaCompliance >= 50 ? 'yellow' : 'red') : 'gray');
+        colorKpiTopBar('monthly-kpi-closed',  metrics.closed > 0 ? 'green' : 'gray');
+        colorKpiTopBar('monthly-kpi-mtfc',    !metrics.closed ? 'gray' : (metrics.avgMtfc <= 8 ? 'green' : metrics.avgMtfc <= 16 ? 'yellow' : 'red'));
+        colorKpiTopBar('monthly-kpi-mtts',    !metrics.closed ? 'gray' : (metrics.avgMtts <= 7 ? 'green' : metrics.avgMtts <= 14 ? 'yellow' : 'red'));
+        colorKpiTopBar('monthly-kpi-backlog', openBacklog.length <= 100 ? 'green' : openBacklog.length <= 200 ? 'yellow' : 'red');
+
+        // SLA badge
+        const badge = document.getElementById('monthly-sla-badge');
+        badge.textContent = metrics.eligible
+            ? (metrics.slaCompliance >= 80 ? tx('badge_on_target') : metrics.slaCompliance >= 50 ? tx('badge_attention') : tx('badge_critical'))
+            : '--';
+        badge.className = `badge ${metrics.slaCompliance >= 80 ? 'badge-green' : metrics.slaCompliance >= 50 ? 'badge-yellow' : 'badge-red'}`;
+
+        // Charts by region
+        renderCharts(monthData);
+
+        // Backlog stacked chart
+        const backlogLabels = REGION_GROUPS.filter(r => openBacklog.some(t => getTicketRegionGroup(t) === r));
+        createStackedBarChart('chart-monthly-backlog', backlogLabels, [
+            {
+                label: t('with_first_response'),
+                data: backlogLabels.map(r => openBacklog.filter(t => getTicketRegionGroup(t) === r && Number.isFinite(metricNumber(t.mtfc_horas_bi, t.mtfc_horas))).length),
+                backgroundColor: colorHex('green'), borderRadius: 6, borderSkipped: false
+            },
+            {
+                label: t('without_first_response'),
+                data: backlogLabels.map(r => noResponse.filter(t => getTicketRegionGroup(t) === r).length),
+                backgroundColor: colorHex('red'), borderRadius: 6, borderSkipped: false
+            }
+        ], tx('sec_backlog'));
+
+        // Closed tickets table — reset sort and search on new month
+        sortState = { column: 'closed_time', direction: 'desc' };
+        closedTicketsList = [...monthData];
+        closedTicketsPage = 1;
+        ticketSearchQuery = '';
+        const searchInput = document.getElementById('ticket-search');
+        if (searchInput) searchInput.value = '';
+        const titleEl = document.getElementById('closed-tickets-title');
+        if (titleEl) titleEl.textContent = `${tx('sec_closed_tickets')} — ${monthKey}`;
+        renderClosedTickets();
+
+        // Print header update
+        const pTitle = document.getElementById('print-title');
+        if (pTitle) pTitle.textContent = `Monthly Report — ${monthKey}`;
+        const pMeta = document.getElementById('print-meta');
+        if (pMeta) pMeta.textContent = `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // APP LIFECYCLE
+    // ──────────────────────────────────────────────────────────
+    function applyPage() {
+        applyExtraI18n();
+        if (!rawData.length) return;
+        const filters = { ...FilterState.get(), dateFrom: '', dateTo: '' };
+        renderPage(applyFilters(rawData, filters));
+    }
+
+    async function refreshData() {
+        clearCache();
+        rawData = [];
+        await init();
+    }
+
+    async function init() {
+        hideError();
+        showLoading(true);
+        bindFilterControls();
+        bindTableSort();
+        FilterState.update('agentGroups', [...AGENT_GROUPS]);
+        try {
+            if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
+                throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+            rawData = (await fetchDashboardBiTickets()).tickets;
+            populateFilterOptions(rawData);
+            applyExtraI18n();
+            showLoading(false);
+            applyPage();
+            fetchSyncHealth().then(({ health }) => {
+                const ts = health && (health.last_sync_at || health.synced_at);
+                if (!ts) return;
+                const el = document.getElementById('last-sync');
+                if (el) el.textContent = t('last_sync_label') + ' ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            }).catch(() => {});
+        } catch (e) {
+            showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
+        }
+    }
+
+    document.addEventListener('filterschange', applyPage);
+    document.addEventListener('langchange', () => {
+        applyExtraI18n();
+        if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
+    });
+    window.addEventListener('load', init);
     </script>
 </body>
 </html>

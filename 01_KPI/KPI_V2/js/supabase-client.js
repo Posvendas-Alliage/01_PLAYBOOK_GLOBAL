@@ -74,8 +74,12 @@ async function fetchDashboardBiData() {
 
 async function fetchDashboardBiBacklog() {
     const backlog = await fetchDashboard('bi-backlog', { limit: 500 });
+    const OFICINA_DEPT_ID = '1128522000008788112';
+    const data = backlog.data
+        .filter(row => row.department_id !== OFICINA_DEPT_ID)
+        .filter(row => !isExcludedTicket(row));
     return {
-        backlog: backlog.data,
+        backlog: data,
         meta: backlog
     };
 }
@@ -99,7 +103,7 @@ async function fetchDashboardBiTickets(limit = 10000) {
         marca_produto: row.produtos,
         categoria_custom: row.categoria,
         numero_serie: row.numero_serie
-    }));
+    })).filter(row => !isExcludedTicket(row));
     return {
         tickets,
         meta: payload
@@ -129,7 +133,7 @@ async function fetchAgents() {
 
     agents.forEach(a => {
         window.AGENT_FIRST_NAMES[a.id] = a.first_name || '';
-        if (a.first_name === 'Vitor' || (a.email || '').includes('@unicorn')) {
+        if ((a.email || '').includes('@unicorn')) {
             window.EXCLUDED_AGENT_IDS.push(a.id);
         }
     });
@@ -157,7 +161,7 @@ async function fetchAllTickets() {
     ].join(',');
 
     while (hasMore) {
-        const url = `${SUPABASE_URL}/rest/v1/zoho_tickets?select=${fields}&is_deleted=eq.false&order=created_time.desc&limit=${LIMIT}&offset=${offset}`;
+        const url = `${SUPABASE_URL}/rest/v1/zoho_tickets?select=${fields}&is_deleted=eq.false&department_id=neq.1128522000008788112&order=created_time.desc&limit=${LIMIT}&offset=${offset}`;
         const res = await fetch(url, {
             headers: supabaseHeaders()
         });

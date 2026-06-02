@@ -9,6 +9,56 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/layout.css">
+    <style>
+        /* ── Country filter ────────────────────────────── */
+        .country-filter-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+        .country-btn { padding: 4px 11px; border-radius: 20px; cursor: pointer; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted); font-size: 12px; font-family: var(--font-display); transition: background .15s, color .15s, border-color .15s; white-space: nowrap; }
+        .country-btn:hover { border-color: var(--color-primary); color: var(--color-text); }
+        .country-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+        .filter-field-countries { width: 100%; min-width: 100%; }
+
+        /* ── Ticket link ───────────────────────────────── */
+        .ticket-link { color: #388bfd; text-decoration: none; font-family: var(--font-mono); font-size: .85rem; display: inline-flex; align-items: center; gap: 2px; }
+        .ticket-link:hover { color: #58a6ff; text-decoration: underline; }
+
+        /* ── Sortable columns ──────────────────────────── */
+        .daily-tickets-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .daily-tickets-table th.sortable:hover { color: var(--color-text); background: rgba(31,111,235,.08); }
+        .daily-tickets-table th.sortable .sort-icon { margin-left: 4px; font-size: 10px; color: var(--color-text-muted); }
+        .daily-tickets-table th.sortable.sort-active .sort-icon { color: #1f6feb; }
+        .daily-tickets-table thead th { color: var(--color-text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); padding: 9px 11px; border-bottom: 1px solid var(--color-border); text-align: left; }
+        .daily-tickets-table td { padding: 9px 11px; border-bottom: 1px solid var(--color-border); text-align: left; font-size: 0.85rem; vertical-align: middle; }
+        .daily-tickets-table tbody tr { transition: background-color 0.12s; }
+        .daily-tickets-table tbody tr:hover { background: rgba(31,111,235,0.05) !important; }
+
+        /* ── Alerts section ────────────────────────────── */
+        .daily-alerts { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
+        .alert-card { padding: 10px 16px; border-radius: var(--radius-md); font-size: 0.86rem; font-weight: 500; border: 1px solid transparent; flex: 1 1 200px; }
+        .alert-card-red    { background: rgba(227,20,36,.09);   border-color: rgba(227,20,36,.35);   color: #E31424; }
+        .alert-card-yellow { background: rgba(228,191,20,.09);  border-color: rgba(228,191,20,.35);  color: #9a7d08; }
+        .alert-card-green  { background: rgba(18,223,52,.09);   border-color: rgba(18,223,52,.35);   color: #0a9e20; }
+
+        /* ── Misc ──────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .daily-kpi-strip { grid-template-columns: repeat(2, 1fr) !important; }
+            .daily-tickets-table th:nth-child(2),
+            .daily-tickets-table td:nth-child(2),
+            .daily-tickets-table th:nth-child(3),
+            .daily-tickets-table td:nth-child(3) { display: none; }
+        }
+
+        /* ── Print ─────────────────────────────────────── */
+        .print-only { display: none; }
+        @media print {
+            .print-only { display: block !important; margin-bottom: 18px; border-bottom: 1px solid #ccc; padding-bottom: 12px; }
+            .print-only h1 { font-size: 1.3rem; margin: 0 0 4px; color: #111; }
+            .print-only p  { font-size: 0.82rem; color: #555; margin: 0; }
+            .no-print { display: none !important; }
+            .banner-validity { display: flex !important; }
+            body { background: #fff !important; color: #111 !important; }
+            .card { background: #fff !important; border: 1px solid #ccc !important; }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-shell">
@@ -19,6 +69,7 @@
                     <div>
                         <p class="app-brand-title" data-tx="page_title">Daily Backlog Control</p>
                         <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                        <p id="last-sync" style="font-size:0.7rem;color:var(--color-text-muted);margin:2px 0 0;opacity:.8;">--</p>
                     </div>
                 </div>
                 <div class="app-header-actions">
@@ -27,6 +78,7 @@
                         <button type="button" class="lang-btn" data-lang="en">EN</button>
                         <button type="button" class="lang-btn" data-lang="es">ES</button>
                     </div>
+                    <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-sm" title="Toggle theme" style="padding:6px 10px;font-size:15px;line-height:1;">🌙</button>
                     <button type="button" class="btn btn-ghost btn-sm no-print" onclick="exportCurrentPagePdf()" data-i18n="btn_export_pdf">Exportar PDF</button>
                 </div>
             </div>
@@ -39,12 +91,24 @@
                 <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
             </div>
         </nav>
+        <div id="banner-validity" class="banner-validity">
+            <span class="banner-validity-icon" aria-hidden="true">⚠️</span>
+            <span id="banner-validity-text" class="banner-validity-text"></span>
+            <button class="banner-validity-close" aria-label="Fechar">×</button>
+        </div>
+
+        <!-- Print-only report header -->
+        <div class="print-only" id="daily-print-header">
+            <h1 id="daily-print-title">Daily Report</h1>
+            <p id="daily-print-meta"></p>
+        </div>
 
         <main class="app-main">
             <section class="filter-bar" aria-label="Filtros">
-                <div class="filter-field">
-                    <label for="filter-region" data-i18n="filter_region">Regiao</label>
-                    <select id="filter-region" data-filter="region"></select>
+                <!-- Country filter (replaces region select) -->
+                <div class="filter-field filter-field-countries">
+                    <label data-tx="filter_country">País / Região</label>
+                    <div id="country-filter" class="country-filter-btns"></div>
                 </div>
                 <div class="filter-field">
                     <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
@@ -89,33 +153,41 @@
                     <span class="badge badge-yellow" id="daily-risk-badge">--</span>
                 </section>
 
+                <!-- KPI strip -->
                 <section class="kpi-strip daily-kpi-strip">
                     <article class="card">
                         <div class="kpi-label" data-tx="kpi_open_total">Backlog atual</div>
                         <div class="kpi-number mono" id="kpi-open-total">--</div>
+                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_backlog">tickets em aberto agora</p>
                     </article>
                     <article class="card">
                         <div class="kpi-label" data-tx="kpi_without_resp">Sem primeira resposta</div>
                         <div class="kpi-number mono" id="kpi-without-resp">--</div>
+                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_no_resp">aguardando primeiro contato</p>
                     </article>
                     <article class="card">
                         <div class="kpi-label" data-tx="kpi_over_10">&gt; 10 dias</div>
                         <div class="kpi-number mono" id="kpi-over-10">--</div>
+                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_over10">tickets acima de 10 dias</p>
                     </article>
                     <article class="card">
                         <div class="kpi-label" data-tx="kpi_dependency">Dependencia externa</div>
                         <div class="kpi-number mono" id="kpi-dependency">--</div>
+                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_dep">aguardando resposta externa</p>
                     </article>
                     <article class="card">
                         <div class="kpi-label" data-tx="kpi_p12">P1/P2 abertos</div>
                         <div class="kpi-number mono" id="kpi-p12">--</div>
+                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_p12">tickets urgentes/alta prioridade</p>
                     </article>
                     <article class="card">
                         <div class="kpi-label" data-tx="kpi_avg_aging">Aging medio</div>
                         <div class="kpi-number mono" id="kpi-avg-aging">--</div>
+                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_aging">dias em aberto em media</p>
                     </article>
                 </section>
 
+                <!-- Decision grid -->
                 <section class="decision-grid">
                     <article class="card daily-decision-card">
                         <span class="decision-label" data-tx="decision_aging">Fila critica</span>
@@ -134,6 +206,10 @@
                     </article>
                 </section>
 
+                <!-- Alerts section (NEW) -->
+                <div id="daily-alerts" class="daily-alerts"></div>
+
+                <!-- Charts -->
                 <section class="page-grid-2col" style="margin-top:18px">
                     <article class="card chart-card">
                         <h3 data-tx="chart_status">Backlog por Status</h3>
@@ -153,20 +229,28 @@
                     </article>
                 </section>
 
+                <!-- Open tickets table -->
                 <section class="card table-card" style="margin-top:18px">
-                    <div class="section-heading">
-                        <h3 data-tx="table_title">Tickets em Aberto</h3>
-                        <p class="text-muted" data-tx="table_note">Ordenado por risco operacional para decisao do dia.</p>
+                    <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                        <div>
+                            <h3 data-tx="table_title" style="margin:0 0 2px">Tickets em Aberto</h3>
+                            <span id="table-count" class="text-muted" style="font-size:.82rem;"></span>
+                        </div>
+                        <input type="text" id="ticket-search-daily"
+                               style="padding:7px 12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);font-size:.84rem;width:220px;"
+                               data-tx-placeholder="search_placeholder" placeholder="Buscar ticket #..."
+                               oninput="updateSearch(this.value)">
                     </div>
                     <div class="table-scroll">
-                        <table>
+                        <table class="daily-tickets-table" style="width:100%;border-collapse:collapse;">
                             <thead>
                                 <tr>
-                                    <th data-tx="col_ticket">Ticket #</th>
-                                    <th data-tx="col_aging">Aging (dias)</th>
-                                    <th data-tx="col_priority">Prioridade</th>
-                                    <th data-tx="col_region">Regiao</th>
-                                    <th data-tx="col_status">Status</th>
+                                    <th class="sortable" data-sort="ticket_number" data-tx="col_ticket">Ticket #<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="region" data-tx="col_region">Região<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="priority" data-tx="col_priority">Prioridade<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="status" data-tx="col_status">Status<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="mtfc" data-tx="col_mtfc">MTFC<span class="sort-icon">↕</span></th>
+                                    <th class="sortable sort-active" data-sort="aging" data-tx="col_aging">Aging (dias)<span class="sort-icon">↓</span></th>
                                     <th data-tx="col_action">Acao</th>
                                 </tr>
                             </thead>
@@ -194,463 +278,692 @@
     <script src="js/business-rules.js"></script>
     <script src="js/charts.js"></script>
     <script>
-        const EXTRA_I18N = {
-            pt: {
-                page_title: 'Daily Backlog Control', brand_subtitle: 'Playbook Global | KPI',
-                back_to_playbook: 'Voltar', to_label: 'Ate',
-                btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
-                filter_department: 'Departamento', filter_status: 'Status',
-                daily_kicker: 'Daily', daily_title: 'Controle diario de backlog',
-                kpi_open_total: 'Backlog atual', kpi_without_resp: 'Sem primeira resposta',
-                kpi_avg_aging: 'Aging medio (dias)',
-                kpi_over_10: 'Tickets > 10 dias', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abertos',
-                decision_aging: 'Fila critica', decision_response: 'Primeira resposta', decision_dependency: 'Dependencias',
-                risk_ok: 'Estavel', risk_attention: 'Acao hoje',
-                note_aging: '{n} tickets acima de 10 dias',
-                note_response: '{n} tickets ainda sem primeira resposta',
-                note_dependency: '{n} tickets aguardando cliente, peca, terceiro ou visita',
-                chart_status: 'Backlog por Status', chart_region: 'Backlog por Regiao e resposta',
-                chart_aging: 'Aging Buckets', chart_priority: 'Backlog por Prioridade',
-                table_title: 'Tickets em Aberto',
-                table_note: 'Ordenado por risco operacional para decisao do dia.',
-                col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridade',
-                col_region: 'Regiao', col_status: 'Status', col_action: 'Acao',
-                action_first_response: 'Dar primeira resposta',
-                action_old_ticket: 'Revisar aging',
-                action_dependency: 'Follow-up dependencia',
-                action_p12: 'Priorizar P1/P2',
-                action_monitor: 'Monitorar',
-                prev: 'Anterior', next: 'Proximo',
-                page_info: 'Pagina {p} de {t} - {n} tickets',
-                endpoint_missing: 'Backlog real exige dashboard-read?type=bi-backlog. Endpoint antigo, mock e zoho_tickets foram desativados nesta pagina.',
-                footer: 'Playbook Global - Global Service - KPI'
-            },
-            en: {
-                page_title: 'Daily Backlog Control', brand_subtitle: 'Global Playbook | KPI',
-                back_to_playbook: 'Back', to_label: 'To',
-                btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
-                filter_department: 'Department', filter_status: 'Status',
-                daily_kicker: 'Daily', daily_title: 'Daily backlog control',
-                kpi_open_total: 'Current backlog', kpi_without_resp: 'No first response',
-                kpi_avg_aging: 'Avg aging (days)',
-                kpi_over_10: 'Tickets > 10 days', kpi_dependency: 'External dependency', kpi_p12: 'Open P1/P2',
-                decision_aging: 'Critical queue', decision_response: 'First response', decision_dependency: 'Dependencies',
-                risk_ok: 'Stable', risk_attention: 'Action today',
-                note_aging: '{n} tickets over 10 days',
-                note_response: '{n} tickets without first response',
-                note_dependency: '{n} tickets waiting for customer, part, third party or visit',
-                chart_status: 'Backlog by Status', chart_region: 'Backlog by Region and response',
-                chart_aging: 'Aging Buckets', chart_priority: 'Backlog by Priority',
-                table_title: 'Open Tickets',
-                table_note: 'Sorted by operational risk for daily decisions.',
-                col_ticket: 'Ticket #', col_aging: 'Aging (days)', col_priority: 'Priority',
-                col_region: 'Region', col_status: 'Status', col_action: 'Action',
-                action_first_response: 'Send first response',
-                action_old_ticket: 'Review aging',
-                action_dependency: 'Dependency follow-up',
-                action_p12: 'Prioritize P1/P2',
-                action_monitor: 'Monitor',
-                prev: 'Previous', next: 'Next',
-                page_info: 'Page {p} of {t} - {n} tickets',
-                endpoint_missing: 'Real backlog requires dashboard-read?type=bi-backlog. The old endpoint, mock data and zoho_tickets were disabled on this page.',
-                footer: 'Global Playbook - Global Service - KPI'
-            },
-            es: {
-                page_title: 'Daily Backlog Control', brand_subtitle: 'Playbook Global | KPI',
-                back_to_playbook: 'Volver', to_label: 'Hasta',
-                btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
-                filter_department: 'Departamento', filter_status: 'Estado',
-                daily_kicker: 'Daily', daily_title: 'Control diario de backlog',
-                kpi_open_total: 'Backlog actual', kpi_without_resp: 'Sin primera respuesta',
-                kpi_avg_aging: 'Aging medio (dias)',
-                kpi_over_10: 'Tickets > 10 dias', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abiertos',
-                decision_aging: 'Fila critica', decision_response: 'Primera respuesta', decision_dependency: 'Dependencias',
-                risk_ok: 'Estable', risk_attention: 'Accion hoy',
-                note_aging: '{n} tickets arriba de 10 dias',
-                note_response: '{n} tickets sin primera respuesta',
-                note_dependency: '{n} tickets esperando cliente, pieza, tercero o visita',
-                chart_status: 'Backlog por Estado', chart_region: 'Backlog por Region y respuesta',
-                chart_aging: 'Buckets de Aging', chart_priority: 'Backlog por Prioridad',
-                table_title: 'Tickets Abiertos',
-                table_note: 'Ordenado por riesgo operacional para decisiones diarias.',
-                col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridad',
-                col_region: 'Region', col_status: 'Estado', col_action: 'Accion',
-                action_first_response: 'Dar primera respuesta',
-                action_old_ticket: 'Revisar aging',
-                action_dependency: 'Follow-up dependencia',
-                action_p12: 'Priorizar P1/P2',
-                action_monitor: 'Monitorear',
-                prev: 'Anterior', next: 'Siguiente',
-                page_info: 'Pagina {p} de {t} - {n} tickets',
-                endpoint_missing: 'El backlog real requiere dashboard-read?type=bi-backlog. El endpoint antiguo, mock y zoho_tickets fueron desactivados en esta pagina.',
-                footer: 'Playbook Global - Global Service - KPI'
-            }
-        };
-
-        const PAGE_SIZE = 50;
-        let rawData = [];
-        let openTickets = [];
-        let currentPage = 1;
-
-        function tx(key) {
-            const lang = getLang();
-            return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || key;
+    // ──────────────────────────────────────────────────────────
+    // TRANSLATIONS
+    // ──────────────────────────────────────────────────────────
+    const EXTRA_I18N = {
+        pt: {
+            page_title: 'Daily Backlog Control', brand_subtitle: 'Playbook Global | KPI',
+            back_to_playbook: 'Voltar', filter_country: 'País / Região', country_all: 'Todos',
+            btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+            filter_department: 'Departamento', filter_status: 'Status',
+            daily_kicker: 'Daily', daily_title: 'Controle diario de backlog',
+            kpi_open_total: 'Backlog atual', kpi_without_resp: 'Sem primeira resposta',
+            kpi_avg_aging: 'Aging medio',
+            kpi_over_10: 'Fila critica (>10d)', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abertos',
+            kpi_sub_backlog: 'tickets em aberto agora',
+            kpi_sub_no_resp: 'aguardando primeiro contato',
+            kpi_sub_over10: 'tickets acima de 10 dias',
+            kpi_sub_dep: 'aguardando resposta externa',
+            kpi_sub_p12: 'tickets urgentes/alta prioridade',
+            kpi_sub_aging: 'dias em aberto em media',
+            decision_aging: 'Fila critica', decision_response: 'Primeira resposta', decision_dependency: 'Dependencias',
+            risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
+            note_aging: '{n} tickets acima de 10 dias',
+            note_response: '{n} tickets ainda sem primeira resposta',
+            note_dependency: '{n} tickets aguardando cliente, peca, terceiro ou visita',
+            chart_status: 'Backlog por Status', chart_region: 'Backlog por Regiao e resposta',
+            chart_aging: 'Aging Buckets', chart_priority: 'Backlog por Prioridade',
+            table_title: 'Tickets em Aberto',
+            col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridade',
+            col_region: 'Regiao', col_status: 'Status', col_action: 'Acao', col_mtfc: 'MTFC',
+            action_first_response: 'Dar primeira resposta',
+            action_old_ticket: 'Revisar aging',
+            action_dependency: 'Verificar dependencia',
+            action_p12: 'Priorizar P1/P2',
+            action_monitor: 'Atualizar status',
+            prev: 'Anterior', next: 'Proximo',
+            page_info: 'Pagina {p} de {t} - {n} tickets',
+            last_sync_label: 'Ultima atualizacao:',
+            search_placeholder: 'Buscar ticket #...',
+            no_response_label: 'Sem resposta',
+            alert_no_response: '{n} ticket(s) sem primeira resposta — acao imediata necessaria',
+            alert_urgent: '{n} ticket(s) URGENTE(S) em aberto',
+            alert_aging15: '{n} ticket(s) com mais de 15 dias sem resolucao',
+            alert_sla_risk: '{n} ticket(s) P1/P2 com SLA em risco',
+            alert_ok: 'Nenhum alerta critico no momento',
+            endpoint_missing: 'Backlog real exige dashboard-read?type=bi-backlog. Endpoint antigo, mock e zoho_tickets foram desativados nesta pagina.',
+            footer: 'Playbook Global - Global Service - KPI'
+        },
+        en: {
+            page_title: 'Daily Backlog Control', brand_subtitle: 'Global Playbook | KPI',
+            back_to_playbook: 'Back', filter_country: 'Country / Region', country_all: 'All',
+            btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+            filter_department: 'Department', filter_status: 'Status',
+            daily_kicker: 'Daily', daily_title: 'Daily backlog control',
+            kpi_open_total: 'Current backlog', kpi_without_resp: 'No first response',
+            kpi_avg_aging: 'Avg aging',
+            kpi_over_10: 'Critical queue (>10d)', kpi_dependency: 'External dependency', kpi_p12: 'Open P1/P2',
+            kpi_sub_backlog: 'open tickets now',
+            kpi_sub_no_resp: 'waiting first contact',
+            kpi_sub_over10: 'tickets over 10 days',
+            kpi_sub_dep: 'waiting external response',
+            kpi_sub_p12: 'urgent/high priority tickets',
+            kpi_sub_aging: 'avg days open',
+            decision_aging: 'Critical queue', decision_response: 'First response', decision_dependency: 'Dependencies',
+            risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
+            note_aging: '{n} tickets over 10 days',
+            note_response: '{n} tickets without first response',
+            note_dependency: '{n} tickets waiting for customer, part, third party or visit',
+            chart_status: 'Backlog by Status', chart_region: 'Backlog by Region and response',
+            chart_aging: 'Aging Buckets', chart_priority: 'Backlog by Priority',
+            table_title: 'Open Tickets',
+            col_ticket: 'Ticket #', col_aging: 'Aging (days)', col_priority: 'Priority',
+            col_region: 'Region', col_status: 'Status', col_action: 'Action', col_mtfc: 'MTFC',
+            action_first_response: 'Send first response',
+            action_old_ticket: 'Review aging',
+            action_dependency: 'Check dependency',
+            action_p12: 'Prioritize P1/P2',
+            action_monitor: 'Update status',
+            prev: 'Previous', next: 'Next',
+            page_info: 'Page {p} of {t} - {n} tickets',
+            last_sync_label: 'Last updated:',
+            search_placeholder: 'Search ticket #...',
+            no_response_label: 'No response',
+            alert_no_response: '{n} ticket(s) without first response — immediate action required',
+            alert_urgent: '{n} URGENT ticket(s) open',
+            alert_aging15: '{n} ticket(s) open for more than 15 days',
+            alert_sla_risk: '{n} P1/P2 ticket(s) with SLA at risk',
+            alert_ok: 'No critical alerts at this time',
+            endpoint_missing: 'Real backlog requires dashboard-read?type=bi-backlog. The old endpoint, mock data and zoho_tickets were disabled on this page.',
+            footer: 'Global Playbook - Global Service - KPI'
+        },
+        es: {
+            page_title: 'Daily Backlog Control', brand_subtitle: 'Playbook Global | KPI',
+            back_to_playbook: 'Volver', filter_country: 'País / Región', country_all: 'Todos',
+            btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+            filter_department: 'Departamento', filter_status: 'Estado',
+            daily_kicker: 'Daily', daily_title: 'Control diario de backlog',
+            kpi_open_total: 'Backlog actual', kpi_without_resp: 'Sin primera respuesta',
+            kpi_avg_aging: 'Aging medio',
+            kpi_over_10: 'Fila critica (>10d)', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abiertos',
+            kpi_sub_backlog: 'tickets abiertos ahora',
+            kpi_sub_no_resp: 'esperando primer contacto',
+            kpi_sub_over10: 'tickets arriba de 10 dias',
+            kpi_sub_dep: 'esperando respuesta externa',
+            kpi_sub_p12: 'tickets urgentes/alta prioridad',
+            kpi_sub_aging: 'dias abierto en promedio',
+            decision_aging: 'Fila critica', decision_response: 'Primera respuesta', decision_dependency: 'Dependencias',
+            risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
+            note_aging: '{n} tickets arriba de 10 dias',
+            note_response: '{n} tickets sin primera respuesta',
+            note_dependency: '{n} tickets esperando cliente, pieza, tercero o visita',
+            chart_status: 'Backlog por Estado', chart_region: 'Backlog por Region y respuesta',
+            chart_aging: 'Buckets de Aging', chart_priority: 'Backlog por Prioridad',
+            table_title: 'Tickets Abiertos',
+            col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridad',
+            col_region: 'Region', col_status: 'Estado', col_action: 'Accion', col_mtfc: 'MTFC',
+            action_first_response: 'Dar primera respuesta',
+            action_old_ticket: 'Revisar aging',
+            action_dependency: 'Verificar dependencia',
+            action_p12: 'Priorizar P1/P2',
+            action_monitor: 'Actualizar estado',
+            prev: 'Anterior', next: 'Siguiente',
+            page_info: 'Pagina {p} de {t} - {n} tickets',
+            last_sync_label: 'Ultima actualizacion:',
+            search_placeholder: 'Buscar ticket #...',
+            no_response_label: 'Sin respuesta',
+            alert_no_response: '{n} ticket(s) sin primera respuesta — accion inmediata necesaria',
+            alert_urgent: '{n} ticket(s) URGENTE(S) abiertos',
+            alert_aging15: '{n} ticket(s) abiertos hace mas de 15 dias',
+            alert_sla_risk: '{n} ticket(s) P1/P2 con SLA en riesgo',
+            alert_ok: 'Sin alertas criticas en este momento',
+            endpoint_missing: 'El backlog real requiere dashboard-read?type=bi-backlog. El endpoint antiguo, mock y zoho_tickets fueron desactivados en esta pagina.',
+            footer: 'Playbook Global - Global Service - KPI'
         }
+    };
 
-        function applyExtraI18n() {
-            document.querySelectorAll('[data-tx]').forEach(node => {
-                node.textContent = tx(node.getAttribute('data-tx'));
+    // ──────────────────────────────────────────────────────────
+    // I18N HELPERS
+    // ──────────────────────────────────────────────────────────
+    function tx(key) {
+        const lang = getLang();
+        return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || t(key) || key;
+    }
+    function applyExtraI18n() {
+        document.querySelectorAll('[data-tx]').forEach(node => {
+            node.textContent = tx(node.getAttribute('data-tx'));
+        });
+        document.querySelectorAll('[data-tx-placeholder]').forEach(node => {
+            node.placeholder = tx(node.getAttribute('data-tx-placeholder'));
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // CONSTANTS & STATE
+    // ──────────────────────────────────────────────────────────
+    const COUNTRY_BUTTONS = [
+        { key: 'all', emoji: '🌐' },
+        { key: 'Brasil', emoji: '🇧🇷' },
+        { key: 'USA', emoji: '🇺🇸' },
+        { key: 'Argentina', emoji: '🇦🇷' },
+        { key: 'México', emoji: '🇲🇽' },
+        { key: 'LATAM', emoji: '🌎' },
+        { key: 'ROW', emoji: '🌍' }
+    ];
+    const REGION_FLAGS = { Brasil: '🇧🇷', Argentina: '🇦🇷', 'México': '🇲🇽', LATAM: '🌎', USA: '🇺🇸', ROW: '🌍' };
+    const SORT_PRIORITY = { 'Urgente': 1, 'Alta': 2, 'Média': 3, 'Baixa': 4, 'Muito Baixa': 5 };
+
+    const PAGE_SIZE = 50;
+    let rawData = [];
+    let openTickets = [];
+    let allRowsSorted = [];
+    let currentPage = 1;
+    let tableSortState = { column: 'risk', direction: 'desc' };
+    let searchQuery = '';
+
+    // ──────────────────────────────────────────────────────────
+    // UTILITY HELPERS
+    // ──────────────────────────────────────────────────────────
+    function showLoading(on) {
+        document.getElementById('loading').style.display = on ? '' : 'none';
+        document.getElementById('page-body').style.display = on ? 'none' : '';
+    }
+    function showError(msg) {
+        document.getElementById('error-banner-text').textContent = msg || tx('endpoint_missing');
+        document.getElementById('error-banner').style.display = '';
+        document.getElementById('page-body').style.display = 'none';
+        document.getElementById('loading').style.display = 'none';
+    }
+    function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+    function fmt(n, d) {
+        if (n === null || n === undefined || isNaN(n)) return '--';
+        return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+    function setKpi(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+    function regionLabel(group) {
+        const map = { Brasil: 'region_brazil', Argentina: 'region_argentina', 'México': 'region_mexico', LATAM: 'region_latam', USA: 'region_usa', ROW: 'region_row' };
+        return t(map[group] || '') || group || '--';
+    }
+
+    function colorKpiTopBar(kpiId, colorName) {
+        const el = document.getElementById(kpiId);
+        if (!el) return;
+        const card = el.closest('.card');
+        if (!card) return;
+        let bar = card.querySelector('.kpi-top-bar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.className = 'kpi-top-bar';
+            bar.style.cssText = 'height:3px;margin:-20px -20px 12px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;transition:background .2s;';
+            card.insertBefore(bar, card.firstChild);
+        }
+        bar.style.background = colorHex(colorName);
+    }
+
+    function agingDays(row) {
+        return Number(row.aging_backlog_dias ?? row.aging_days ?? row.aging_dias ?? 0);
+    }
+    function hasFirstResponse(row) {
+        return Number.isFinite(metricNumber(row.mtfc_horas_bi, row.mtfc_horas));
+    }
+    function isDependencyStatusText(value) {
+        const s = normalizeStatus(value);
+        return s.includes('aguardando') || s.includes('waiting') || s.includes('terceiro') || s.includes('third') || s.includes('peca') || s.includes('cliente') || s.includes('customer') || s.includes('visita');
+    }
+    function isP12(row) {
+        const p = normalizeStatus(row.priority_standard || row.priority);
+        return p.includes('urgente') || p.includes('urgent') || p.includes('alta') || p.includes('high') || p === 'p1' || p === 'p2';
+    }
+    function getRiskScore(row) {
+        let score = 0;
+        if (!hasFirstResponse(row)) score += 1000;
+        score += (SORT_PRIORITY[getTicketPriority(row)] ? (6 - (SORT_PRIORITY[getTicketPriority(row)])) * 100 : 0);
+        score += agingDays(row) * 2;
+        return score;
+    }
+
+    function getZohoTicketUrl(row) {
+        const org = 'alliage';
+        const id = row.ticket_id || row.id;
+        if (id) return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/dv/${id}`;
+        return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/search/${row.ticket_number}`;
+    }
+
+    function priorityBadge(priority) {
+        const cls = { 'Urgente': 'badge-red', 'Alta': 'badge-orange', 'Média': 'badge-yellow', 'Baixa': 'badge-blue', 'Muito Baixa': 'badge-muted' };
+        const label = priority || 'Sem prior.';
+        return `<span class="badge ${cls[priority] || 'badge-muted'}">${label}</span>`;
+    }
+
+    function statusBadgeFor(status) {
+        if (!status) return '<span class="badge badge-muted">--</span>';
+        const norm = normalizeStatus(status);
+        if (norm.includes('aguardando') && norm.includes('cliente')) return `<span class="badge badge-yellow">${status}</span>`;
+        if (norm.includes('aguardando') && norm.includes('peca')) return `<span class="badge badge-orange">${status}</span>`;
+        if (norm.includes('aguardando') && (norm.includes('terceiro') || norm.includes('visita'))) return `<span class="badge" style="background:rgba(92,42,191,.14);border:1px solid rgba(92,42,191,.4);color:#9e7eea">${status}</span>`;
+        if (norm.includes('em atendimento') || norm.includes('in progress') || norm.includes('atendimento')) return `<span class="badge badge-blue">${status}</span>`;
+        return `<span class="badge" style="background:rgba(31,111,235,.1);border:1px solid rgba(31,111,235,.3);color:#388bfd">${status}</span>`;
+    }
+
+    function actionFor(row) {
+        if (!hasFirstResponse(row)) return `<span class="action-badge action-badge-red">${tx('action_first_response')}</span>`;
+        if (agingDays(row) > 10) return `<span class="action-badge action-badge-yellow">${tx('action_old_ticket')}</span>`;
+        if (isDependencyStatusText(row.status)) return `<span class="action-badge action-badge-blue">${tx('action_dependency')}</span>`;
+        if (isP12(row)) return `<span class="action-badge action-badge-yellow">${tx('action_p12')}</span>`;
+        return `<span class="action-badge action-badge-gray">${tx('action_monitor')}</span>`;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // COUNTRY FILTER
+    // ──────────────────────────────────────────────────────────
+    function renderCountryFilter() {
+        const container = document.getElementById('country-filter');
+        if (!container) return;
+        const current = FilterState.get().region || 'all';
+        container.innerHTML = '';
+        COUNTRY_BUTTONS.forEach(({ key, emoji }) => {
+            const label = key === 'all' ? `${emoji} ${tx('country_all')}` : `${emoji} ${key}`;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.className = 'country-btn' + (current === key ? ' active' : '');
+            btn.addEventListener('click', () => {
+                FilterState.update('region', key);
+                renderCountryFilter();
+                applyPage();
             });
-        }
+            container.appendChild(btn);
+        });
+    }
 
-        function showLoading(on) {
-            document.getElementById('loading').style.display = on ? '' : 'none';
-            document.getElementById('page-body').style.display = on ? 'none' : '';
-        }
-
-        function showError(msg) {
-            document.getElementById('error-banner-text').textContent = msg || tx('endpoint_missing');
-            document.getElementById('error-banner').style.display = '';
-            document.getElementById('page-body').style.display = 'none';
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        function hideError() {
-            document.getElementById('error-banner').style.display = 'none';
-        }
-
-        function fmt(n, d) {
-            if (n === null || n === undefined || isNaN(n)) return '--';
-            return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-        }
-
-        function setKpi(id, value) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
-        }
-
-        function buildSelectOptions(select, values, defaultLabel) {
-            select.innerHTML = '';
-            const optAll = document.createElement('option');
-            optAll.value = 'all';
-            optAll.textContent = defaultLabel;
-            select.appendChild(optAll);
-            values.forEach(v => {
-                if (!v) return;
-                const opt = document.createElement('option');
-                opt.value = v;
-                opt.textContent = v;
-                select.appendChild(opt);
-            });
-        }
-
-        function populateFilterOptions(rows) {
-            const state = FilterState.get();
-            buildSelectOptions(document.getElementById('filter-region'),
-                [...new Set(rows.map(r => r.regiao_grupo || r.region_group || r.region).filter(Boolean))].sort(),
-                t('filter_all'));
-            buildSelectOptions(document.getElementById('filter-priority'),
-                [...new Set(rows.map(r => r.priority_standard || r.priority).filter(Boolean))].sort(),
-                t('filter_all'));
-            buildSelectOptions(document.getElementById('filter-type'),
-                [...new Set(rows.map(r => r.department_name || r.department).filter(Boolean))].sort(),
-                t('filter_all'));
-            buildSelectOptions(document.getElementById('filter-product'),
-                [...new Set(rows.map(r => r.status).filter(Boolean))].sort(),
-                t('filter_all'));
-            ['region','priority','type','product'].forEach(key => {
-                const input = document.querySelector(`[data-filter="${key}"]`);
-                if (input && [...input.options].some(o => o.value === state[key])) input.value = state[key];
-            });
-            renderAgentGroupFilter();
-        }
-
-        function renderAgentGroupFilter() {
-            const container = document.getElementById('filter-agent-groups');
-            if (!container) return;
-            const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
-            container.innerHTML = '';
-            AGENT_GROUPS.forEach(group => {
-                const checked = current.includes(group);
-                const btn = document.createElement('button');
-                btn.textContent = group;
-                btn.dataset.group = group;
-                btn.style.cssText = `padding:4px 10px;border-radius:20px;border:1px solid #30363d;font-size:12px;background:${checked ? '#1f6feb' : '#161b22'};color:${checked ? '#fff' : '#7d8590'};cursor:pointer`;
-                btn.addEventListener('click', () => {
-                    const f = FilterState.get();
-                    const groups = Array.isArray(f.agentGroups) ? [...f.agentGroups] : [...DEFAULT_AGENT_GROUPS];
-                    const idx = groups.indexOf(group);
-                    if (idx >= 0) groups.splice(idx, 1);
-                    else groups.push(group);
-                    FilterState.update('agentGroups', groups);
-                    renderAgentGroupFilter();
-                    applyPage();
-                });
-                container.appendChild(btn);
-            });
-        }
-
-        function metricValue(rows, keys) {
-            for (const row of rows) {
-                for (const key of keys) {
-                    if (row[key] !== null && row[key] !== undefined) return Number(row[key]);
-                }
-            }
-            return null;
-        }
-
-        function agingDays(row) {
-            return Number(row.aging_backlog_dias ?? row.aging_days ?? row.aging_dias ?? 0);
-        }
-
-        function hasFirstResponse(row) {
-            return Number.isFinite(metricNumber(row.mtfc_horas_bi, row.mtfc_horas));
-        }
-
-        function isDependencyStatusText(value) {
-            const status = normalizeStatus(value);
-            return status.includes('aguardando') ||
-                status.includes('waiting') ||
-                status.includes('terceiro') ||
-                status.includes('third') ||
-                status.includes('peca') ||
-                status.includes('cliente') ||
-                status.includes('customer') ||
-                status.includes('visita');
-        }
-
-        function isP12(row) {
-            const priority = normalizeStatus(row.priority_standard || row.priority);
-            return priority.includes('urgente') ||
-                priority.includes('urgent') ||
-                priority.includes('alta') ||
-                priority.includes('high') ||
-                priority === 'p1' ||
-                priority === 'p2';
-        }
-
-        function riskScore(row) {
-            let score = agingDays(row);
-            if (!hasFirstResponse(row)) score += 40;
-            if (isP12(row)) score += 25;
-            if (isDependencyStatusText(row.status)) score += 10;
-            return score;
-        }
-
-        function actionFor(row) {
-            if (!hasFirstResponse(row)) return tx('action_first_response');
-            if (agingDays(row) > 10) return tx('action_old_ticket');
-            if (isDependencyStatusText(row.status)) return tx('action_dependency');
-            if (isP12(row)) return tx('action_p12');
-            return tx('action_monitor');
-        }
-
-        function groupCounts(rows, labelFn) {
-            const counts = new Map();
-            rows.forEach(row => {
-                const label = labelFn(row) || '--';
-                counts.set(label, (counts.get(label) || 0) + 1);
-            });
-            return [...counts.entries()]
-                .map(([label, value]) => ({ label, value }))
-                .sort((a, b) => b.value - a.value);
-        }
-
-        function renderCountBar(canvasId, rows, labelFn, title, colorFn) {
-            const groups = groupCounts(rows, labelFn).slice(0, 10);
-            if (!groups.length) {
-                destroyChart(canvasId);
-                return;
-            }
-            createBarChart(
-                canvasId,
-                groups.map(g => g.label),
-                groups.map(g => g.value),
-                groups.map(g => colorFn ? colorFn(g.label, g.value) : '#1f6feb'),
-                title
-            );
-        }
-
-        function renderBacklogByRegion(rows) {
-            const labels = REGION_GROUPS.filter(region =>
-                rows.some(row => getTicketRegionGroup(row) === region)
-            );
-            createStackedBarChart('chart-backlog-region', labels, [
-                {
-                    label: t('with_first_response'),
-                    data: labels.map(region => rows.filter(row => getTicketRegionGroup(row) === region && hasFirstResponse(row)).length),
-                    backgroundColor: colorHex('green'),
-                    borderRadius: 6,
-                    borderSkipped: false
-                },
-                {
-                    label: t('without_first_response'),
-                    data: labels.map(region => rows.filter(row => getTicketRegionGroup(row) === region && !hasFirstResponse(row)).length),
-                    backgroundColor: colorHex('red'),
-                    borderRadius: 6,
-                    borderSkipped: false
-                }
-            ], tx('chart_region'));
-        }
-
-        function applyBacklogFilters(rows, filters) {
-            return rows.filter(row => {
-                if (filters.region && filters.region !== 'all' && getTicketRegionGroup(row) !== filters.region) return false;
-                if (filters.priority && filters.priority !== 'all' && getTicketPriority(row) !== filters.priority) return false;
-                if (filters.type && filters.type !== 'all' && (row.department_name || row.department || '') !== filters.type) return false;
-                if (filters.product && filters.product !== 'all' && (row.status || '') !== filters.product) return false;
-                if (filters.agentGroups && filters.agentGroups.length && !filters.agentGroups.includes(getTicketAgentGroup(row))) return false;
-                return true;
-            });
-        }
-
-        function chartRows(rows, groupKeys, valueKeys) {
-            return rows
-                .map(row => ({
-                    label: groupKeys.map(k => row[k]).find(Boolean),
-                    value: metricValue([row], valueKeys)
-                }))
-                .filter(row => row.label && row.value !== null);
-        }
-
-        function renderMappedBar(canvasId, rows, groupKeys, valueKeys, title, color) {
-            const mapped = chartRows(rows, groupKeys, valueKeys);
-            if (!mapped.length) {
-                destroyChart(canvasId);
-                return;
-            }
-            createBarChart(canvasId,
-                mapped.map(r => r.label),
-                mapped.map(r => r.value),
-                mapped.map(() => color || '#1f6feb'),
-                title
-            );
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('open-tickets-body');
-            const total = openTickets.length;
-            const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-            if (currentPage > totalPages) currentPage = totalPages;
-            const start = (currentPage - 1) * PAGE_SIZE;
-            const slice = openTickets.slice(start, start + PAGE_SIZE);
-            tbody.innerHTML = '';
-            if (!slice.length) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td colspan="6" class="text-muted" style="text-align:center;padding:18px">--</td>';
-                tbody.appendChild(tr);
-            } else {
-                slice.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="mono">${row.ticket_number || row.id || '--'}</td>
-                        <td class="mono">${fmt(agingDays(row), 1)}</td>
-                        <td>${row.priority_standard || row.priority || '--'}</td>
-                        <td>${row.regiao_grupo || row.region_group || row.region || '--'}</td>
-                        <td>${row.status || '--'}</td>
-                        <td>${actionFor(row)}</td>`;
-                    tbody.appendChild(tr);
-                });
-            }
-            document.getElementById('pagination-info').textContent =
-                tx('page_info').replace('{p}', currentPage).replace('{t}', totalPages).replace('{n}', total);
-        }
-
-        function renderPage(rows) {
-            const noResponse = rows.filter(row => !hasFirstResponse(row));
-            const over10 = rows.filter(row => agingDays(row) > 10);
-            const dependencies = rows.filter(row => isDependencyStatusText(row.status));
-            const p12 = rows.filter(isP12);
-            const avgAging = rows.length ? rows.reduce((sum, row) => sum + agingDays(row), 0) / rows.length : 0;
-
-            setKpi('kpi-open-total', fmt(rows.length, 0));
-            setKpi('kpi-without-resp', fmt(noResponse.length, 0));
-            setKpi('kpi-over-10', fmt(over10.length, 0));
-            setKpi('kpi-dependency', fmt(dependencies.length, 0));
-            setKpi('kpi-p12', fmt(p12.length, 0));
-            setKpi('kpi-avg-aging', fmt(avgAging, 1));
-
-            document.getElementById('daily-risk-badge').textContent =
-                (over10.length || noResponse.length || p12.length) ? tx('risk_attention') : tx('risk_ok');
-            document.getElementById('daily-risk-badge').className =
-                (over10.length || noResponse.length || p12.length) ? 'badge badge-yellow' : 'badge badge-green';
-            setKpi('decision-aging-value', fmt(over10.length, 0));
-            setKpi('decision-response-value', fmt(noResponse.length, 0));
-            setKpi('decision-dependency-value', fmt(dependencies.length, 0));
-            setKpi('decision-aging-note', tx('note_aging').replace('{n}', fmt(over10.length, 0)));
-            setKpi('decision-response-note', tx('note_response').replace('{n}', fmt(noResponse.length, 0)));
-            setKpi('decision-dependency-note', tx('note_dependency').replace('{n}', fmt(dependencies.length, 0)));
-
-            renderCountBar('chart-backlog-status', rows, row => row.status || '--', tx('chart_status'));
-            renderBacklogByRegion(rows);
-            renderCountBar('chart-aging-buckets', rows, row => row.aging_bucket || `${Math.floor(agingDays(row))}d`, tx('chart_aging'), label => label.includes('+') ? colorHex('red') : '#E4BF14');
-            renderCountBar('chart-backlog-priority', rows, row => row.priority_standard || row.priority || '--', tx('chart_priority'), label => (normalizeStatus(label).includes('urgent') || normalizeStatus(label).includes('urgente')) ? colorHex('red') : '#1f6feb');
-
-            openTickets = rows
-                .filter(row => row.ticket_number || row.id)
-                .sort((a, b) => riskScore(b) - riskScore(a));
-            currentPage = 1;
-            renderTable();
-        }
-
-        function bindFilterControls() {
-            document.getElementById('btn-apply').addEventListener('click', () => {
-                const next = {};
-                document.querySelectorAll('[data-filter]').forEach(input => {
-                    next[input.dataset.filter] = input.value;
-                });
-                next.agentGroups = FilterState.get().agentGroups;
-                FilterState.set(next);
-            });
-            document.getElementById('btn-clear').addEventListener('click', () => {
-                FilterState.reset();
-                document.querySelectorAll('[data-filter]').forEach(input => {
-                    input.value = input.tagName === 'SELECT' ? 'all' : '';
-                });
+    // ──────────────────────────────────────────────────────────
+    // AGENT GROUP FILTER
+    // ──────────────────────────────────────────────────────────
+    function renderAgentGroupFilter() {
+        const container = document.getElementById('filter-agent-groups');
+        if (!container) return;
+        const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
+        container.innerHTML = '';
+        AGENT_GROUPS.forEach(group => {
+            const checked = current.includes(group);
+            const btn = document.createElement('button');
+            btn.textContent = group;
+            btn.dataset.group = group;
+            btn.style.cssText = `padding:4px 10px;border-radius:20px;border:1px solid #30363d;font-size:12px;background:${checked ? '#1f6feb' : '#161b22'};color:${checked ? '#fff' : '#7d8590'};cursor:pointer`;
+            btn.addEventListener('click', () => {
+                const f = FilterState.get();
+                const groups = Array.isArray(f.agentGroups) ? [...f.agentGroups] : [...DEFAULT_AGENT_GROUPS];
+                const idx = groups.indexOf(group);
+                if (idx >= 0) groups.splice(idx, 1); else groups.push(group);
+                FilterState.update('agentGroups', groups);
                 renderAgentGroupFilter();
                 applyPage();
             });
-            document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
-            document.getElementById('page-prev').addEventListener('click', () => {
-                if (currentPage > 1) { currentPage--; renderTable(); }
+            container.appendChild(btn);
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // FILTER POPULATION
+    // ──────────────────────────────────────────────────────────
+    function buildSelectOptions(select, values, defaultLabel) {
+        select.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = 'all'; optAll.textContent = defaultLabel;
+        select.appendChild(optAll);
+        values.forEach(v => {
+            if (!v) return;
+            const opt = document.createElement('option');
+            opt.value = v; opt.textContent = v;
+            select.appendChild(opt);
+        });
+    }
+
+    function populateFilterOptions(rows) {
+        const state = FilterState.get();
+        renderCountryFilter();
+        buildSelectOptions(document.getElementById('filter-priority'),
+            [...new Set(rows.map(r => r.priority_standard || r.priority).filter(Boolean))].sort(),
+            t('filter_all'));
+        buildSelectOptions(document.getElementById('filter-type'),
+            [...new Set(rows.map(r => r.department_name || r.department).filter(Boolean))].sort(),
+            t('filter_all'));
+        buildSelectOptions(document.getElementById('filter-product'),
+            [...new Set(rows.map(r => r.status).filter(Boolean))].sort(),
+            t('filter_all'));
+        ['priority','type','product'].forEach(key => {
+            const input = document.querySelector(`[data-filter="${key}"]`);
+            if (input && [...input.options].some(o => o.value === state[key])) input.value = state[key];
+        });
+        renderAgentGroupFilter();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // FILTER CONTROLS
+    // ──────────────────────────────────────────────────────────
+    function bindFilterControls() {
+        document.getElementById('btn-apply').addEventListener('click', () => {
+            const next = {};
+            document.querySelectorAll('[data-filter]').forEach(input => {
+                next[input.dataset.filter] = input.value;
             });
-            document.getElementById('page-next').addEventListener('click', () => {
-                const total = Math.max(1, Math.ceil(openTickets.length / PAGE_SIZE));
-                if (currentPage < total) { currentPage++; renderTable(); }
+            next.region = FilterState.get().region || 'all';
+            next.agentGroups = FilterState.get().agentGroups;
+            FilterState.set(next);
+        });
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            FilterState.reset();
+            FilterState.update('region', 'all');
+            document.querySelectorAll('[data-filter]').forEach(input => {
+                input.value = input.tagName === 'SELECT' ? 'all' : '';
             });
-        }
-
-        function applyPage() {
-            applyExtraI18n();
-            const filters = { ...FilterState.get(), dateFrom: '', dateTo: '' };
-            renderPage(applyBacklogFilters(rawData, filters));
-        }
-
-        async function init() {
-            hideError();
-            showLoading(true);
-            bindFilterControls();
-            try {
-                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
-                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-                }
-                rawData = (await fetchDashboardBiBacklog()).backlog;
-                populateFilterOptions(rawData);
-                applyExtraI18n();
-                showLoading(false);
-                applyPage();
-            } catch (e) {
-                showError(`${tx('endpoint_missing')} ${e && e.message ? '(' + e.message + ')' : ''}`);
-            }
-        }
-
-        document.addEventListener('filterschange', applyPage);
-        document.addEventListener('langchange', () => {
-            applyExtraI18n();
-            populateFilterOptions(rawData);
+            renderCountryFilter();
+            renderAgentGroupFilter();
             applyPage();
         });
-        window.addEventListener('load', init);
+        document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+        document.getElementById('page-prev').addEventListener('click', () => {
+            if (currentPage > 1) { currentPage--; renderTable(); }
+        });
+        document.getElementById('page-next').addEventListener('click', () => {
+            const total = Math.max(1, Math.ceil(openTickets.length / PAGE_SIZE));
+            if (currentPage < total) { currentPage++; renderTable(); }
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // TABLE SORT
+    // ──────────────────────────────────────────────────────────
+    function handleTableSort(column) {
+        if (tableSortState.column === column) {
+            if (tableSortState.direction === 'asc') tableSortState.direction = 'desc';
+            else tableSortState = { column: 'risk', direction: 'desc' };
+        } else {
+            tableSortState = { column, direction: 'asc' };
+        }
+        currentPage = 1;
+        applyTableSort();
+    }
+
+    function applyTableSort() {
+        const base = searchQuery
+            ? allRowsSorted.filter(r => String(r.ticket_number || '').toLowerCase().includes(searchQuery.toLowerCase()))
+            : allRowsSorted;
+
+        let sorted;
+        if (tableSortState.column === 'risk') {
+            sorted = [...base].sort((a, b) => getRiskScore(b) - getRiskScore(a));
+        } else {
+            sorted = [...base].sort((a, b) => {
+                let valA, valB;
+                switch (tableSortState.column) {
+                    case 'ticket_number': valA = Number(a.ticket_number)||0; valB = Number(b.ticket_number)||0; break;
+                    case 'region':   valA = (getTicketRegionGroup(a)||'').toLowerCase(); valB = (getTicketRegionGroup(b)||'').toLowerCase(); break;
+                    case 'priority': valA = SORT_PRIORITY[getTicketPriority(a)]||9; valB = SORT_PRIORITY[getTicketPriority(b)]||9; break;
+                    case 'status':   valA = (a.status||'').toLowerCase(); valB = (b.status||'').toLowerCase(); break;
+                    case 'mtfc':
+                        valA = Number.isFinite(metricNumber(a.mtfc_horas_bi, a.mtfc_horas)) ? metricNumber(a.mtfc_horas_bi, a.mtfc_horas) : 9999;
+                        valB = Number.isFinite(metricNumber(b.mtfc_horas_bi, b.mtfc_horas)) ? metricNumber(b.mtfc_horas_bi, b.mtfc_horas) : 9999;
+                        break;
+                    case 'aging': default: valA = agingDays(a); valB = agingDays(b); break;
+                }
+                if (valA < valB) return tableSortState.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return tableSortState.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        openTickets = sorted;
+        renderTable();
+        updateSortIcons();
+    }
+
+    function updateSortIcons() {
+        document.querySelectorAll('.daily-tickets-table th.sortable').forEach(th => {
+            const col = th.dataset.sort;
+            const icon = th.querySelector('.sort-icon');
+            if (!icon) return;
+            if (col === tableSortState.column) {
+                icon.textContent = tableSortState.direction === 'asc' ? ' ↑' : ' ↓';
+                th.classList.add('sort-active');
+            } else {
+                icon.textContent = ' ↕';
+                th.classList.remove('sort-active');
+            }
+        });
+    }
+
+    function updateSearch(query) {
+        searchQuery = String(query || '').trim();
+        currentPage = 1;
+        applyTableSort();
+    }
+
+    function bindTableSort() {
+        document.querySelectorAll('.daily-tickets-table th.sortable').forEach(th => {
+            th.addEventListener('click', () => handleTableSort(th.dataset.sort));
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // RENDER TABLE
+    // ──────────────────────────────────────────────────────────
+    function renderTable() {
+        const tbody = document.getElementById('open-tickets-body');
+        const total = openTickets.length;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const slice = openTickets.slice(start, start + PAGE_SIZE);
+
+        const countEl = document.getElementById('table-count');
+        if (countEl) countEl.textContent = `(${total})`;
+
+        tbody.innerHTML = '';
+        if (!slice.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${t('no_filter_data')}</td></tr>`;
+        } else {
+            slice.forEach(row => {
+                const tr = document.createElement('tr');
+                const priority = getTicketPriority(row);
+                const pNorm = normalizeStatus(priority);
+                if (pNorm.includes('urgente') || pNorm === 'p1') {
+                    tr.style.borderLeft = '3px solid #E31424';
+                } else if (pNorm.includes('alta') || pNorm === 'p2') {
+                    tr.style.borderLeft = '3px solid #E4A014';
+                }
+                if (!hasFirstResponse(row)) {
+                    tr.style.background = 'rgba(227,20,36,0.05)';
+                }
+
+                const region = getTicketRegionGroup(row);
+                const regionStr = `${REGION_FLAGS[region] || ''} ${regionLabel(region)}`;
+
+                const mtfc = metricNumber(row.mtfc_horas_bi, row.mtfc_horas);
+                const mtfcTarget = MTFC_TARGET[priority] || MTFC_TARGET_DEFAULT;
+                const mtfcStr = Number.isFinite(mtfc)
+                    ? `<span style="color:${colorHex(mtfc <= mtfcTarget ? 'green' : 'red')}">${fmt(mtfc, 1)} h</span>`
+                    : `<span style="color:${colorHex('red')};font-weight:600">${tx('no_response_label')}</span>`;
+
+                const aging = agingDays(row);
+                const agingColor = aging < 5 ? 'green' : aging <= 10 ? 'yellow' : 'red';
+                const agingStr = aging > 10
+                    ? `<strong style="color:${colorHex('red')}">${fmt(aging, 0)}</strong>`
+                    : `<span style="color:${colorHex(agingColor)}">${fmt(aging, 0)}</span>`;
+
+                tr.innerHTML = `
+                    <td><a href="${getZohoTicketUrl(row)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Abrir #${row.ticket_number} no Zoho Desk">#${row.ticket_number || row.id || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
+                    <td>${regionStr}</td>
+                    <td>${priorityBadge(priority)}</td>
+                    <td>${statusBadgeFor(row.status)}</td>
+                    <td>${mtfcStr}</td>
+                    <td>${agingStr}</td>
+                    <td>${actionFor(row)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('pagination-info').textContent =
+            tx('page_info').replace('{p}', currentPage).replace('{t}', totalPages).replace('{n}', total);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // ALERTS
+    // ──────────────────────────────────────────────────────────
+    function renderAlerts(rows) {
+        const container = document.getElementById('daily-alerts');
+        if (!container) return;
+
+        const noResponse = rows.filter(r => !hasFirstResponse(r));
+        const urgent     = rows.filter(r => (r.priority_standard || r.priority) === 'Urgente');
+        const over15     = rows.filter(r => agingDays(r) > 15);
+        const slaRisk    = rows.filter(r => isP12(r) && !hasFirstResponse(r));
+
+        const alerts = [];
+        if (noResponse.length) alerts.push({ type: 'red',    msg: `⚡ ${tx('alert_no_response').replace('{n}', noResponse.length)}` });
+        if (urgent.length)     alerts.push({ type: 'red',    msg: `🔴 ${tx('alert_urgent').replace('{n}', urgent.length)}` });
+        if (over15.length)     alerts.push({ type: 'yellow', msg: `⏰ ${tx('alert_aging15').replace('{n}', over15.length)}` });
+        if (slaRisk.length)    alerts.push({ type: 'yellow', msg: `⚠️ ${tx('alert_sla_risk').replace('{n}', slaRisk.length)}` });
+
+        if (!alerts.length) {
+            container.innerHTML = `<div class="alert-card alert-card-green">✅ ${tx('alert_ok')}</div>`;
+            return;
+        }
+        container.innerHTML = alerts.map(a => `<div class="alert-card alert-card-${a.type}">${a.msg}</div>`).join('');
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // CHARTS
+    // ──────────────────────────────────────────────────────────
+    function groupCounts(rows, labelFn) {
+        const counts = new Map();
+        rows.forEach(row => {
+            const label = labelFn(row) || '--';
+            counts.set(label, (counts.get(label) || 0) + 1);
+        });
+        return [...counts.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+    }
+
+    function renderCountBar(canvasId, rows, labelFn, title, colorFn) {
+        const groups = groupCounts(rows, labelFn).slice(0, 10);
+        if (!groups.length) { destroyChart(canvasId); return; }
+        createBarChart(canvasId, groups.map(g => g.label), groups.map(g => g.value), groups.map(g => colorFn ? colorFn(g.label, g.value) : '#1f6feb'), title);
+    }
+
+    function renderBacklogByRegion(rows) {
+        const labels = REGION_GROUPS.filter(region => rows.some(row => getTicketRegionGroup(row) === region));
+        createStackedBarChart('chart-backlog-region', labels, [
+            { label: t('with_first_response'), data: labels.map(r => rows.filter(row => getTicketRegionGroup(row) === r && hasFirstResponse(row)).length), backgroundColor: colorHex('green'), borderRadius: 6, borderSkipped: false },
+            { label: t('without_first_response'), data: labels.map(r => rows.filter(row => getTicketRegionGroup(row) === r && !hasFirstResponse(row)).length), backgroundColor: colorHex('red'), borderRadius: 6, borderSkipped: false }
+        ], tx('chart_region'));
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // BACKLOG FILTERS
+    // ──────────────────────────────────────────────────────────
+    function applyBacklogFilters(rows, filters) {
+        return rows.filter(row => {
+            if (filters.region && filters.region !== 'all' && getTicketRegionGroup(row) !== filters.region) return false;
+            if (filters.priority && filters.priority !== 'all' && getTicketPriority(row) !== filters.priority) return false;
+            if (filters.type && filters.type !== 'all' && (row.department_name || row.department || '') !== filters.type) return false;
+            if (filters.product && filters.product !== 'all' && (row.status || '') !== filters.product) return false;
+            if (filters.agentGroups && filters.agentGroups.length && !filters.agentGroups.includes(getTicketAgentGroup(row))) return false;
+            return true;
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // MAIN RENDER
+    // ──────────────────────────────────────────────────────────
+    function renderPage(rows) {
+        const noResponse  = rows.filter(row => !hasFirstResponse(row));
+        const over10      = rows.filter(row => agingDays(row) > 10);
+        const dependencies = rows.filter(row => isDependencyStatusText(row.status));
+        const p12         = rows.filter(isP12);
+        const avgAging    = rows.length ? rows.reduce((sum, row) => sum + agingDays(row), 0) / rows.length : 0;
+
+        setKpi('kpi-open-total',   fmt(rows.length, 0));
+        setKpi('kpi-without-resp', fmt(noResponse.length, 0));
+        setKpi('kpi-over-10',      fmt(over10.length, 0));
+        setKpi('kpi-dependency',   fmt(dependencies.length, 0));
+        setKpi('kpi-p12',          fmt(p12.length, 0));
+        setKpi('kpi-avg-aging',    fmt(avgAging, 1));
+
+        colorKpiTopBar('kpi-open-total',   rows.length < 100 ? 'green' : rows.length <= 200 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-without-resp', noResponse.length === 0 ? 'green' : noResponse.length <= 5 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-over-10',      over10.length === 0 ? 'green' : over10.length <= 10 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-dependency',   dependencies.length === 0 ? 'green' : dependencies.length <= 5 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-p12',          p12.length === 0 ? 'green' : p12.length <= 3 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-avg-aging',    avgAging < 5 ? 'green' : avgAging <= 10 ? 'yellow' : 'red');
+
+        const riskLevel = p12.length > 0 ? 'critical' : (over10.length > 0 || noResponse.length > 0 ? 'attention' : 'ok');
+        document.getElementById('daily-risk-badge').textContent = tx('risk_' + riskLevel);
+        document.getElementById('daily-risk-badge').className =
+            riskLevel === 'ok' ? 'badge badge-green' : riskLevel === 'attention' ? 'badge badge-yellow' : 'badge badge-red';
+
+        setKpi('decision-aging-value',      fmt(over10.length, 0));
+        setKpi('decision-response-value',   fmt(noResponse.length, 0));
+        setKpi('decision-dependency-value', fmt(dependencies.length, 0));
+        setKpi('decision-aging-note',       tx('note_aging').replace('{n}', fmt(over10.length, 0)));
+        setKpi('decision-response-note',    tx('note_response').replace('{n}', fmt(noResponse.length, 0)));
+        setKpi('decision-dependency-note',  tx('note_dependency').replace('{n}', fmt(dependencies.length, 0)));
+
+        // Alerts (new)
+        renderAlerts(rows);
+
+        // Charts
+        renderCountBar('chart-backlog-status', rows, row => row.status || '--', tx('chart_status'));
+        renderBacklogByRegion(rows);
+        renderCountBar('chart-aging-buckets', rows, row => row.aging_bucket || `${Math.floor(agingDays(row))}d`, tx('chart_aging'), label => label.includes('+') ? colorHex('red') : '#E4BF14');
+        renderCountBar('chart-backlog-priority', rows, row => row.priority_standard || row.priority || '--', tx('chart_priority'), label => (normalizeStatus(label).includes('urgent') || normalizeStatus(label).includes('urgente')) ? colorHex('red') : '#1f6feb');
+
+        // Table — reset sort and search on new filter
+        tableSortState = { column: 'risk', direction: 'desc' };
+        searchQuery = '';
+        const searchInput = document.getElementById('ticket-search-daily');
+        if (searchInput) searchInput.value = '';
+        allRowsSorted = rows.filter(row => row.ticket_number || row.id);
+        currentPage = 1;
+        applyTableSort();
+
+        // Print header
+        const pTitle = document.getElementById('daily-print-title');
+        if (pTitle) pTitle.textContent = `Daily Report — ${new Date().toLocaleDateString('pt-BR')}`;
+        const pMeta = document.getElementById('daily-print-meta');
+        if (pMeta) pMeta.textContent = `Backlog: ${rows.length} | Sem resposta: ${noResponse.length} | P1/P2: ${p12.length}`;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // APP LIFECYCLE
+    // ──────────────────────────────────────────────────────────
+    function applyPage() {
+        applyExtraI18n();
+        const filters = { ...FilterState.get(), dateFrom: '', dateTo: '' };
+        renderPage(applyBacklogFilters(rawData, filters));
+    }
+
+    async function init() {
+        hideError();
+        showLoading(true);
+        bindFilterControls();
+        bindTableSort();
+        try {
+            if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
+                throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+            rawData = (await fetchDashboardBiBacklog()).backlog;
+            populateFilterOptions(rawData);
+            applyExtraI18n();
+            showLoading(false);
+            applyPage();
+            fetchSyncHealth().then(({ health }) => {
+                const ts = health && (health.last_sync_at || health.synced_at);
+                if (!ts) return;
+                const el = document.getElementById('last-sync');
+                if (el) el.textContent = tx('last_sync_label') + ' ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            }).catch(() => {});
+        } catch (e) {
+            showError(`${tx('endpoint_missing')} ${e && e.message ? '(' + e.message + ')' : ''}`);
+        }
+    }
+
+    document.addEventListener('filterschange', applyPage);
+    document.addEventListener('langchange', () => {
+        applyExtraI18n();
+        populateFilterOptions(rawData);
+        applyPage();
+    });
+    window.addEventListener('load', init);
     </script>
 </body>
 </html>

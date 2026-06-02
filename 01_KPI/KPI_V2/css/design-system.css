@@ -29,6 +29,30 @@
     --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
 }
 
+/* ─── Light mode ─────────────────────────────────────── */
+html[data-theme="light"] {
+    --color-bg: #f4f6f9;
+    --color-surface: #ffffff;
+    --color-surface-2: #eef0f4;
+    --color-border: #dde1ea;
+    --color-text: #1a1d27;
+    --color-text-muted: #5a6375;
+}
+
+html[data-theme="light"] .app-header {
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .app-nav {
+    background: #f0f2f7;
+}
+
+/* ─── Theme transition ───────────────────────────────── */
+html, body {
+    transition: background-color 0.2s ease, color 0.15s ease;
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
 }
@@ -107,6 +131,24 @@ a:hover {
     background: rgba(227, 20, 36, 0.14);
     border: 1px solid rgba(227, 20, 36, 0.5);
     color: var(--color-red);
+}
+
+.badge-orange {
+    background: rgba(229, 111, 29, 0.14);
+    border: 1px solid rgba(229, 111, 29, 0.4);
+    color: #e56f1d;
+}
+
+.badge-blue {
+    background: rgba(56, 139, 253, 0.14);
+    border: 1px solid rgba(56, 139, 253, 0.4);
+    color: #388bfd;
+}
+
+.badge-muted {
+    background: rgba(125, 133, 144, 0.10);
+    border: 1px solid rgba(125, 133, 144, 0.25);
+    color: var(--color-text-muted);
 }
 
 .kpi-number {
@@ -259,4 +301,75 @@ select:focus {
     gap: 14px;
     min-height: 220px;
     color: var(--color-text-muted);
+}
+
+/* ─── Banner de validade dos dados ───────────────────── */
+.banner-validity {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 24px;
+    background: #E4BF14;
+    color: #0f1117;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--font-display);
+    line-height: 1.4;
+}
+
+.banner-validity-icon { flex-shrink: 0; font-size: 14px; }
+.banner-validity-text { flex: 1; }
+
+.banner-validity-close {
+    background: none;
+    border: none;
+    color: #0f1117;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+.banner-validity-close:hover { opacity: 1; }
+
+/* ─── Action badges (daily table) ────────────────────── */
+.action-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.action-badge-red    { background: rgba(227,20,36,0.12);   color: #E31424; border-color: rgba(227,20,36,0.30); }
+.action-badge-yellow { background: rgba(228,191,20,0.12);  color: #9a7d08; border-color: rgba(228,191,20,0.30); }
+.action-badge-blue   { background: rgba(31,111,235,0.12);  color: #388bfd; border-color: rgba(31,111,235,0.30); }
+.action-badge-gray   { background: rgba(125,133,144,0.10); color: #7d8590; border-color: rgba(125,133,144,0.22); }
+
+/* ─── Table row hover ────────────────────────────────── */
+.table-scroll tbody tr { transition: background-color 0.12s ease; }
+.table-scroll tbody tr:hover { background: rgba(31, 111, 235, 0.05); }
+
+/* ─── Skeleton loader ────────────────────────────────── */
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+.skeleton {
+    background: var(--color-border);
+    border-radius: var(--radius-sm);
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+    display: inline-block;
+    min-height: 1em;
+    min-width: 60px;
+}
+
+/* ─── No-data empty state ────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
 }

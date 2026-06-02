@@ -10,8 +10,8 @@
         .data-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
         .data-table th, .data-table td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--color-border); }
         .data-table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); }
+        .data-table tbody tr:hover { background: rgba(31,111,235,0.05); }
         .table-wrap { overflow: auto; max-height: 540px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-2); }
-        .week-buttons { display: flex; gap: 8px; align-items: center; }
         .charts-4col { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
         .charts-4col .chart-card { min-height: 260px; }
         .delta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -20,28 +20,50 @@
         @media (max-width: 1100px) { .charts-4col { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 720px) { .charts-4col, .delta-grid { grid-template-columns: 1fr; } }
         .section-title { margin: 22px 0 12px; font-size: 1.05rem; }
+
+        /* ── Country filter ────────────────────────────── */
+        .country-filter-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+        .country-btn { padding: 4px 11px; border-radius: 20px; cursor: pointer; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted); font-size: 12px; font-family: var(--font-display); transition: background .15s, color .15s, border-color .15s; white-space: nowrap; }
+        .country-btn:hover { border-color: var(--color-primary); color: var(--color-text); }
+        .country-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+        .filter-field-countries { width: 100%; min-width: 100%; }
+
+        /* ── Sortable columns ──────────────────────────── */
+        .data-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .data-table th.sortable:hover { color: var(--color-text); background: rgba(31,111,235,0.08); }
+        .data-table th.sortable .sort-icon { margin-left: 4px; font-size: 10px; color: var(--color-text-muted); }
+        .data-table th.sortable.sort-active .sort-icon { color: #1f6feb; }
+
+        /* ── Ticket link ───────────────────────────────── */
+        .ticket-link { color: #388bfd; text-decoration: none; font-family: var(--font-mono); font-size: .85rem; display: inline-flex; align-items: center; gap: 2px; }
+        .ticket-link:hover { color: #58a6ff; text-decoration: underline; }
+
+        /* ── Priority / badge extras ───────────────────── */
+        .badge-orange { background: rgba(229,111,29,.14); border: 1px solid rgba(229,111,29,.4); color: #e56f1d; }
+        .badge-blue   { background: rgba(56,139,253,.14);  border: 1px solid rgba(56,139,253,.4);  color: #388bfd; }
+        .badge-muted  { background: rgba(125,133,144,.10); border: 1px solid rgba(125,133,144,.22); color: #7d8590; }
+
+        /* ── Print ─────────────────────────────────────── */
+        .print-only { display: none; }
+        @media print {
+            .print-only { display: block !important; margin-bottom: 18px; border-bottom: 1px solid #ccc; padding-bottom: 12px; }
+            .print-only h1 { font-size: 1.3rem; margin: 0 0 4px; color: #111; }
+            .print-only p  { font-size: 0.82rem; color: #555; margin: 0; }
+            .no-print { display: none !important; }
+            .banner-validity { display: flex !important; }
+            body { background: #fff !important; color: #111 !important; }
+            .card { background: #fff !important; border: 1px solid #ccc !important; }
+        }
     </style>
 </head>
 <body>
     <!-- Loading overlay -->
-    <div id="loading-overlay" style="
-      display:none; position:fixed; inset:0;
-      background:rgba(13,17,23,0.85);
-      justify-content:center; align-items:center;
-      z-index:9998; flex-direction:column; gap:16px;
-    ">
-      <div class="loading-spinner spinner"></div>
-      <p style="color:#e6edf3;font-family:'DM Sans',sans-serif"
-         data-i18n="loading">Carregando dados...</p>
+    <div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.85);justify-content:center;align-items:center;z-index:9998;flex-direction:column;gap:16px;">
+        <div class="loading-spinner spinner"></div>
+        <p style="color:#e6edf3;font-family:'DM Sans',sans-serif" data-i18n="loading">Carregando dados...</p>
     </div>
-
     <!-- Error message -->
-    <div id="error-message" style="
-      display:none; background:#E31424;
-      color:#fff; padding:16px 24px;
-      border-radius:8px; margin:20px;
-      font-family:'DM Sans',sans-serif;
-    "></div>
+    <div id="error-message" style="display:none;background:#E31424;color:#fff;padding:16px 24px;border-radius:8px;margin:20px;font-family:'DM Sans',sans-serif;"></div>
 
     <div class="dashboard-shell">
         <header class="app-header">
@@ -49,6 +71,7 @@
                 <div class="app-brand">
                     <p class="app-brand-title" data-i18n="nav_weekly">Weekly Report</p>
                     <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                    <p id="last-sync" style="font-size:0.7rem;color:var(--color-text-muted);margin:2px 0 0;opacity:.8;">--</p>
                 </div>
                 <div class="app-header-actions">
                     <a href="../../index.html" class="back-link">
@@ -60,15 +83,10 @@
                         <button type="button" data-lang="en">EN</button>
                         <button type="button" data-lang="es">ES</button>
                     </div>
-                    <button id="btn-refresh" onclick="refreshData()" style="
-                      background:#1f6feb; color:#fff; border:none;
-                      padding:6px 14px; border-radius:6px; cursor:pointer;
-                      font-family:'DM Sans',sans-serif; font-size:13px;
-                      display:flex; align-items:center; gap:6px;
-                    ">
-                      <span>↻</span>
-                      <span data-i18n="btn_refresh">Atualizar</span>
+                    <button id="btn-refresh" onclick="refreshData()" style="background:#1f6feb;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;display:flex;align-items:center;gap:6px;">
+                        <span>↻</span><span data-i18n="btn_refresh">Atualizar</span>
                     </button>
+                    <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-sm" title="Toggle theme" style="padding:6px 10px;font-size:15px;line-height:1;">🌙</button>
                     <button type="button" class="btn btn-ghost btn-sm no-print" onclick="exportCurrentPagePdf()" data-i18n="btn_export_pdf">Exportar PDF</button>
                 </div>
             </div>
@@ -81,12 +99,24 @@
                 <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
             </div>
         </nav>
+        <div id="banner-validity" class="banner-validity">
+            <span class="banner-validity-icon" aria-hidden="true">⚠️</span>
+            <span id="banner-validity-text" class="banner-validity-text"></span>
+            <button class="banner-validity-close" aria-label="Fechar">×</button>
+        </div>
+
+        <!-- Print-only report header -->
+        <div class="print-only" id="weekly-print-header">
+            <h1 id="weekly-print-title">Weekly Report</h1>
+            <p id="weekly-print-meta"></p>
+        </div>
 
         <main class="app-main">
             <section class="filter-bar" aria-label="Filtros">
-                <div class="filter-field">
-                    <label for="filter-region" data-i18n="filter_region">Região</label>
-                    <select id="filter-region" data-filter="region"></select>
+                <!-- Country filter (replaces region select) -->
+                <div class="filter-field filter-field-countries">
+                    <label data-tx="filter_country">País / Região</label>
+                    <div id="country-filter" class="country-filter-btns"></div>
                 </div>
                 <div class="filter-field">
                     <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
@@ -101,24 +131,12 @@
                     <select id="filter-product" data-filter="product"></select>
                 </div>
                 <div class="filter-field">
-                    <label for="filter-date-from" data-i18n="filter_period">Período</label>
-                    <input type="date" id="filter-date-from" data-filter="dateFrom" placeholder="dd/mm/aaaa">
-                </div>
-                <div class="filter-field">
-                    <label for="filter-date-to" data-tx="to_label">Até</label>
-                    <input type="date" id="filter-date-to" data-filter="dateTo" placeholder="dd/mm/aaaa">
-                </div>
-                <div class="filter-field">
-                    <label data-tx="week_quick">Atalhos de semana</label>
-                    <div class="week-buttons">
-                        <button type="button" class="btn btn-ghost btn-sm" id="btn-this-week" data-tx="btn_this_week">Esta semana</button>
-                        <button type="button" class="btn btn-ghost btn-sm" id="btn-prev-week" data-tx="btn_prev_week">Semana anterior</button>
-                    </div>
+                    <label for="week-selector" data-tx="week_selector_label">Semana</label>
+                    <select id="week-selector"></select>
                 </div>
                 <div class="filter-field">
                     <label data-i18n="filter_agent_group">Grupo do Agente</label>
-                    <div id="filter-agent-groups" class="multi-select-group"
-                         style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+                    <div id="filter-agent-groups" class="multi-select-group" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
                 </div>
                 <div class="filter-actions">
                     <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply">Aplicar</button>
@@ -140,21 +158,43 @@
                 <section class="tier-heading">
                     <div>
                         <p class="tier-kicker" data-i18n="nav_weekly">Weekly</p>
-                        <h2 data-tx="weekly_title">Report semanal</h2>
+                        <h2 data-tx="weekly_title">Report semanal <span id="week-range-title"></span></h2>
                         <p class="tier-audience" data-i18n="audience_weekly">Coordenadores + Gerente</p>
                     </div>
                 </section>
 
+                <!-- KPI strip -->
                 <h3 class="section-title" data-tx="sec_summary">Executive Summary</h3>
                 <section class="kpi-strip">
-                    <div class="card"><div class="kpi-label" data-tx="kpi_created">Criados</div><div class="kpi-number mono" id="kpi-created">--</div></div>
+                    <div class="card"><div class="kpi-label" data-tx="kpi_sla">SLA Compliance</div><div class="kpi-number mono" id="kpi-sla">--</div></div>
                     <div class="card"><div class="kpi-label" data-tx="kpi_closed">Fechados</div><div class="kpi-number mono" id="kpi-closed">--</div></div>
-                    <div class="card"><div class="kpi-label" data-tx="kpi_backlog">Backlog</div><div class="kpi-number mono" id="kpi-backlog">--</div></div>
-                    <div class="card"><div class="kpi-label" data-i18n="kpi_sla">SLA</div><div class="kpi-number mono" id="kpi-sla">--</div></div>
+                    <div class="card"><div class="kpi-label" data-tx="kpi_created">Criados</div><div class="kpi-number mono" id="kpi-created">--</div></div>
                     <div class="card"><div class="kpi-label" data-i18n="kpi_mtfc">MTFC</div><div class="kpi-number mono" id="kpi-mtfc">--</div></div>
                     <div class="card"><div class="kpi-label" data-i18n="kpi_mtts">MTTS</div><div class="kpi-number mono" id="kpi-mtts">--</div></div>
+                    <div class="card"><div class="kpi-label" data-tx="kpi_backlog">Backlog</div><div class="kpi-number mono" id="kpi-backlog">--</div></div>
                 </section>
 
+                <!-- Region summary table (printable) -->
+                <h3 class="section-title" data-tx="sec_region_table">Resumo por Região</h3>
+                <section id="region-summary-section" class="card" style="margin-bottom:22px;padding:0;">
+                    <div class="table-scroll" style="border-radius:var(--radius-lg);">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="region" data-tx="col_region">Região<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="closed" data-tx="col_closed_n">Fechados<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="mtfc" data-tx="col_mtfc_h">MTFC<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="mtts" data-tx="col_mtts_d">MTTS<span class="sort-icon">↕</span></th>
+                                    <th class="sortable sort-active" data-sort="sla" data-tx="col_sla_pct">SLA%<span class="sort-icon">↑</span></th>
+                                    <th data-tx="col_status">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="region-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Delta grid -->
                 <h3 class="section-title" data-tx="sec_trend">Trend Snapshot — Semana atual vs anterior</h3>
                 <section class="delta-grid">
                     <article class="card delta-card">
@@ -183,6 +223,7 @@
                     </article>
                 </section>
 
+                <!-- Charts by region -->
                 <h3 class="section-title" data-tx="sec_region">Performance por Região</h3>
                 <section class="charts-4col">
                     <article class="card chart-card"><h3 data-tx="chart_sla_region">SLA</h3><div class="chart-canvas-wrap"><canvas id="chart-rg-sla"></canvas></div></article>
@@ -191,6 +232,7 @@
                     <article class="card chart-card"><h3 data-tx="chart_closed_region">Fechados</h3><div class="chart-canvas-wrap"><canvas id="chart-rg-closed"></canvas></div></article>
                 </section>
 
+                <!-- Charts by priority -->
                 <h3 class="section-title" data-tx="sec_priority">Performance por Prioridade</h3>
                 <section class="charts-4col">
                     <article class="card chart-card"><h3 data-tx="chart_sla_priority">SLA</h3><div class="chart-canvas-wrap"><canvas id="chart-pr-sla"></canvas></div></article>
@@ -199,8 +241,9 @@
                     <article class="card chart-card"><h3 data-tx="chart_closed_priority">Fechados</h3><div class="chart-canvas-wrap"><canvas id="chart-pr-closed"></canvas></div></article>
                 </section>
 
+                <!-- Open backlog -->
                 <h3 class="section-title" data-tx="sec_open">Open Backlog &amp; Aging</h3>
-                <section class="kpi-strip" style="grid-template-columns: 1fr;">
+                <section class="kpi-strip" style="grid-template-columns:1fr;">
                     <div class="card"><div class="kpi-label" data-tx="kpi_open_total">Backlog em Aberto</div><div class="kpi-number mono" id="kpi-open-total">--</div></div>
                 </section>
                 <section class="charts-4col" style="margin-top:14px;">
@@ -210,6 +253,7 @@
                     <article class="card chart-card"><h3 data-tx="chart_priority">Por Prioridade</h3><div class="chart-canvas-wrap"><canvas id="chart-open-priority"></canvas></div></article>
                 </section>
 
+                <!-- Weekly open tickets follow-up (existing) -->
                 <h3 class="section-title" data-tx="sec_followup">Weekly Open Tickets Follow-up</h3>
                 <section class="card">
                     <div class="table-wrap">
@@ -231,6 +275,40 @@
                         </table>
                     </div>
                 </section>
+
+                <!-- Closed tickets table (no-print) -->
+                <section class="card no-print" id="weekly-closed-section" style="margin-top:22px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                        <div>
+                            <h3 id="weekly-closed-title" style="margin:0 0 2px">Tickets Fechados na Semana</h3>
+                            <span id="weekly-closed-count" class="text-muted" style="font-size:.82rem;"></span>
+                        </div>
+                        <input type="text" id="weekly-ticket-search"
+                               style="padding:7px 12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);font-size:.84rem;width:220px;"
+                               placeholder="Buscar ticket #..." oninput="updateWeeklySearch(this.value)">
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="ticket_number" data-tx="col_ticket_n">Ticket #<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="regiao_grupo" data-tx="col_region">Região<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="priority_standard" data-tx="col_priority">Prioridade<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="mtfc_horas_bi" data-tx="col_mtfc_h">MTFC<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="mtts_dias_bi" data-tx="col_mtts_d">MTTS<span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="sla_status_bi" data-tx="col_sla_status">SLA<span class="sort-icon">↕</span></th>
+                                    <th class="sortable sort-active" data-sort="closed_time" data-tx="col_closed_date">Data Fechamento<span class="sort-icon">↓</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="weekly-closed-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <span id="weekly-closed-info">--</span>
+                        <button type="button" class="btn btn-ghost btn-sm" id="weekly-prev">Anterior</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="weekly-next">Próximo</button>
+                    </div>
+                </section>
             </div>
         </main>
 
@@ -246,465 +324,798 @@
     <script src="js/business-rules.js"></script>
     <script src="js/charts.js"></script>
     <script>
-        const EXTRA_I18N = {
-            pt: {
-                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
-                btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
-                week_quick: 'Atalhos de semana', btn_this_week: 'Esta semana', btn_prev_week: 'Semana anterior',
-                weekly_title: 'Report semanal',
-                sec_summary: 'Executive Summary (semana selecionada)',
-                sec_trend: 'Trend Snapshot — Semana atual vs anterior',
-                sec_region: 'Performance por Região', sec_priority: 'Performance por Prioridade',
-                sec_open: 'Open Backlog & Aging', sec_followup: 'Weekly Open Tickets Follow-up',
-                kpi_created: 'Criados', kpi_closed: 'Fechados', kpi_backlog: 'Backlog',
-                kpi_open_total: 'Total de tickets abertos',
-                chart_sla_region: 'SLA', chart_mtfc_region: 'MTFC', chart_mtts_region: 'MTTS', chart_closed_region: 'Fechados',
-                chart_sla_priority: 'SLA', chart_mtfc_priority: 'MTFC', chart_mtts_priority: 'MTTS', chart_closed_priority: 'Fechados',
-                chart_status: 'Por Status', chart_aging: 'Aging Buckets', chart_region: 'Por Região', chart_priority: 'Por Prioridade',
-                col_ticket: 'Ticket #', col_aging: 'Aging', col_priority: 'Prioridade', col_region: 'Região',
-                col_requester: 'Solicitante', col_assignee: 'Agente', col_type: 'Tipo', col_sla: 'SLA', col_status: 'Status',
-                badge_outside: 'Fora SLA', badge_eligible: 'Elegível', badge_open: 'Aberto', badge_not_eligible: 'Não elegível',
-                no_data: 'Sem dados suficientes',
-                footer: 'Playbook Global · Global Service · KPI'
-            },
-            en: {
-                brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
-                btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
-                week_quick: 'Week shortcuts', btn_this_week: 'This week', btn_prev_week: 'Previous week',
-                weekly_title: 'Weekly report',
-                sec_summary: 'Executive Summary (selected week)',
-                sec_trend: 'Trend Snapshot — current vs previous week',
-                sec_region: 'Performance by Region', sec_priority: 'Performance by Priority',
-                sec_open: 'Open Backlog & Aging', sec_followup: 'Weekly Open Tickets Follow-up',
-                kpi_created: 'Created', kpi_closed: 'Closed', kpi_backlog: 'Backlog',
-                kpi_open_total: 'Total open tickets',
-                chart_sla_region: 'SLA', chart_mtfc_region: 'MTFC', chart_mtts_region: 'MTTS', chart_closed_region: 'Closed',
-                chart_sla_priority: 'SLA', chart_mtfc_priority: 'MTFC', chart_mtts_priority: 'MTTS', chart_closed_priority: 'Closed',
-                chart_status: 'By Status', chart_aging: 'Aging Buckets', chart_region: 'By Region', chart_priority: 'By Priority',
-                col_ticket: 'Ticket #', col_aging: 'Aging', col_priority: 'Priority', col_region: 'Region',
-                col_requester: 'Requester', col_assignee: 'Agent', col_type: 'Type', col_sla: 'SLA', col_status: 'Status',
-                badge_outside: 'Outside SLA', badge_eligible: 'Eligible', badge_open: 'Open', badge_not_eligible: 'Not eligible',
-                no_data: 'Not enough data',
-                footer: 'Global Playbook · Global Service · KPI'
-            },
-            es: {
-                brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
-                btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
-                week_quick: 'Atajos de semana', btn_this_week: 'Esta semana', btn_prev_week: 'Semana anterior',
-                weekly_title: 'Reporte semanal',
-                sec_summary: 'Executive Summary (semana seleccionada)',
-                sec_trend: 'Snapshot — semana actual vs anterior',
-                sec_region: 'Rendimiento por Región', sec_priority: 'Rendimiento por Prioridad',
-                sec_open: 'Backlog Abierto & Antigüedad', sec_followup: 'Tickets Abiertos — Follow-up Semanal',
-                kpi_created: 'Creados', kpi_closed: 'Cerrados', kpi_backlog: 'Backlog',
-                kpi_open_total: 'Total de tickets abiertos',
-                chart_sla_region: 'SLA', chart_mtfc_region: 'MTFC', chart_mtts_region: 'MTTS', chart_closed_region: 'Cerrados',
-                chart_sla_priority: 'SLA', chart_mtfc_priority: 'MTFC', chart_mtts_priority: 'MTTS', chart_closed_priority: 'Cerrados',
-                chart_status: 'Por Estado', chart_aging: 'Buckets Antigüedad', chart_region: 'Por Región', chart_priority: 'Por Prioridad',
-                col_ticket: 'Ticket #', col_aging: 'Días', col_priority: 'Prioridad', col_region: 'Región',
-                col_requester: 'Solicitante', col_assignee: 'Agente', col_type: 'Tipo', col_sla: 'SLA', col_status: 'Estado',
-                badge_outside: 'Fuera SLA', badge_eligible: 'Elegible', badge_open: 'Abierto', badge_not_eligible: 'No elegible',
-                no_data: 'Sin datos suficientes',
-                footer: 'Playbook Global · Global Service · KPI'
-            }
-        };
-
-        function tx(key) {
-            const lang = getLang();
-            return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || key;
+    // ──────────────────────────────────────────────────────────
+    // TRANSLATIONS
+    // ──────────────────────────────────────────────────────────
+    const EXTRA_I18N = {
+        pt: {
+            brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
+            btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+            week_selector_label: 'Semana', filter_country: 'País / Região', country_all: 'Todos',
+            weekly_title: 'Report semanal',
+            sec_summary: 'Executive Summary', sec_trend: 'Trend — Semana atual vs anterior',
+            sec_region_table: 'Resumo por Região',
+            sec_region: 'Performance por Região', sec_priority: 'Performance por Prioridade',
+            sec_open: 'Open Backlog & Aging', sec_followup: 'Tickets Abertos — Follow-up Semanal',
+            kpi_created: 'Criados', kpi_closed: 'Fechados', kpi_backlog: 'Backlog',
+            kpi_open_total: 'Total de tickets abertos',
+            chart_sla_region: 'SLA', chart_mtfc_region: 'MTFC', chart_mtts_region: 'MTTS', chart_closed_region: 'Fechados',
+            chart_sla_priority: 'SLA', chart_mtfc_priority: 'MTFC', chart_mtts_priority: 'MTTS', chart_closed_priority: 'Fechados',
+            chart_status: 'Por Status', chart_aging: 'Aging Buckets', chart_region: 'Por Região', chart_priority: 'Por Prioridade',
+            col_ticket: 'Ticket #', col_aging: 'Aging', col_priority: 'Prioridade', col_region: 'Região',
+            col_ticket_n: 'Ticket #', col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Data Fechamento',
+            col_closed_n: 'Fechados', col_sla_pct: 'SLA%', col_status: 'Status',
+            col_requester: 'Solicitante', col_assignee: 'Agente', col_type: 'Tipo', col_sla: 'SLA',
+            badge_outside: 'Fora SLA', badge_eligible: 'Elegível', badge_open: 'Aberto', badge_not_eligible: 'Não elegível',
+            sla_within: '✓ Dentro', sla_outside: '✗ Fora', sla_na: '— N/A',
+            no_data: 'Sem dados suficientes',
+            footer: 'Playbook Global · Global Service · KPI',
+            closed_tickets_title: 'Tickets Fechados na Semana'
+        },
+        en: {
+            brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
+            btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+            week_selector_label: 'Week', filter_country: 'Country / Region', country_all: 'All',
+            weekly_title: 'Weekly report',
+            sec_summary: 'Executive Summary', sec_trend: 'Trend — current vs previous week',
+            sec_region_table: 'Region Summary',
+            sec_region: 'Performance by Region', sec_priority: 'Performance by Priority',
+            sec_open: 'Open Backlog & Aging', sec_followup: 'Open Tickets — Weekly Follow-up',
+            kpi_created: 'Created', kpi_closed: 'Closed', kpi_backlog: 'Backlog',
+            kpi_open_total: 'Total open tickets',
+            chart_sla_region: 'SLA', chart_mtfc_region: 'MTFC', chart_mtts_region: 'MTTS', chart_closed_region: 'Closed',
+            chart_sla_priority: 'SLA', chart_mtfc_priority: 'MTFC', chart_mtts_priority: 'MTTS', chart_closed_priority: 'Closed',
+            chart_status: 'By Status', chart_aging: 'Aging Buckets', chart_region: 'By Region', chart_priority: 'By Priority',
+            col_ticket: 'Ticket #', col_aging: 'Aging', col_priority: 'Priority', col_region: 'Region',
+            col_ticket_n: 'Ticket #', col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Close Date',
+            col_closed_n: 'Closed', col_sla_pct: 'SLA%', col_status: 'Status',
+            col_requester: 'Requester', col_assignee: 'Agent', col_type: 'Type', col_sla: 'SLA',
+            badge_outside: 'Outside SLA', badge_eligible: 'Eligible', badge_open: 'Open', badge_not_eligible: 'Not eligible',
+            sla_within: '✓ Within', sla_outside: '✗ Outside', sla_na: '— N/A',
+            no_data: 'Not enough data',
+            footer: 'Global Playbook · Global Service · KPI',
+            closed_tickets_title: 'Closed Tickets This Week'
+        },
+        es: {
+            brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
+            btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+            week_selector_label: 'Semana', filter_country: 'País / Región', country_all: 'Todos',
+            weekly_title: 'Reporte semanal',
+            sec_summary: 'Executive Summary', sec_trend: 'Snapshot — semana actual vs anterior',
+            sec_region_table: 'Resumen por Región',
+            sec_region: 'Rendimiento por Región', sec_priority: 'Rendimiento por Prioridad',
+            sec_open: 'Backlog Abierto & Antigüedad', sec_followup: 'Tickets Abiertos — Follow-up Semanal',
+            kpi_created: 'Creados', kpi_closed: 'Cerrados', kpi_backlog: 'Backlog',
+            kpi_open_total: 'Total de tickets abiertos',
+            chart_sla_region: 'SLA', chart_mtfc_region: 'MTFC', chart_mtts_region: 'MTTS', chart_closed_region: 'Cerrados',
+            chart_sla_priority: 'SLA', chart_mtfc_priority: 'MTFC', chart_mtts_priority: 'MTTS', chart_closed_priority: 'Cerrados',
+            chart_status: 'Por Estado', chart_aging: 'Buckets Antigüedad', chart_region: 'Por Región', chart_priority: 'Por Prioridad',
+            col_ticket: 'Ticket #', col_aging: 'Días', col_priority: 'Prioridad', col_region: 'Región',
+            col_ticket_n: 'Ticket #', col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Fecha Cierre',
+            col_closed_n: 'Cerrados', col_sla_pct: 'SLA%', col_status: 'Estado',
+            col_requester: 'Solicitante', col_assignee: 'Agente', col_type: 'Tipo', col_sla: 'SLA',
+            badge_outside: 'Fuera SLA', badge_eligible: 'Elegible', badge_open: 'Abierto', badge_not_eligible: 'No elegible',
+            sla_within: '✓ Dentro', sla_outside: '✗ Fuera', sla_na: '— N/A',
+            no_data: 'Sin datos suficientes',
+            footer: 'Playbook Global · Global Service · KPI',
+            closed_tickets_title: 'Tickets Cerrados en la Semana'
         }
-        function applyExtraI18n() {
-            document.querySelectorAll('[data-tx]').forEach(node => {
-                node.textContent = tx(node.getAttribute('data-tx'));
-            });
-        }
+    };
 
-        async function refreshData() {
-            clearCache();
-            rawData = [];
-            await init();
-        }
-
-        function renderAgentGroupFilter() {
-            const container = document.getElementById('filter-agent-groups');
-            if (!container) return;
-            const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
-            container.innerHTML = '';
-            AGENT_GROUPS.forEach(group => {
-                const checked = current.includes(group);
-                const btn = document.createElement('button');
-                btn.textContent = group;
-                btn.dataset.group = group;
-                btn.style.cssText = `
-                    padding:4px 10px; border-radius:20px; cursor:pointer;
-                    border:1px solid #30363d; font-size:12px;
-                    font-family:'DM Sans',sans-serif;
-                    background: ${checked ? '#1f6feb' : '#161b22'};
-                    color: ${checked ? '#fff' : '#7d8590'};
-                `;
-                btn.addEventListener('click', () => {
-                    const f = FilterState.get();
-                    const groups = f.agentGroups || [...DEFAULT_AGENT_GROUPS];
-                    const idx = groups.indexOf(group);
-                    if (idx >= 0) groups.splice(idx, 1);
-                    else groups.push(group);
-                    FilterState.update('agentGroups', groups);
-                    renderAgentGroupFilter();
-                    applyPage();
-                });
-                container.appendChild(btn);
-            });
-        }
-
-        const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
-        const AGING_BUCKETS = [
-            { label: '0–3', min: 0, max: 3 }, { label: '4–7', min: 4, max: 7 },
-            { label: '8–15', min: 8, max: 15 }, { label: '16–30', min: 16, max: 30 },
-            { label: '> 30', min: 31, max: Infinity }
-        ];
-
-        let rawData = [];
-
-        function isoDate(d) {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
-        }
-        function showLoading(on) {
-            document.getElementById('loading').style.display = on ? '' : 'none';
-            document.getElementById('page-body').style.display = on ? 'none' : '';
-        }
-        function showError(msg) {
-            document.getElementById('error-banner-text').textContent = msg || tx('btn_retry');
-            document.getElementById('error-banner').style.display = '';
-            const overlayErr = document.getElementById('error-message');
-            if (overlayErr) { overlayErr.textContent = msg || tx('btn_retry'); overlayErr.style.display = 'block'; }
-            document.getElementById('page-body').style.display = 'none';
-            document.getElementById('loading').style.display = 'none';
-        }
-        function hideError() { document.getElementById('error-banner').style.display = 'none'; }
-        function fmt(n, d) {
-            if (n === null || n === undefined || isNaN(n)) return '--';
-            return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-        }
-        function setKpi(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
-        function regionLabel(group) {
-            const map = { Brasil:'region_brazil', Argentina:'region_argentina', 'México':'region_mexico',
-                          LATAM:'region_latam', USA:'region_usa', ROW:'region_row' };
-            return t(map[group] || '') || group || '--';
-        }
-
-        function buildSelectOptions(select, values, defaultLabel) {
-            const current = select.value;
-            select.innerHTML = '';
-            const optAll = document.createElement('option');
-            optAll.value = 'all'; optAll.textContent = defaultLabel;
-            select.appendChild(optAll);
-            values.forEach(v => {
-                if (!v || v === '-Nenhum-') return;
-                const opt = document.createElement('option');
-                opt.value = v; opt.textContent = v;
-                select.appendChild(opt);
-            });
-            if (current && [...select.options].some(o => o.value === current)) select.value = current;
-        }
-
-        function populateFilterOptions(data) {
-            const regionsAvailable = new Set();
-            data.forEach(d => { const g = REGION_MAP[d.region]; if (g) regionsAvailable.add(g); });
-            const regionSelect = document.getElementById('filter-region');
-            regionSelect.innerHTML = '';
-            const optAllR = document.createElement('option');
-            optAllR.value = 'all'; optAllR.textContent = t('filter_all');
-            regionSelect.appendChild(optAllR);
-            REGION_GROUPS.filter(g => regionsAvailable.has(g)).forEach(g => {
-                const o = document.createElement('option'); o.value = g; o.textContent = regionLabel(g);
-                regionSelect.appendChild(o);
-            });
-
-            const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
-                .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
-            buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
-            buildSelectOptions(document.getElementById('filter-type'),
-                [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
-            buildSelectOptions(document.getElementById('filter-product'),
-                [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
-
-            const state = FilterState.get();
-            ['region','priority','type','product','dateFrom','dateTo'].forEach(key => {
-                const input = document.querySelector(`[data-filter="${key}"]`);
-                if (!input) return;
-                if (input.type === 'date') input.value = state[key] || '';
-                else if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
-            });
-            renderAgentGroupFilter();
-        }
-
-        function bindFilterControls() {
-            document.getElementById('btn-apply').addEventListener('click', () => {
-                const next = {};
-                document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
-                FilterState.set(next);
-            });
-            document.getElementById('btn-clear').addEventListener('click', () => {
-                FilterState.reset();
-                document.querySelectorAll('[data-filter]').forEach(i => {
-                    i.value = i.tagName === 'SELECT' ? 'all' : '';
-                });
-            });
-            document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
-            document.getElementById('btn-this-week').addEventListener('click', () => {
-                const to = new Date();
-                const from = new Date(); from.setDate(from.getDate() - 7);
-                document.getElementById('filter-date-from').value = isoDate(from);
-                document.getElementById('filter-date-to').value = isoDate(to);
-                const next = { ...FilterState.get(), dateFrom: isoDate(from), dateTo: isoDate(to) };
-                FilterState.set(next);
-            });
-            document.getElementById('btn-prev-week').addEventListener('click', () => {
-                const to = new Date(); to.setDate(to.getDate() - 7);
-                const from = new Date(); from.setDate(from.getDate() - 14);
-                document.getElementById('filter-date-from').value = isoDate(from);
-                document.getElementById('filter-date-to').value = isoDate(to);
-                const next = { ...FilterState.get(), dateFrom: isoDate(from), dateTo: isoDate(to) };
-                FilterState.set(next);
-            });
-        }
-
-        function parseDateInput(value, endOfDay) {
-            if (!value) return null;
-            const parts = String(value).split('-').map(Number);
-            if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) return null;
-            return new Date(parts[0], parts[1] - 1, parts[2], endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-        }
-
-        function selectedPeriod(filters) {
-            const to = parseDateInput(filters.dateTo, true) || new Date();
-            const from = parseDateInput(filters.dateFrom, false) || (() => {
-                const d = new Date(to);
-                d.setDate(d.getDate() - 7);
-                return d;
-            })();
-            const durationMs = Math.max(24 * 60 * 60 * 1000, to.getTime() - from.getTime());
-            const prevTo = new Date(from.getTime() - 1);
-            const prevFrom = new Date(prevTo.getTime() - durationMs);
-            return { from, to, prevFrom, prevTo };
-        }
-
-        function inDateValueRange(value, from, to) {
-            if (!value) return false;
-            const d = new Date(value);
-            return d >= from && d <= to;
-        }
-
-        function inCreatedRange(t, from, to) {
-            return inDateValueRange(t.created_time, from, to);
-        }
-
-        function inClosedRange(t, from, to) {
-            return inDateValueRange(t.closed_time, from, to);
-        }
-
-        function deltaPct(curr, prev, inverted) {
-            if (!isFinite(curr) || !isFinite(prev) || prev === 0) {
-                return { value: null, color: 'gray', arrow: '·' };
-            }
-            const delta = ((curr - prev) / prev) * 100;
-            const improved = inverted ? delta < 0 : delta > 0;
-            return {
-                value: delta,
-                color: Math.abs(delta) < 0.5 ? 'gray' : (improved ? 'green' : 'red'),
-                arrow: Math.abs(delta) < 0.5 ? '·' : (delta > 0 ? '▲' : '▼')
-            };
-        }
-
-        function setDelta(prefix, d, suffix) {
-            const arrow = document.getElementById(`delta-${prefix}-arrow`);
-            const value = document.getElementById(`delta-${prefix}-value`);
-            const meta = document.getElementById(`delta-${prefix}-meta`);
-            arrow.textContent = d.arrow;
-            arrow.style.color = colorHex(d.color);
-            value.textContent = d.value === null ? '--' : (d.value > 0 ? '+' : '') + fmt(d.value, 2) + '%';
-            value.classList.remove('is-green','is-yellow','is-red');
-            if (d.color === 'green') value.classList.add('is-green');
-            else if (d.color === 'red') value.classList.add('is-red');
-            meta.textContent = (suffix || '');
-        }
-
-        function priorityBadge(p) {
-            const target = MTFC_TARGET[p] || 999;
-            const cls = target <= 1 ? 'badge-red' : target <= 2 ? 'badge-yellow' : 'badge-green';
-            return `<span class="badge ${cls}">${p || '--'}</span>`;
-        }
-
-        function slaBadge(ticket, aging) {
-            const status = ticketSlaStatus(ticket);
-            if (status === 'not_eligible')
-                return `<span class="badge" style="background:rgba(125,133,144,.15);border:1px solid var(--color-border);color:var(--color-text-muted)">${tx('badge_not_eligible')}</span>`;
-            if (status === 'open') {
-                if (!isEligible(ticket))
-                    return `<span class="badge" style="background:rgba(125,133,144,.15);border:1px solid var(--color-border);color:var(--color-text-muted)">${tx('badge_open')}</span>`;
-                const group = REGION_MAP[ticket.region];
-                const tooLong = (aging || 0) > MTTS_TARGET[group];
-                return tooLong ? `<span class="badge badge-red">${tx('badge_outside')}</span>` : `<span class="badge badge-green">${tx('badge_eligible')}</span>`;
-            }
-            return status === 'within'
-                ? `<span class="badge badge-green">${t('within_sla')}</span>`
-                : `<span class="badge badge-red">${tx('badge_outside')}</span>`;
-        }
-
-        function renderPage(filtered, filters) {
-            const now = new Date();
-            const period = selectedPeriod(filters || {});
-
-            const currentCreatedWeek = filtered.filter(t => inCreatedRange(t, period.from, period.to));
-            const currentClosedWeek = filtered.filter(t => inClosedRange(t, period.from, period.to));
-            const previousClosedWeek = filtered.filter(t => inClosedRange(t, period.prevFrom, period.prevTo));
-
-            const curr = computeMetrics(currentClosedWeek);
-            const prev = computeMetrics(previousClosedWeek);
-
-            const created = currentCreatedWeek.length;
-            const closed = currentClosedWeek.length;
-            const open = filtered.filter(t => !t.closed_time);
-            open.forEach(t => { t._aging = (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24); });
-
-            setKpi('kpi-created', fmt(created, 0));
-            setKpi('kpi-closed', fmt(closed, 0));
-            setKpi('kpi-backlog', fmt(open.length, 0));
-            setKpi('kpi-sla', curr.eligible ? fmt(curr.slaCompliance, 2) + '%' : '--');
-            setKpi('kpi-mtfc', curr.closed ? fmt(curr.avgMtfc, 2) + ' h' : '--');
-            setKpi('kpi-mtts', curr.closed ? fmt(curr.avgMtts, 2) + ' d' : '--');
-            setKpi('kpi-open-total', fmt(open.length, 0));
-
-            setDelta('sla', deltaPct(curr.slaCompliance, prev.slaCompliance, false), prev.eligible ? `${fmt(curr.slaCompliance,2)}% vs ${fmt(prev.slaCompliance,2)}%` : tx('no_data'));
-            setDelta('mtfc', deltaPct(curr.avgMtfc, prev.avgMtfc, true), prev.closed ? `${fmt(curr.avgMtfc,2)}h vs ${fmt(prev.avgMtfc,2)}h` : tx('no_data'));
-            setDelta('mtts', deltaPct(curr.avgMtts, prev.avgMtts, true), prev.closed ? `${fmt(curr.avgMtts,2)}d vs ${fmt(prev.avgMtts,2)}d` : tx('no_data'));
-
-            const byRegion = computeByRegion(currentClosedWeek);
-            const regions = REGION_GROUPS.filter(g => byRegion[g].total > 0);
-
-            createBarChart('chart-rg-sla', regions.map(regionLabel),
-                regions.map(r => byRegion[r].eligible ? byRegion[r].slaCompliance : 0),
-                regions.map(r => colorHex(byRegion[r].eligible ? byRegion[r].slaColor : 'gray')),
-                tx('chart_sla_region'));
-            createBarChart('chart-rg-mtfc', regions.map(regionLabel),
-                regions.map(r => byRegion[r].avgMtfc), regions.map(() => '#1f6feb'),
-                tx('chart_mtfc_region'));
-            createBarChart('chart-rg-mtts', regions.map(regionLabel),
-                regions.map(r => byRegion[r].avgMtts),
-                regions.map(r => colorHex(byRegion[r].closed ? byRegion[r].mttsColor : 'gray')),
-                tx('chart_mtts_region'));
-            createBarChart('chart-rg-closed', regions.map(regionLabel),
-                regions.map(r => byRegion[r].closed), regions.map(() => '#388bfd'),
-                tx('chart_closed_region'));
-
-            const priorityStats = {};
-            PRIORITY_ORDER.forEach(p => { priorityStats[p] = computeMetrics(currentClosedWeek.filter(t => t.priority === p)); });
-            const priLabels = PRIORITY_ORDER;
-            createBarChart('chart-pr-sla', priLabels,
-                priLabels.map(p => priorityStats[p].eligible ? priorityStats[p].slaCompliance : 0),
-                priLabels.map(p => colorHex(priorityStats[p].eligible ? priorityStats[p].slaColor : 'gray')),
-                tx('chart_sla_priority'));
-            createBarChart('chart-pr-mtfc', priLabels,
-                priLabels.map(p => priorityStats[p].avgMtfc),
-                priLabels.map(p => {
-                    const tgt = MTFC_TARGET[p] || 999;
-                    return colorHex(priorityStats[p].closed ? mtfcColor(priorityStats[p].avgMtfc, tgt) : 'gray');
-                }),
-                tx('chart_mtfc_priority'));
-            createBarChart('chart-pr-mtts', priLabels,
-                priLabels.map(p => priorityStats[p].avgMtts),
-                priLabels.map(() => '#1f6feb'),
-                tx('chart_mtts_priority'));
-            createBarChart('chart-pr-closed', priLabels,
-                priLabels.map(p => priorityStats[p].closed),
-                priLabels.map(() => '#388bfd'),
-                tx('chart_closed_priority'));
-
-            const statusCounts = {};
-            open.forEach(t => { const s = t.status || '—'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
-            const statusLabels = Object.keys(statusCounts);
-            createBarChart('chart-open-status', statusLabels,
-                statusLabels.map(s => statusCounts[s]), statusLabels.map(() => '#1f6feb'),
-                tx('chart_status'));
-
-            const bucketCounts = AGING_BUCKETS.map(b => open.filter(t => t._aging >= b.min && t._aging <= b.max).length);
-            createBarChart('chart-open-aging', AGING_BUCKETS.map(b => b.label + ' d'),
-                bucketCounts,
-                AGING_BUCKETS.map((b, i) => i <= 1 ? colorHex('green') : i === 2 ? colorHex('yellow') : colorHex('red')),
-                tx('chart_aging'));
-
-            const openByRegion = REGION_GROUPS.filter(g => open.some(t => REGION_MAP[t.region] === g));
-            createBarChart('chart-open-region', openByRegion.map(regionLabel),
-                openByRegion.map(g => open.filter(t => REGION_MAP[t.region] === g).length),
-                openByRegion.map(() => '#1f6feb'),
-                tx('chart_region'));
-
-            createBarChart('chart-open-priority', PRIORITY_ORDER,
-                PRIORITY_ORDER.map(p => open.filter(t => t.priority === p).length),
-                PRIORITY_ORDER.map((p, i) => i === 0 ? colorHex('red') : i === 1 ? colorHex('yellow') : '#1f6feb'),
-                tx('chart_priority'));
-
-            const tbody = document.getElementById('followup-body');
-            tbody.innerHTML = '';
-            const openInWeek = open.filter(t => inCreatedRange(t, period.from, period.to))
-                .sort((a, b) => b._aging - a._aging).slice(0, 30);
-            if (!openInWeek.length) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="9" class="text-muted" style="text-align:center;padding:18px">${tx('no_data')}</td>`;
-                tbody.appendChild(tr);
-            } else {
-                openInWeek.forEach(t => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="mono">${t.ticket_number || t.id || '--'}</td>
-                        <td class="mono">${fmt(t._aging, 1)}</td>
-                        <td>${priorityBadge(t.priority)}</td>
-                        <td>${regionLabel(REGION_MAP[t.region])}</td>
-                        <td>${t.solicitante || '--'}</td>
-                        <td>${t.assignee_id || '--'}</td>
-                        <td>${t.tipo_atendimento || '--'}</td>
-                        <td>${slaBadge(t, t._aging)}</td>
-                        <td>${t.status || '--'}</td>`;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-
-        function applyPage() {
-            applyExtraI18n();
-            if (!rawData.length) return;
-            const filters = FilterState.get();
-            const dimensionFilters = { ...filters, dateFrom: '', dateTo: '' };
-            renderPage(applyFilters(rawData, dimensionFilters), filters);
-        }
-
-        async function init() {
-            hideError();
-            showLoading(true);
-            bindFilterControls();
-            try {
-                if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials()) {
-                    throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-                }
-                rawData = (await fetchDashboardBiTickets()).tickets;
-                populateFilterOptions(rawData);
-                applyExtraI18n();
-                showLoading(false);
-                applyPage();
-            } catch (e) {
-                showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
-            }
-        }
-
-        document.addEventListener('filterschange', applyPage);
-        document.addEventListener('langchange', () => {
-            applyExtraI18n();
-            if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
+    // ──────────────────────────────────────────────────────────
+    // I18N HELPERS
+    // ──────────────────────────────────────────────────────────
+    function tx(key) {
+        const lang = getLang();
+        return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || t(key) || key;
+    }
+    function applyExtraI18n() {
+        document.querySelectorAll('[data-tx]').forEach(node => {
+            node.textContent = tx(node.getAttribute('data-tx'));
         });
-        window.addEventListener('load', init);
+    }
+
+    async function refreshData() { clearCache(); rawData = []; await init(); }
+
+    // ──────────────────────────────────────────────────────────
+    // CONSTANTS & STATE
+    // ──────────────────────────────────────────────────────────
+    const COUNTRY_BUTTONS = [
+        { key: 'all', emoji: '🌐' },
+        { key: 'Brasil', emoji: '🇧🇷' },
+        { key: 'USA', emoji: '🇺🇸' },
+        { key: 'Argentina', emoji: '🇦🇷' },
+        { key: 'México', emoji: '🇲🇽' },
+        { key: 'LATAM', emoji: '🌎' },
+        { key: 'ROW', emoji: '🌍' }
+    ];
+    const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
+    const REGION_FLAGS = { Brasil: '🇧🇷', Argentina: '🇦🇷', 'México': '🇲🇽', LATAM: '🌎', USA: '🇺🇸', ROW: '🌍' };
+    const AGING_BUCKETS = [
+        { label: '0–3', min: 0, max: 3 }, { label: '4–7', min: 4, max: 7 },
+        { label: '8–15', min: 8, max: 15 }, { label: '16–30', min: 16, max: 30 },
+        { label: '> 30', min: 31, max: Infinity }
+    ];
+    const SORT_PRIORITY_ORDER = { 'Urgente': 1, 'Alta': 2, 'Média': 3, 'Baixa': 4, 'Muito Baixa': 5 };
+    const SORT_SLA_ORDER = { 'Dentro SLA': 1, 'Não elegível': 2, 'Fora SLA': 3 };
+
+    let rawData = [];
+    let lastCurrentClosedWeek = [];
+    let sortStateRegion = { column: 'sla', direction: 'asc' };
+    let weeklyClosedList = [];
+    let weeklyClosedFiltered = [];
+    let weeklyClosedPage = 1;
+    const WEEKLY_PAGE_SIZE = 50;
+    let weeklySearchQuery = '';
+    let sortStateWeekly = { column: 'closed_time', direction: 'desc' };
+
+    // ──────────────────────────────────────────────────────────
+    // UTILITY HELPERS
+    // ──────────────────────────────────────────────────────────
+    function isoDate(d) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function showLoading(on) {
+        document.getElementById('loading').style.display = on ? '' : 'none';
+        document.getElementById('page-body').style.display = on ? 'none' : '';
+    }
+    function showError(msg) {
+        document.getElementById('error-banner-text').textContent = msg || tx('btn_retry');
+        document.getElementById('error-banner').style.display = '';
+        const overlayErr = document.getElementById('error-message');
+        if (overlayErr) { overlayErr.textContent = msg; overlayErr.style.display = 'block'; }
+        document.getElementById('page-body').style.display = 'none';
+        document.getElementById('loading').style.display = 'none';
+    }
+    function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+    function fmt(n, d) {
+        if (n === null || n === undefined || isNaN(n)) return '--';
+        return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+    function setKpi(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+    function regionLabel(group) {
+        const map = { Brasil: 'region_brazil', Argentina: 'region_argentina', 'México': 'region_mexico', LATAM: 'region_latam', USA: 'region_usa', ROW: 'region_row' };
+        return t(map[group] || '') || group || '--';
+    }
+
+    function colorKpiTopBar(kpiId, colorName) {
+        const el = document.getElementById(kpiId);
+        if (!el) return;
+        const card = el.closest('.card');
+        if (!card) return;
+        let bar = card.querySelector('.kpi-top-bar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.className = 'kpi-top-bar';
+            bar.style.cssText = 'height:3px;margin:-20px -20px 12px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;transition:background .2s;';
+            card.insertBefore(bar, card.firstChild);
+        }
+        bar.style.background = colorHex(colorName);
+    }
+
+    function priorityBadge(priority) {
+        const cls = { 'Urgente': 'badge-red', 'Alta': 'badge-orange', 'Média': 'badge-yellow', 'Baixa': 'badge-blue', 'Muito Baixa': 'badge-muted' };
+        return `<span class="badge ${cls[priority] || 'badge-muted'}">${priority || '--'}</span>`;
+    }
+
+    function slaStatusBadge(status) {
+        if (status === 'Dentro SLA') return `<span class="badge badge-green">${tx('sla_within')}</span>`;
+        if (status === 'Fora SLA')   return `<span class="badge badge-red">${tx('sla_outside')}</span>`;
+        return `<span class="badge badge-muted">${tx('sla_na')}</span>`;
+    }
+
+    function getZohoTicketUrl(ticket) {
+        const org = 'alliage';
+        const id = ticket.ticket_id || ticket.id;
+        if (id) return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/dv/${id}`;
+        return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/search/${ticket.ticket_number}`;
+    }
+
+    function slaBadge(ticket, aging) {
+        const status = ticketSlaStatus(ticket);
+        if (status === 'not_eligible')
+            return `<span class="badge badge-muted">${tx('badge_not_eligible')}</span>`;
+        if (status === 'open') {
+            if (!isEligible(ticket)) return `<span class="badge badge-muted">${tx('badge_open')}</span>`;
+            const group = REGION_MAP[ticket.region];
+            const tooLong = (aging || 0) > MTTS_TARGET[group];
+            return tooLong ? `<span class="badge badge-red">${tx('badge_outside')}</span>` : `<span class="badge badge-green">${tx('badge_eligible')}</span>`;
+        }
+        return status === 'within'
+            ? `<span class="badge badge-green">${t('within_sla')}</span>`
+            : `<span class="badge badge-red">${tx('badge_outside')}</span>`;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // COUNTRY FILTER
+    // ──────────────────────────────────────────────────────────
+    function renderCountryFilter() {
+        const container = document.getElementById('country-filter');
+        if (!container) return;
+        const current = FilterState.get().region || 'all';
+        container.innerHTML = '';
+        COUNTRY_BUTTONS.forEach(({ key, emoji }) => {
+            const label = key === 'all' ? `${emoji} ${tx('country_all')}` : `${emoji} ${key}`;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.className = 'country-btn' + (current === key ? ' active' : '');
+            btn.addEventListener('click', () => {
+                FilterState.update('region', key);
+                renderCountryFilter();
+                applyPage();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // AGENT GROUP FILTER
+    // ──────────────────────────────────────────────────────────
+    function renderAgentGroupFilter() {
+        const container = document.getElementById('filter-agent-groups');
+        if (!container) return;
+        const current = FilterState.get().agentGroups || DEFAULT_AGENT_GROUPS;
+        container.innerHTML = '';
+        AGENT_GROUPS.forEach(group => {
+            const checked = current.includes(group);
+            const btn = document.createElement('button');
+            btn.textContent = group;
+            btn.dataset.group = group;
+            btn.style.cssText = `padding:4px 10px;border-radius:20px;cursor:pointer;border:1px solid #30363d;font-size:12px;font-family:'DM Sans',sans-serif;background:${checked ? '#1f6feb' : '#161b22'};color:${checked ? '#fff' : '#7d8590'};`;
+            btn.addEventListener('click', () => {
+                const f = FilterState.get();
+                const groups = f.agentGroups || [...DEFAULT_AGENT_GROUPS];
+                const idx = groups.indexOf(group);
+                if (idx >= 0) groups.splice(idx, 1); else groups.push(group);
+                FilterState.update('agentGroups', groups);
+                renderAgentGroupFilter();
+                applyPage();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // WEEK SELECTOR
+    // ──────────────────────────────────────────────────────────
+    function buildWeekOptions() {
+        const weeks = [];
+        const today = new Date();
+        for (let i = 0; i < 8; i++) {
+            const toDate = new Date(today);
+            toDate.setDate(today.getDate() - i * 7);
+            const fromDate = new Date(toDate);
+            fromDate.setDate(toDate.getDate() - 6);
+            weeks.push({
+                from: isoDate(fromDate),
+                to: isoDate(toDate),
+                label: `${fromDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${toDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+            });
+        }
+        return weeks;
+    }
+
+    function initWeekSelector() {
+        const sel = document.getElementById('week-selector');
+        if (!sel) return;
+        const weeks = buildWeekOptions();
+        sel.innerHTML = '';
+        weeks.forEach(w => {
+            const opt = document.createElement('option');
+            opt.value = `${w.from}__${w.to}`;
+            opt.textContent = `Semana: ${w.label}`;
+            sel.appendChild(opt);
+        });
+        const curr = FilterState.get();
+        if (curr.dateFrom && curr.dateTo) {
+            const match = [...sel.options].find(o => o.value === `${curr.dateFrom}__${curr.dateTo}`);
+            if (match) { sel.value = match.value; return; }
+        }
+        sel.selectedIndex = 0;
+        FilterState.update('dateFrom', weeks[0].from);
+        FilterState.update('dateTo', weeks[0].to);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // FILTER POPULATION
+    // ──────────────────────────────────────────────────────────
+    function buildSelectOptions(select, values, defaultLabel) {
+        const current = select.value;
+        select.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = 'all'; optAll.textContent = defaultLabel;
+        select.appendChild(optAll);
+        values.forEach(v => {
+            if (!v || v === '-Nenhum-') return;
+            const opt = document.createElement('option');
+            opt.value = v; opt.textContent = v;
+            select.appendChild(opt);
+        });
+        if (current && [...select.options].some(o => o.value === current)) select.value = current;
+    }
+
+    function populateFilterOptions(data) {
+        renderCountryFilter();
+        const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
+            .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
+        buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
+        buildSelectOptions(document.getElementById('filter-type'),
+            [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
+        buildSelectOptions(document.getElementById('filter-product'),
+            [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
+        const state = FilterState.get();
+        ['priority','type','product'].forEach(key => {
+            const input = document.querySelector(`[data-filter="${key}"]`);
+            if (!input) return;
+            if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
+        });
+        renderAgentGroupFilter();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // FILTER CONTROLS
+    // ──────────────────────────────────────────────────────────
+    function bindFilterControls() {
+        document.getElementById('btn-apply').addEventListener('click', () => {
+            const next = {};
+            document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
+            next.region = FilterState.get().region || 'all';
+            next.agentGroups = FilterState.get().agentGroups || [...DEFAULT_AGENT_GROUPS];
+            const sel = document.getElementById('week-selector');
+            if (sel && sel.value) {
+                const [from, to] = sel.value.split('__');
+                next.dateFrom = from; next.dateTo = to;
+            }
+            FilterState.set(next);
+            applyPage();
+        });
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            const weeks = buildWeekOptions();
+            FilterState.reset();
+            FilterState.update('region', 'all');
+            FilterState.update('agentGroups', [...DEFAULT_AGENT_GROUPS]);
+            FilterState.update('dateFrom', weeks[0].from);
+            FilterState.update('dateTo', weeks[0].to);
+            document.querySelectorAll('[data-filter]').forEach(i => {
+                i.value = i.tagName === 'SELECT' ? 'all' : '';
+            });
+            renderCountryFilter();
+            renderAgentGroupFilter();
+            const sel = document.getElementById('week-selector');
+            if (sel) { sel.selectedIndex = 0; }
+            applyPage();
+        });
+        document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+        document.getElementById('week-selector').addEventListener('change', function() {
+            const [from, to] = this.value.split('__');
+            FilterState.update('dateFrom', from);
+            FilterState.update('dateTo', to);
+            applyPage();
+        });
+        document.getElementById('weekly-prev').addEventListener('click', () => {
+            if (weeklyClosedPage > 1) { weeklyClosedPage--; renderWeeklyClosedTable(); }
+        });
+        document.getElementById('weekly-next').addEventListener('click', () => {
+            const total = Math.ceil((weeklyClosedFiltered.length || weeklyClosedList.length) / WEEKLY_PAGE_SIZE);
+            if (weeklyClosedPage < total) { weeklyClosedPage++; renderWeeklyClosedTable(); }
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // DATE / PERIOD HELPERS
+    // ──────────────────────────────────────────────────────────
+    function parseDateInput(value, endOfDay) {
+        if (!value) return null;
+        const parts = String(value).split('-').map(Number);
+        if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) return null;
+        return new Date(parts[0], parts[1]-1, parts[2], endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+    }
+
+    function selectedPeriod(filters) {
+        const to = parseDateInput(filters.dateTo, true) || new Date();
+        const from = parseDateInput(filters.dateFrom, false) || (() => {
+            const d = new Date(to); d.setDate(d.getDate() - 7); return d;
+        })();
+        const durationMs = Math.max(24 * 60 * 60 * 1000, to.getTime() - from.getTime());
+        const prevTo = new Date(from.getTime() - 1);
+        const prevFrom = new Date(prevTo.getTime() - durationMs);
+        return { from, to, prevFrom, prevTo };
+    }
+
+    function inDateValueRange(value, from, to) {
+        if (!value) return false;
+        const d = new Date(value);
+        return d >= from && d <= to;
+    }
+    function inCreatedRange(ticket, from, to) { return inDateValueRange(ticket.created_time, from, to); }
+    function inClosedRange(ticket, from, to) { return inDateValueRange(ticket.closed_time, from, to); }
+
+    // ──────────────────────────────────────────────────────────
+    // DELTA / KPI HELPERS
+    // ──────────────────────────────────────────────────────────
+    function deltaPct(curr, prev, inverted) {
+        if (!isFinite(curr) || !isFinite(prev) || prev === 0)
+            return { value: null, color: 'gray', arrow: '·' };
+        const delta = ((curr - prev) / prev) * 100;
+        const improved = inverted ? delta < 0 : delta > 0;
+        return {
+            value: delta,
+            color: Math.abs(delta) < 0.5 ? 'gray' : (improved ? 'green' : 'red'),
+            arrow: Math.abs(delta) < 0.5 ? '·' : (delta > 0 ? '▲' : '▼')
+        };
+    }
+
+    function setDelta(prefix, d, suffix) {
+        const arrow = document.getElementById(`delta-${prefix}-arrow`);
+        const value = document.getElementById(`delta-${prefix}-value`);
+        const meta  = document.getElementById(`delta-${prefix}-meta`);
+        arrow.textContent = d.arrow;
+        arrow.style.color = colorHex(d.color);
+        value.textContent = d.value === null ? '--' : (d.value > 0 ? '+' : '') + fmt(d.value, 2) + '%';
+        value.classList.remove('is-green','is-yellow','is-red');
+        if (d.color === 'green') value.classList.add('is-green');
+        else if (d.color === 'red') value.classList.add('is-red');
+        meta.textContent = suffix || '';
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // REGION SUMMARY TABLE
+    // ──────────────────────────────────────────────────────────
+    function renderRegionTable(closedWeek) {
+        lastCurrentClosedWeek = closedWeek;
+        const byRegion = REGION_GROUPS.map(r => {
+            const data = closedWeek.filter(t => getTicketRegionGroup(t) === r);
+            return { region: r, m: computeMetrics(data, r) };
+        }).filter(r => r.m.closed > 0 || r.m.eligible > 0);
+
+        const sorted = [...byRegion].sort((a, b) => {
+            let valA, valB;
+            switch (sortStateRegion.column) {
+                case 'region':  valA = regionLabel(a.region); valB = regionLabel(b.region); return sortStateRegion.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                case 'closed':  valA = a.m.closed; valB = b.m.closed; break;
+                case 'mtfc':    valA = a.m.avgMtfc || 9999; valB = b.m.avgMtfc || 9999; break;
+                case 'mtts':    valA = a.m.avgMtts || 9999; valB = b.m.avgMtts || 9999; break;
+                case 'sla':
+                default:        valA = a.m.eligible ? a.m.slaCompliance : -1; valB = b.m.eligible ? b.m.slaCompliance : -1; break;
+            }
+            return sortStateRegion.direction === 'asc' ? valA - valB : valB - valA;
+        });
+
+        const tbody = document.getElementById('region-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (!sorted.length) {
+            tbody.innerHTML = `<tr><td colspan="6" class="empty-state">${t('no_filter_data')}</td></tr>`;
+        } else {
+            sorted.forEach(({ region, m }) => {
+                const slaColor = m.eligible ? m.slaColor : 'gray';
+                const slaStr = m.eligible ? `<span style="color:${colorHex(slaColor)};font-weight:600">${fmt(m.slaCompliance, 1)}%</span>` : '--';
+                const mtfcStr = m.closed ? `<span style="color:${colorHex(m.avgMtfc <= 8 ? 'green' : m.avgMtfc <= 16 ? 'yellow' : 'red')}">${fmt(m.avgMtfc, 1)} h</span>` : '--';
+                const mttsTarget = MTTS_TARGET[region] || 7;
+                const mttsStr = m.closed ? `<span style="color:${colorHex(m.avgMtts <= mttsTarget ? 'green' : m.avgMtts <= mttsTarget * 2 ? 'yellow' : 'red')}">${fmt(m.avgMtts, 1)} d</span>` : '--';
+                const statusBadge = m.eligible
+                    ? (m.slaCompliance >= 80 ? '<span class="badge badge-green">ON TARGET</span>' : m.slaCompliance >= 50 ? '<span class="badge badge-yellow">ATTENTION</span>' : '<span class="badge badge-red">CRITICAL</span>')
+                    : '<span class="badge badge-muted">—</span>';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${REGION_FLAGS[region] || ''} ${regionLabel(region)}</td>
+                    <td class="mono">${fmt(m.closed, 0)}</td>
+                    <td>${mtfcStr}</td>
+                    <td>${mttsStr}</td>
+                    <td>${slaStr}</td>
+                    <td>${statusBadge}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        // Update sort icons
+        document.querySelectorAll('#region-summary-section th.sortable').forEach(th => {
+            const col = th.dataset.sort;
+            const icon = th.querySelector('.sort-icon');
+            if (!icon) return;
+            if (col === sortStateRegion.column) {
+                icon.textContent = sortStateRegion.direction === 'asc' ? ' ↑' : ' ↓';
+                th.classList.add('sort-active');
+            } else {
+                icon.textContent = ' ↕';
+                th.classList.remove('sort-active');
+            }
+        });
+    }
+
+    function handleRegionSort(column) {
+        if (sortStateRegion.column === column) {
+            sortStateRegion.direction = sortStateRegion.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortStateRegion = { column, direction: 'asc' };
+        }
+        renderRegionTable(lastCurrentClosedWeek);
+    }
+
+    function bindRegionTableSort() {
+        document.querySelectorAll('#region-summary-section th.sortable').forEach(th => {
+            th.addEventListener('click', () => handleRegionSort(th.dataset.sort));
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // CLOSED TICKETS TABLE (weekly)
+    // ──────────────────────────────────────────────────────────
+    function sortWeeklyTickets(tickets, column, direction) {
+        return [...tickets].sort((a, b) => {
+            let valA, valB;
+            switch (column) {
+                case 'ticket_number':    valA = Number(a.ticket_number) || 0; valB = Number(b.ticket_number) || 0; break;
+                case 'regiao_grupo':     valA = (getTicketRegionGroup(a) || '').toLowerCase(); valB = (getTicketRegionGroup(b) || '').toLowerCase(); break;
+                case 'priority_standard': valA = SORT_PRIORITY_ORDER[getTicketPriority(a)] || 9; valB = SORT_PRIORITY_ORDER[getTicketPriority(b)] || 9; break;
+                case 'mtfc_horas_bi':    valA = Number.isFinite(metricNumber(a.mtfc_horas_bi, a.mtfc_horas)) ? metricNumber(a.mtfc_horas_bi, a.mtfc_horas) : 9999; valB = Number.isFinite(metricNumber(b.mtfc_horas_bi, b.mtfc_horas)) ? metricNumber(b.mtfc_horas_bi, b.mtfc_horas) : 9999; break;
+                case 'mtts_dias_bi':     valA = Number.isFinite(metricNumber(a.mtts_dias_bi, a.mtts_dias)) ? metricNumber(a.mtts_dias_bi, a.mtts_dias) : 9999; valB = Number.isFinite(metricNumber(b.mtts_dias_bi, b.mtts_dias)) ? metricNumber(b.mtts_dias_bi, b.mtts_dias) : 9999; break;
+                case 'sla_status_bi':    valA = SORT_SLA_ORDER[a.sla_status_bi] || 9; valB = SORT_SLA_ORDER[b.sla_status_bi] || 9; break;
+                case 'closed_time':
+                default:                 valA = new Date(a.closed_time || 0).getTime(); valB = new Date(b.closed_time || 0).getTime(); break;
+            }
+            if (valA < valB) return direction === 'asc' ? -1 : 1;
+            if (valA > valB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function handleWeeklySort(column) {
+        if (sortStateWeekly.column === column) {
+            if (sortStateWeekly.direction === 'asc') sortStateWeekly.direction = 'desc';
+            else sortStateWeekly = { column: 'closed_time', direction: 'desc' };
+        } else {
+            sortStateWeekly = { column, direction: 'asc' };
+        }
+        weeklyClosedPage = 1;
+        renderWeeklyClosedTable();
+    }
+
+    function renderWeeklyClosedTable() {
+        const searched = weeklySearchQuery
+            ? weeklyClosedList.filter(t => String(t.ticket_number || '').toLowerCase().includes(weeklySearchQuery.toLowerCase()))
+            : weeklyClosedList;
+        const filtered = sortWeeklyTickets(searched, sortStateWeekly.column, sortStateWeekly.direction);
+        weeklyClosedFiltered = filtered;
+
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / WEEKLY_PAGE_SIZE));
+        if (weeklyClosedPage > totalPages) weeklyClosedPage = totalPages;
+        const start = (weeklyClosedPage - 1) * WEEKLY_PAGE_SIZE;
+        const slice = filtered.slice(start, start + WEEKLY_PAGE_SIZE);
+
+        const countEl = document.getElementById('weekly-closed-count');
+        if (countEl) countEl.textContent = `(${total})`;
+
+        const tbody = document.getElementById('weekly-closed-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!slice.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${t('no_filter_data')}</td></tr>`;
+        } else {
+            slice.forEach(ticket => {
+                const region = getTicketRegionGroup(ticket);
+                const priority = getTicketPriority(ticket);
+                const mtfc = metricNumber(ticket.mtfc_horas_bi, ticket.mtfc_horas);
+                const mttsD = metricNumber(ticket.mtts_dias_bi, ticket.mtts_dias);
+                const mtfcTarget = MTFC_TARGET[priority] || MTFC_TARGET_DEFAULT;
+                const mttsTarget = MTTS_TARGET[region] || 7;
+                const mtfcCol = Number.isFinite(mtfc) ? (mtfc <= mtfcTarget ? 'green' : 'red') : 'gray';
+                const mttsCol = Number.isFinite(mttsD) ? (mttsD <= mttsTarget ? 'green' : 'red') : 'gray';
+                const mtfcStr = Number.isFinite(mtfc) ? `<span style="color:${colorHex(mtfcCol)}">${fmt(mtfc, 1)} h</span>` : '--';
+                const mttsStr = Number.isFinite(mttsD) ? `<span style="color:${colorHex(mttsCol)}">${fmt(mttsD, 1)} d</span>` : '--';
+                const closedDate = ticket.closed_time ? new Date(ticket.closed_time).toLocaleDateString('pt-BR') : '--';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><a href="${getZohoTicketUrl(ticket)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Abrir #${ticket.ticket_number} no Zoho Desk">#${ticket.ticket_number || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
+                    <td>${(REGION_FLAGS[region] || '')} ${regionLabel(region)}</td>
+                    <td>${priorityBadge(priority)}</td>
+                    <td>${mtfcStr}</td>
+                    <td>${mttsStr}</td>
+                    <td>${slaStatusBadge(ticket.sla_status_bi)}</td>
+                    <td style="white-space:nowrap;font-size:.83rem">${closedDate}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const info = document.getElementById('weekly-closed-info');
+        if (info) info.textContent = `Página ${weeklyClosedPage} de ${totalPages} — ${total} tickets`;
+
+        const prev = document.getElementById('weekly-prev');
+        const next = document.getElementById('weekly-next');
+        if (prev) prev.disabled = weeklyClosedPage <= 1;
+        if (next) next.disabled = weeklyClosedPage >= totalPages;
+
+        // Update sort icons
+        document.querySelectorAll('#weekly-closed-section th.sortable').forEach(th => {
+            const col = th.dataset.sort;
+            const icon = th.querySelector('.sort-icon');
+            if (!icon) return;
+            if (col === sortStateWeekly.column) {
+                icon.textContent = sortStateWeekly.direction === 'asc' ? ' ↑' : ' ↓';
+                th.classList.add('sort-active');
+            } else {
+                icon.textContent = ' ↕';
+                th.classList.remove('sort-active');
+            }
+        });
+    }
+
+    function updateWeeklySearch(query) {
+        weeklySearchQuery = String(query || '').trim();
+        weeklyClosedPage = 1;
+        renderWeeklyClosedTable();
+    }
+
+    function bindWeeklyTableSort() {
+        document.querySelectorAll('#weekly-closed-section th.sortable').forEach(th => {
+            th.addEventListener('click', () => handleWeeklySort(th.dataset.sort));
+        });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // MAIN RENDER
+    // ──────────────────────────────────────────────────────────
+    function renderPage(filtered, filters) {
+        const now = new Date();
+        const period = selectedPeriod(filters || {});
+
+        const currentCreatedWeek = filtered.filter(t => inCreatedRange(t, period.from, period.to));
+        const currentClosedWeek  = filtered.filter(t => inClosedRange(t, period.from, period.to));
+        const previousClosedWeek = filtered.filter(t => inClosedRange(t, period.prevFrom, period.prevTo));
+
+        const curr = computeMetrics(currentClosedWeek);
+        const prev = computeMetrics(previousClosedWeek);
+
+        const created = currentCreatedWeek.length;
+        const closed  = currentClosedWeek.length;
+        const open    = filtered.filter(t => !t.closed_time);
+        open.forEach(t => { t._aging = (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24); });
+
+        // KPI values
+        setKpi('kpi-sla',      curr.eligible ? fmt(curr.slaCompliance, 2) + '%' : '--');
+        setKpi('kpi-closed',   fmt(closed, 0));
+        setKpi('kpi-created',  fmt(created, 0));
+        setKpi('kpi-mtfc',     curr.closed ? fmt(curr.avgMtfc, 2) + ' h' : '--');
+        setKpi('kpi-mtts',     curr.closed ? fmt(curr.avgMtts, 2) + ' d' : '--');
+        setKpi('kpi-backlog',  fmt(open.length, 0));
+        setKpi('kpi-open-total', fmt(open.length, 0));
+
+        // KPI top bars
+        colorKpiTopBar('kpi-sla',    curr.eligible ? (curr.slaCompliance >= 80 ? 'green' : curr.slaCompliance >= 50 ? 'yellow' : 'red') : 'gray');
+        colorKpiTopBar('kpi-closed', closed > 0 ? 'green' : 'gray');
+        colorKpiTopBar('kpi-mtfc',   !curr.closed ? 'gray' : (curr.avgMtfc <= 8 ? 'green' : curr.avgMtfc <= 16 ? 'yellow' : 'red'));
+        colorKpiTopBar('kpi-mtts',   !curr.closed ? 'gray' : (curr.avgMtts <= 7 ? 'green' : curr.avgMtts <= 14 ? 'yellow' : 'red'));
+        colorKpiTopBar('kpi-backlog', open.length <= 100 ? 'green' : open.length <= 200 ? 'yellow' : 'red');
+
+        // Week range in title
+        const fromFmt = period.from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const toFmt   = period.to.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const rangeEl = document.getElementById('week-range-title');
+        if (rangeEl) rangeEl.textContent = `— ${fromFmt} a ${toFmt}`;
+
+        // Deltas
+        setDelta('sla',  deltaPct(curr.slaCompliance, prev.slaCompliance, false), prev.eligible ? `${fmt(curr.slaCompliance,2)}% vs ${fmt(prev.slaCompliance,2)}%` : tx('no_data'));
+        setDelta('mtfc', deltaPct(curr.avgMtfc, prev.avgMtfc, true),              prev.closed   ? `${fmt(curr.avgMtfc,2)}h vs ${fmt(prev.avgMtfc,2)}h` : tx('no_data'));
+        setDelta('mtts', deltaPct(curr.avgMtts, prev.avgMtts, true),              prev.closed   ? `${fmt(curr.avgMtts,2)}d vs ${fmt(prev.avgMtts,2)}d` : tx('no_data'));
+
+        // Region table (new)
+        renderRegionTable(currentClosedWeek);
+
+        // Charts by region
+        const byRegion = computeByRegion(currentClosedWeek);
+        const regions = REGION_GROUPS.filter(g => byRegion[g].total > 0);
+        createBarChart('chart-rg-sla', regions.map(regionLabel), regions.map(r => byRegion[r].eligible ? byRegion[r].slaCompliance : 0), regions.map(r => colorHex(byRegion[r].eligible ? byRegion[r].slaColor : 'gray')), tx('chart_sla_region'));
+        createBarChart('chart-rg-mtfc', regions.map(regionLabel), regions.map(r => byRegion[r].avgMtfc), regions.map(() => '#1f6feb'), tx('chart_mtfc_region'));
+        createBarChart('chart-rg-mtts', regions.map(regionLabel), regions.map(r => byRegion[r].avgMtts), regions.map(r => colorHex(byRegion[r].closed ? byRegion[r].mttsColor : 'gray')), tx('chart_mtts_region'));
+        createBarChart('chart-rg-closed', regions.map(regionLabel), regions.map(r => byRegion[r].closed), regions.map(() => '#388bfd'), tx('chart_closed_region'));
+
+        // Charts by priority
+        const priorityStats = {};
+        PRIORITY_ORDER.forEach(p => { priorityStats[p] = computeMetrics(currentClosedWeek.filter(t => t.priority === p)); });
+        createBarChart('chart-pr-sla', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].eligible ? priorityStats[p].slaCompliance : 0), PRIORITY_ORDER.map(p => colorHex(priorityStats[p].eligible ? priorityStats[p].slaColor : 'gray')), tx('chart_sla_priority'));
+        createBarChart('chart-pr-mtfc', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].avgMtfc), PRIORITY_ORDER.map(p => { const tgt = MTFC_TARGET[p] || 999; return colorHex(priorityStats[p].closed ? mtfcColor(priorityStats[p].avgMtfc, tgt) : 'gray'); }), tx('chart_mtfc_priority'));
+        createBarChart('chart-pr-mtts', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].avgMtts), PRIORITY_ORDER.map(() => '#1f6feb'), tx('chart_mtts_priority'));
+        createBarChart('chart-pr-closed', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].closed), PRIORITY_ORDER.map(() => '#388bfd'), tx('chart_closed_priority'));
+
+        // Open backlog charts
+        const statusCounts = {};
+        open.forEach(t => { const s = t.status || '—'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
+        const statusLabels = Object.keys(statusCounts);
+        createBarChart('chart-open-status', statusLabels, statusLabels.map(s => statusCounts[s]), statusLabels.map(() => '#1f6feb'), tx('chart_status'));
+        const bucketCounts = AGING_BUCKETS.map(b => open.filter(t => t._aging >= b.min && t._aging <= b.max).length);
+        createBarChart('chart-open-aging', AGING_BUCKETS.map(b => b.label + ' d'), bucketCounts, AGING_BUCKETS.map((b, i) => i <= 1 ? colorHex('green') : i === 2 ? colorHex('yellow') : colorHex('red')), tx('chart_aging'));
+        const openByRegion = REGION_GROUPS.filter(g => open.some(t => REGION_MAP[t.region] === g));
+        createBarChart('chart-open-region', openByRegion.map(regionLabel), openByRegion.map(g => open.filter(t => REGION_MAP[t.region] === g).length), openByRegion.map(() => '#1f6feb'), tx('chart_region'));
+        createBarChart('chart-open-priority', PRIORITY_ORDER, PRIORITY_ORDER.map(p => open.filter(t => t.priority === p).length), PRIORITY_ORDER.map((p, i) => i === 0 ? colorHex('red') : i === 1 ? colorHex('yellow') : '#1f6feb'), tx('chart_priority'));
+
+        // Follow-up table (open tickets created in week)
+        const tbody = document.getElementById('followup-body');
+        tbody.innerHTML = '';
+        const openInWeek = open.filter(t => inCreatedRange(t, period.from, period.to)).sort((a, b) => b._aging - a._aging).slice(0, 30);
+        if (!openInWeek.length) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="9" class="empty-state">${tx('no_data')}</td>`;
+            tbody.appendChild(tr);
+        } else {
+            openInWeek.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="mono">${t.ticket_number || t.id || '--'}</td>
+                    <td class="mono">${fmt(t._aging, 1)}</td>
+                    <td>${priorityBadge(t.priority)}</td>
+                    <td>${regionLabel(REGION_MAP[t.region])}</td>
+                    <td>${t.solicitante || '--'}</td>
+                    <td>${t.assignee_id || '--'}</td>
+                    <td>${t.tipo_atendimento || '--'}</td>
+                    <td>${slaBadge(t, t._aging)}</td>
+                    <td>${t.status || '--'}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Closed tickets table (new, no-print)
+        sortStateWeekly = { column: 'closed_time', direction: 'desc' };
+        weeklyClosedList = [...currentClosedWeek];
+        weeklyClosedPage = 1;
+        weeklySearchQuery = '';
+        const wsInput = document.getElementById('weekly-ticket-search');
+        if (wsInput) wsInput.value = '';
+        const wTitle = document.getElementById('weekly-closed-title');
+        if (wTitle) wTitle.textContent = `${tx('closed_tickets_title')} — ${fromFmt} a ${toFmt}`;
+        renderWeeklyClosedTable();
+
+        // Print header
+        const pTitle = document.getElementById('weekly-print-title');
+        if (pTitle) pTitle.textContent = `Weekly Report — ${fromFmt} a ${toFmt}`;
+        const pMeta = document.getElementById('weekly-print-meta');
+        if (pMeta) pMeta.textContent = `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // APP LIFECYCLE
+    // ──────────────────────────────────────────────────────────
+    function applyPage() {
+        applyExtraI18n();
+        if (!rawData.length) return;
+        const filters = FilterState.get();
+        const dimensionFilters = { ...filters, dateFrom: '', dateTo: '' };
+        renderPage(applyFilters(rawData, dimensionFilters), filters);
+    }
+
+    async function init() {
+        hideError();
+        showLoading(true);
+        bindFilterControls();
+        initWeekSelector();
+        bindRegionTableSort();
+        bindWeeklyTableSort();
+        try {
+            if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
+                throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+            rawData = (await fetchDashboardBiTickets()).tickets;
+            populateFilterOptions(rawData);
+            applyExtraI18n();
+            showLoading(false);
+            applyPage();
+            fetchSyncHealth().then(({ health }) => {
+                const ts = health && (health.last_sync_at || health.synced_at);
+                if (!ts) return;
+                const el = document.getElementById('last-sync');
+                if (el) el.textContent = t('last_sync_label') + ' ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            }).catch(() => {});
+        } catch (e) {
+            showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
+        }
+    }
+
+    document.addEventListener('filterschange', applyPage);
+    document.addEventListener('langchange', () => {
+        applyExtraI18n();
+        if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
+    });
+    window.addEventListener('load', init);
     </script>
 </body>
 </html>

@@ -580,6 +580,37 @@
     .app-nav-inner { padding: 0 20px; }
 }
 
+@media (max-width: 768px) {
+    .filter-bar {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .filter-field {
+        min-width: 100%;
+        width: 100%;
+    }
+    .filter-actions {
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-end;
+    }
+    .app-header-inner {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 16px;
+    }
+    .app-main { padding: 16px; }
+    .app-nav-inner { padding: 0 12px; }
+    .banner-validity { font-size: 11px; padding: 7px 12px; }
+    .banner-validity-icon { display: none; }
+    .kpi-strip,
+    .daily-kpi-strip,
+    .executive-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .decision-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 640px) {
     .sync-health-metrics { grid-template-columns: 1fr; }
     .grid-cols-2,

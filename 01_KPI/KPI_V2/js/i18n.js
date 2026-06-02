@@ -74,7 +74,10 @@ const TRANSLATIONS = {
         audience_weekly: "Coordenadores + Gerente",
         audience_monthly: "Gerente + Diretor",
         btn_open: "Abrir",
-        app_footer: "Playbook Global · Global Service · Módulo KPI"
+        app_footer: "Playbook Global · Global Service · Módulo KPI",
+        banner_validity: "Análises válidas a partir de 01/06/2026 — dados anteriores podem conter inconsistências de classificação",
+        no_filter_data: "Nenhum dado encontrado para os filtros selecionados",
+        last_sync_label: "Última atualização:"
     },
     en: {
         nav_overview: "Global Overview",
@@ -151,7 +154,10 @@ const TRANSLATIONS = {
         audience_weekly: "Coordinators + Manager",
         audience_monthly: "Manager + Director",
         btn_open: "Open",
-        app_footer: "Global Playbook · Global Service · KPI Module"
+        app_footer: "Global Playbook · Global Service · KPI Module",
+        banner_validity: "Analytics valid from 06/01/2026 — prior data may contain classification inconsistencies",
+        no_filter_data: "No data found for the selected filters",
+        last_sync_label: "Last updated:"
     },
     es: {
         nav_overview: "Visión Global",
@@ -228,7 +234,10 @@ const TRANSLATIONS = {
         audience_weekly: "Coordinadores + Gerente",
         audience_monthly: "Gerente + Director",
         btn_open: "Abrir",
-        app_footer: "Playbook Global · Global Service · Módulo KPI"
+        app_footer: "Playbook Global · Global Service · Módulo KPI",
+        banner_validity: "Análisis válidos a partir del 01/06/2026 — los datos anteriores pueden contener inconsistencias de clasificación",
+        no_filter_data: "No se encontraron datos para los filtros seleccionados",
+        last_sync_label: "Última actualización:"
     }
 };
 
@@ -248,6 +257,37 @@ function setLang(lang) {
     localStorage.setItem('dashboard_lang', lang);
     applyTranslations();
     document.dispatchEvent(new Event('langchange'));
+    const bannerText = document.getElementById('banner-validity-text');
+    if (bannerText) bannerText.textContent = t('banner_validity');
+}
+
+function initTheme() {
+    const saved = localStorage.getItem('kpi-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    const btn = document.getElementById('btn-theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('kpi-theme', next);
+    const btn = document.getElementById('btn-theme-toggle');
+    if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+function initValidityBanner() {
+    if (localStorage.getItem('kpi-banner-closed') === '1') return;
+    const banner = document.getElementById('banner-validity');
+    if (!banner) return;
+    banner.style.display = 'flex';
+    const textEl = document.getElementById('banner-validity-text');
+    if (textEl) textEl.textContent = t('banner_validity');
+    banner.querySelector('.banner-validity-close')?.addEventListener('click', () => {
+        banner.style.display = 'none';
+        localStorage.setItem('kpi-banner-closed', '1');
+    });
 }
 
 function applyTranslations(root) {
@@ -272,9 +312,12 @@ function applyTranslations(root) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     applyTranslations();
 
     document.querySelectorAll('.lang-switch button').forEach(btn => {
         btn.addEventListener('click', () => setLang(btn.dataset.lang));
     });
+    document.getElementById('btn-theme-toggle')?.addEventListener('click', toggleTheme);
+    initValidityBanner();
 });
