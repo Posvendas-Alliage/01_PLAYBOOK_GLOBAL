@@ -285,7 +285,7 @@
                         </div>
                         <input type="text" id="weekly-ticket-search"
                                style="padding:7px 12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);font-size:.84rem;width:220px;"
-                               placeholder="Buscar ticket #..." oninput="updateWeeklySearch(this.value)">
+                               data-i18n-placeholder="search_ticket" placeholder="Buscar ticket #..." oninput="updateWeeklySearch(this.value)">
                     </div>
                     <div class="table-scroll">
                         <table class="data-table">
@@ -305,8 +305,8 @@
                     </div>
                     <div class="pagination">
                         <span id="weekly-closed-info">--</span>
-                        <button type="button" class="btn btn-ghost btn-sm" id="weekly-prev">Anterior</button>
-                        <button type="button" class="btn btn-ghost btn-sm" id="weekly-next">Próximo</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="weekly-prev" data-tx="pagination_prev">Anterior</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="weekly-next" data-tx="pagination_next">Próximo</button>
                     </div>
                 </section>
             </div>
@@ -795,7 +795,7 @@
                 const mttsTarget = MTTS_TARGET[region] || 7;
                 const mttsStr = m.closed ? `<span style="color:${colorHex(m.avgMtts <= mttsTarget ? 'green' : m.avgMtts <= mttsTarget * 2 ? 'yellow' : 'red')}">${fmt(m.avgMtts, 1)} d</span>` : '--';
                 const statusBadge = m.eligible
-                    ? (m.slaCompliance >= 80 ? '<span class="badge badge-green">ON TARGET</span>' : m.slaCompliance >= 50 ? '<span class="badge badge-yellow">ATTENTION</span>' : '<span class="badge badge-red">CRITICAL</span>')
+                    ? (m.slaCompliance >= 80 ? `<span class="badge badge-green">${tx('badge_on_target')}</span>` : m.slaCompliance >= 50 ? `<span class="badge badge-yellow">${tx('badge_attention')}</span>` : `<span class="badge badge-red">${tx('badge_critical')}</span>`)
                     : '<span class="badge badge-muted">—</span>';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -920,7 +920,7 @@
         }
 
         const info = document.getElementById('weekly-closed-info');
-        if (info) info.textContent = `Página ${weeklyClosedPage} de ${totalPages} — ${total} tickets`;
+        if (info) info.textContent = `${tx('pagination_page')} ${weeklyClosedPage} ${tx('pagination_of')} ${totalPages} — ${total} tickets`;
 
         const prev = document.getElementById('weekly-prev');
         const next = document.getElementById('weekly-next');
@@ -993,7 +993,7 @@
         const fromFmt = period.from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
         const toFmt   = period.to.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const rangeEl = document.getElementById('week-range-title');
-        if (rangeEl) rangeEl.textContent = `— ${fromFmt} a ${toFmt}`;
+        if (rangeEl) rangeEl.textContent = `— ${fromFmt} ${tx('week_to')} ${toFmt}`;
 
         // Deltas
         setDelta('sla',  deltaPct(curr.slaCompliance, prev.slaCompliance, false), prev.eligible ? `${fmt(curr.slaCompliance,2)}% vs ${fmt(prev.slaCompliance,2)}%` : tx('no_data'));
@@ -1063,14 +1063,14 @@
         const wsInput = document.getElementById('weekly-ticket-search');
         if (wsInput) wsInput.value = '';
         const wTitle = document.getElementById('weekly-closed-title');
-        if (wTitle) wTitle.textContent = `${tx('closed_tickets_title')} — ${fromFmt} a ${toFmt}`;
+        if (wTitle) wTitle.textContent = `${tx('closed_tickets_title')} — ${fromFmt} ${tx('week_to')} ${toFmt}`;
         renderWeeklyClosedTable();
 
         // Print header
         const pTitle = document.getElementById('weekly-print-title');
         if (pTitle) pTitle.textContent = `Weekly Report — ${fromFmt} a ${toFmt}`;
         const pMeta = document.getElementById('weekly-print-meta');
-        if (pMeta) pMeta.textContent = `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`;
+        if (pMeta) pMeta.textContent = `${tx('print_generated')}: ${new Date().toLocaleDateString('pt-BR')}`;
     }
 
     // ──────────────────────────────────────────────────────────

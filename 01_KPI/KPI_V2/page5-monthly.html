@@ -264,8 +264,8 @@
                     </div>
                     <div class="pagination">
                         <span id="closed-pagination-info">--</span>
-                        <button type="button" class="btn btn-ghost btn-sm" id="closed-prev">Anterior</button>
-                        <button type="button" class="btn btn-ghost btn-sm" id="closed-next">Próximo</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="closed-prev" data-tx="pagination_prev">Anterior</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="closed-next" data-tx="pagination_next">Próximo</button>
                     </div>
                 </section>
 
@@ -776,7 +776,7 @@
         }
 
         const info = document.getElementById('closed-pagination-info');
-        if (info) info.textContent = `Página ${closedTicketsPage} de ${totalPages} — ${total} tickets`;
+        if (info) info.textContent = `${tx('pagination_page')} ${closedTicketsPage} ${tx('pagination_of')} ${totalPages} — ${total} tickets`;
 
         const prev = document.getElementById('closed-prev');
         const next = document.getElementById('closed-next');
@@ -945,7 +945,7 @@
         const pTitle = document.getElementById('print-title');
         if (pTitle) pTitle.textContent = `Monthly Report — ${monthKey}`;
         const pMeta = document.getElementById('print-meta');
-        if (pMeta) pMeta.textContent = `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`;
+        if (pMeta) pMeta.textContent = `${tx('print_generated')}: ${new Date().toLocaleDateString('pt-BR')}`;
     }
 
     // ──────────────────────────────────────────────────────────

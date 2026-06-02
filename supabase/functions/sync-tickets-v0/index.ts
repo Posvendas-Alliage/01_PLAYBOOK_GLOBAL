@@ -22,7 +22,7 @@ const DEFAULT_MAX_PAGES_PER_DEPARTMENT = 100;
 const DEFAULT_BACKFILL_MAX_PAGES = 50;
 const DEFAULT_CONTACTS_MAX_PAGES = 10;
 const FUNCTION_NAME = "sync-tickets-v0";
-const FUNCTION_CODE_VERSION = "2026-06-02-v35-deletion-sweep";
+const FUNCTION_CODE_VERSION = "2026-06-02-v35-404-marks-deleted-and-deletion-sweep";
 const ZOHO_FETCH_MAX_ATTEMPTS = 3;
 const ZOHO_FETCH_BASE_BACKOFF_MS = 750;
 const DEFAULT_MAX_RUNTIME_SECONDS = 110;
@@ -1047,6 +1047,38 @@ function isZohoTicketNotFoundError(error: unknown): boolean {
     haystack.includes("does not exist") ||
     haystack.includes("not exist") ||
     haystack.includes("invalid ticket");
+}
+
+function isZohoTicketDetailNotFound404(error: unknown): boolean {
+  return error instanceof ZohoTicketDetailFetchError && error.httpStatus === 404;
+}
+
+async function markZohoTicketDeletedInSupabase(
+  supabase: SupabaseClient,
+  ticketId: string,
+  dryRun = false,
+): Promise<void> {
+  if (dryRun) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const result = await supabase
+    .from("zoho_tickets")
+    .update({
+      is_deleted: true,
+      synced_at: now,
+      updated_in_supabase_at: now,
+    })
+    .eq("id", ticketId) as SupabaseCallResult | undefined;
+
+  if (!result || result.error) {
+    throw new Error(
+      `Falha ao marcar ticket ${ticketId} como deletado no Supabase: ${
+        supabaseErrorMessage(result, "retorno vazio do Supabase")
+      }`,
+    );
+  }
 }
 
 async function deleteZohoTicketFromSupabase(
@@ -2354,10 +2386,32 @@ Deno.serve(async (req) => {
               metricsUpdated += 1;
             }
           } catch (error) {
-            if (isZohoTicketNotFoundError(error)) {
-              await deleteZohoTicketFromSupabase(supabase, ticketId, params.dryRun);
-              ticketsDeleted += 1;
-              successRecords += 1;
+            if (isZohoTicketDetailNotFound404(error)) {
+              const ticketNumber = toText(ticket.ticket_number);
+              console.log(
+                `open_tickets_sweep: ticket #${ticketNumber} retornou 404 — marcando como deletado${
+                  params.dryRun ? " [DRY RUN]" : ""
+                }`,
+              );
+
+              try {
+                await markZohoTicketDeletedInSupabase(supabase, ticketId, params.dryRun);
+                ticketsUpdated += 1;
+                ticketsDeleted += 1;
+                successRecords += 1;
+              } catch (deleteError) {
+                errorRecords += 1;
+                await logError(
+                  supabase,
+                  syncRunId,
+                  "open_tickets_sweep",
+                  ticketId,
+                  deleteError,
+                  { ticket_id: ticketId, ticket_number: ticketNumber, reason: "failed_to_mark_deleted_after_404" },
+                  "open_tickets_sweep_mark_deleted",
+                  endpoint,
+                );
+              }
               continue;
             }
 
@@ -3164,9 +3218,31 @@ Deno.serve(async (req) => {
             incrementalOpenTicketSweepUpdated += 1;
             incrementalDetailsUpdated += 1;
           } catch (error) {
-            if (isZohoTicketNotFoundError(error)) {
-              await deleteZohoTicketFromSupabase(supabase, ticketId, incrementalParams.dryRun);
-              incrementalTicketsDeleted += 1;
+            if (isZohoTicketDetailNotFound404(error)) {
+              const ticketNumber = toText(ticket.ticket_number);
+              console.log(
+                `incremental open_sweep: ticket #${ticketNumber} retornou 404 — marcando como deletado${
+                  incrementalParams.dryRun ? " [DRY RUN]" : ""
+                }`,
+              );
+
+              try {
+                await markZohoTicketDeletedInSupabase(supabase, ticketId, incrementalParams.dryRun);
+                incrementalOpenTicketSweepUpdated += 1;
+                incrementalTicketsDeleted += 1;
+              } catch (deleteError) {
+                errorRecords += 1;
+                await logError(
+                  supabase,
+                  syncRunId,
+                  incrementalSyncType,
+                  ticketId,
+                  deleteError,
+                  { ticket_id: ticketId, ticket_number: ticketNumber, reason: "failed_to_mark_deleted_after_404" },
+                  "zoho_ticket_incremental_open_sweep_mark_deleted",
+                  endpoint,
+                );
+              }
               continue;
             }
 

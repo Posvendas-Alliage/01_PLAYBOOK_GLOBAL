@@ -809,7 +809,7 @@
                     : `<td class="col-agente"><span style="
                         font-size:11px; padding:2px 8px; border-radius:10px;
                         background:rgba(125,133,144,0.15); color:#7d8590;
-                    ">Sem dono</span></td>`;
+                    ">${tx('no_owner_label')}</span></td>`;
 
                 tr.innerHTML = `
                     <td><a href="${getZohoTicketUrl(row)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Abrir #${row.ticket_number} no Zoho Desk">#${row.ticket_number || row.id || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
@@ -951,7 +951,7 @@
         const pTitle = document.getElementById('daily-print-title');
         if (pTitle) pTitle.textContent = `Daily Report — ${new Date().toLocaleDateString('pt-BR')}`;
         const pMeta = document.getElementById('daily-print-meta');
-        if (pMeta) pMeta.textContent = `Backlog: ${rows.length} | Sem resposta: ${noResponse.length} | P1/P2: ${p12.length}`;
+        if (pMeta) pMeta.textContent = `Backlog: ${rows.length} | ${tx('no_response_label')}: ${noResponse.length} | P1/P2: ${p12.length}`;
     }
 
     // ──────────────────────────────────────────────────────────
