@@ -44,7 +44,8 @@
             .daily-tickets-table th:nth-child(2),
             .daily-tickets-table td:nth-child(2),
             .daily-tickets-table th:nth-child(3),
-            .daily-tickets-table td:nth-child(3) { display: none; }
+            .daily-tickets-table td:nth-child(3),
+            .col-agente { display: none; }
         }
 
         /* ── Print ─────────────────────────────────────── */
@@ -249,6 +250,7 @@
                                     <th class="sortable" data-sort="region" data-tx="col_region">Região<span class="sort-icon">↕</span></th>
                                     <th class="sortable" data-sort="priority" data-tx="col_priority">Prioridade<span class="sort-icon">↕</span></th>
                                     <th class="sortable" data-sort="status" data-tx="col_status">Status<span class="sort-icon">↕</span></th>
+                                    <th class="sortable col-agente" data-sort="agent_name" data-tx="col_agent">Agente<span class="sort-icon">↕</span></th>
                                     <th class="sortable" data-sort="mtfc" data-tx="col_mtfc">MTFC<span class="sort-icon">↕</span></th>
                                     <th class="sortable sort-active" data-sort="aging" data-tx="col_aging">Aging (dias)<span class="sort-icon">↓</span></th>
                                     <th data-tx="col_action">Acao</th>
@@ -306,7 +308,7 @@
             chart_aging: 'Aging Buckets', chart_priority: 'Backlog por Prioridade',
             table_title: 'Tickets em Aberto',
             col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridade',
-            col_region: 'Regiao', col_status: 'Status', col_action: 'Acao', col_mtfc: 'MTFC',
+            col_region: 'Regiao', col_status: 'Status', col_agent: 'Agente', col_action: 'Acao', col_mtfc: 'MTFC',
             action_first_response: 'Dar primeira resposta',
             action_old_ticket: 'Revisar aging',
             action_dependency: 'Verificar dependencia',
@@ -349,7 +351,7 @@
             chart_aging: 'Aging Buckets', chart_priority: 'Backlog by Priority',
             table_title: 'Open Tickets',
             col_ticket: 'Ticket #', col_aging: 'Aging (days)', col_priority: 'Priority',
-            col_region: 'Region', col_status: 'Status', col_action: 'Action', col_mtfc: 'MTFC',
+            col_region: 'Region', col_status: 'Status', col_agent: 'Agent', col_action: 'Action', col_mtfc: 'MTFC',
             action_first_response: 'Send first response',
             action_old_ticket: 'Review aging',
             action_dependency: 'Check dependency',
@@ -392,7 +394,7 @@
             chart_aging: 'Buckets de Aging', chart_priority: 'Backlog por Prioridad',
             table_title: 'Tickets Abiertos',
             col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridad',
-            col_region: 'Region', col_status: 'Estado', col_action: 'Accion', col_mtfc: 'MTFC',
+            col_region: 'Region', col_status: 'Estado', col_agent: 'Agente', col_action: 'Accion', col_mtfc: 'MTFC',
             action_first_response: 'Dar primera respuesta',
             action_old_ticket: 'Revisar aging',
             action_dependency: 'Verificar dependencia',
@@ -469,6 +471,21 @@
     function fmt(n, d) {
         if (n === null || n === undefined || isNaN(n)) return '--';
         return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[char]);
+    }
+    function getAgentDisplayName(agentName) {
+        if (!agentName || agentName.trim() === '' || agentName === '-') return null;
+        const name = agentName.trim();
+        if (['Alliage', 'Norberto'].includes(name)) return null;
+        return name.split(' ')[0];
     }
     function setKpi(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
     function regionLabel(group) {
@@ -692,6 +709,10 @@
                     case 'region':   valA = (getTicketRegionGroup(a)||'').toLowerCase(); valB = (getTicketRegionGroup(b)||'').toLowerCase(); break;
                     case 'priority': valA = SORT_PRIORITY[getTicketPriority(a)]||9; valB = SORT_PRIORITY[getTicketPriority(b)]||9; break;
                     case 'status':   valA = (a.status||'').toLowerCase(); valB = (b.status||'').toLowerCase(); break;
+                    case 'agent_name':
+                        valA = getAgentDisplayName(a.agent_name) || 'zzz';
+                        valB = getAgentDisplayName(b.agent_name) || 'zzz';
+                        break;
                     case 'mtfc':
                         valA = Number.isFinite(metricNumber(a.mtfc_horas_bi, a.mtfc_horas)) ? metricNumber(a.mtfc_horas_bi, a.mtfc_horas) : 9999;
                         valB = Number.isFinite(metricNumber(b.mtfc_horas_bi, b.mtfc_horas)) ? metricNumber(b.mtfc_horas_bi, b.mtfc_horas) : 9999;
@@ -752,7 +773,7 @@
 
         tbody.innerHTML = '';
         if (!slice.length) {
-            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${t('no_filter_data')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="empty-state">${t('no_filter_data')}</td></tr>`;
         } else {
             slice.forEach(row => {
                 const tr = document.createElement('tr');
@@ -782,11 +803,20 @@
                     ? `<strong style="color:${colorHex('red')}">${fmt(aging, 0)}</strong>`
                     : `<span style="color:${colorHex(agingColor)}">${fmt(aging, 0)}</span>`;
 
+                const agentDisplay = getAgentDisplayName(row.agent_name);
+                const agentCell = agentDisplay
+                    ? `<td class="col-agente">${escapeHtml(agentDisplay)}</td>`
+                    : `<td class="col-agente"><span style="
+                        font-size:11px; padding:2px 8px; border-radius:10px;
+                        background:rgba(125,133,144,0.15); color:#7d8590;
+                    ">Sem dono</span></td>`;
+
                 tr.innerHTML = `
                     <td><a href="${getZohoTicketUrl(row)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Abrir #${row.ticket_number} no Zoho Desk">#${row.ticket_number || row.id || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
                     <td>${regionStr}</td>
                     <td>${priorityBadge(priority)}</td>
                     <td>${statusBadgeFor(row.status)}</td>
+                    ${agentCell}
                     <td>${mtfcStr}</td>
                     <td>${agingStr}</td>
                     <td>${actionFor(row)}</td>`;

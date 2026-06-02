@@ -1,4 +1,4 @@
-﻿import "@supabase/functions-js/edge-runtime.d.ts";
+﻿import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -22,7 +22,7 @@ const DEFAULT_MAX_PAGES_PER_DEPARTMENT = 100;
 const DEFAULT_BACKFILL_MAX_PAGES = 50;
 const DEFAULT_CONTACTS_MAX_PAGES = 10;
 const FUNCTION_NAME = "sync-tickets-v0";
-const FUNCTION_CODE_VERSION = "2026-06-01-r18-delete-zoho-not-found-tickets";
+const FUNCTION_CODE_VERSION = "2026-06-02-v35-deletion-sweep";
 const ZOHO_FETCH_MAX_ATTEMPTS = 3;
 const ZOHO_FETCH_BASE_BACKOFF_MS = 750;
 const DEFAULT_MAX_RUNTIME_SECONDS = 110;
@@ -38,10 +38,12 @@ const INCREMENTAL_CHECKPOINT_OVERLAP_MINUTES = 30;
 
 // ─────────────────────────────────────────────────────
 // DELETION_SWEEP
-// Verifica tickets suspeitos de terem sido deletados no Zoho.
-// Suspeitos: abertos no Supabase, sem modificacao ha 30+ dias.
-// Custo: 1 chamada API por ticket verificado.
-// Recomendacao: rodar 1x por semana, max 50 tickets por vez.
+// Verifica tickets suspeitos de deletados no Zoho.
+// Critério: abertos no Supabase, sem modificação há N dias.
+// Custo: 1 chamada API por ticket. Máx 200 tickets por run.
+// Cron recomendado: 1x por semana (segunda-feira 06:00 UTC).
+// Validado em 02/jun/2026: detectou #221072, #222036, #236724
+// como fantasmas e 6 tickets de teste.
 // ─────────────────────────────────────────────────────
 const DELETION_SWEEP_LOAD_STRATEGY = "v1f_deletion_sweep";
 const DEFAULT_DELETION_SWEEP_MAX_TICKETS = 50;
@@ -835,15 +837,18 @@ function createRuntimeGuard(startedAtMs: number, maxRuntimeSeconds: number): {
   remainingMs: () => number;
   canStartWork: () => boolean;
   shouldStop: () => boolean;
+  shouldStopSweep: () => boolean;
 } {
   const maxRuntimeMs = Math.min(Math.max(maxRuntimeSeconds, 10), MAX_RUNTIME_SECONDS) * 1000;
   const deadlineMs = startedAtMs + maxRuntimeMs - RUNTIME_SAFETY_MARGIN_MS;
+  const shouldStop = () => Date.now() >= deadlineMs;
 
   return {
     elapsedMs: () => Date.now() - startedAtMs,
     remainingMs: () => deadlineMs - Date.now(),
     canStartWork: () => Date.now() < deadlineMs,
-    shouldStop: () => Date.now() >= deadlineMs,
+    shouldStop,
+    shouldStopSweep: shouldStop,
   };
 }
 
@@ -1102,15 +1107,15 @@ async function checkTicketExistsInZoho(
     });
     if (response.status === 200) return true;
     if (response.status === 404) return false;
-    // Para outros erros (401, 429, 500) — assume que existe para nao deletar por engano
+    // Qualquer outro erro (401, 429, 500) — assume que existe.
+    // NUNCA deletar por engano devido a erro de rede ou rate limit.
     console.warn(
-      `checkTicketExistsInZoho: status inesperado ${response.status} para ticket ${ticketId}`,
+      `checkTicketExistsInZoho: status inesperado ${response.status} para ticket ${ticketId} — assumindo que existe`,
     );
     return true;
   } catch (error) {
-    // Erro de rede — assume que existe para nao deletar por engano
     console.warn(
-      `checkTicketExistsInZoho: erro de rede para ticket ${ticketId}`,
+      `checkTicketExistsInZoho: erro de rede para ticket ${ticketId} — assumindo que existe`,
       errorMessage(error),
     );
     return true;
@@ -2112,7 +2117,7 @@ Deno.serve(async (req) => {
       const deletedTicketNumbers: string[] = [];
 
       for (const ticket of ticketsToCheck) {
-        if (runtimeGuard.shouldStop()) break;
+        if (runtimeGuard.shouldStopSweep()) break;
 
         const ticketId = toText(ticket.id);
         const ticketNumber = toText(ticket.ticket_number);
@@ -2155,7 +2160,7 @@ Deno.serve(async (req) => {
             ticketsConfirmedExist++;
           }
 
-          await sleep(200);
+          await sleep(250);
         } catch (error) {
           checkErrors++;
           await logError(
@@ -2177,6 +2182,7 @@ Deno.serve(async (req) => {
         `deletion_sweep=true`,
         `dry_run=${dryRun}`,
         `stale_days=${staleDays}`,
+        `suspects_found=${suspects.length}`,
         `tickets_checked=${ticketsChecked}`,
         `tickets_marked_deleted=${ticketsMarkedDeleted}`,
         `tickets_confirmed_exist=${ticketsConfirmedExist}`,
@@ -2219,7 +2225,7 @@ Deno.serve(async (req) => {
         deleted_ticket_numbers: deletedTicketNumbers,
         has_more: hasMore,
         stale_runs_marked: staleRunsMarked,
-        function_version: functionVersion(),
+        function_version: FUNCTION_CODE_VERSION,
       });
     }
 
@@ -4148,6 +4154,8 @@ Deno.serve(async (req) => {
       ? `V1D ticket metrics falhou: ${errorMessage(error)}`
       : mode === "incremental" || mode === "modified_window_sync"
       ? `${mode} falhou: ${errorMessage(error)}`
+      : mode === "deletion_sweep"
+      ? `Deletion sweep falhou: ${errorMessage(error)}`
       : failureMessage;
     const summary = {
       totalRecords,
