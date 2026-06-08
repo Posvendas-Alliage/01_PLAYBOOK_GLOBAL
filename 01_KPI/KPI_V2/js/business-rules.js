@@ -296,6 +296,9 @@ function applyFilters(tickets, filters) {
                 if (getTicketRegionGroup(t) !== filters.region) return false;
             }
         }
+        if (filters.department && filters.department !== 'all') {
+            if ((t.department_name || '') !== filters.department) return false;
+        }
         if (filters.priority && filters.priority !== 'all') {
             if (getTicketPriority(t) !== filters.priority) return false;
         }

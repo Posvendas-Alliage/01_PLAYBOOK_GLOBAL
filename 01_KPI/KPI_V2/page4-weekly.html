@@ -149,6 +149,10 @@
                     <label data-i18n="filter_agent_group">Grupo do Agente</label>
                     <div id="filter-agent-groups" class="multi-select-group" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
                 </div>
+                <div class="filter-field" id="filter-dept-wrapper">
+                    <label data-tx="filter_dept">Departamento</label>
+                    <div id="filter-dept-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+                </div>
                 <div class="filter-actions">
                     <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply">Aplicar</button>
                     <button type="button" class="btn btn-ghost btn-sm" id="btn-clear" data-tx="btn_clear">Limpar</button>
@@ -346,6 +350,7 @@
             brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
             btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
             week_selector_label: 'Semana', filter_country: 'País / Região', country_all: 'Todos',
+            filter_dept: 'Departamento', dept_all: 'Todos',
             weekly_title: 'Report semanal',
             sec_summary: 'Executive Summary', sec_trend: 'Trend — Semana atual vs anterior',
             sec_region_table: 'Resumo por Região',
@@ -370,6 +375,7 @@
             brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
             btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
             week_selector_label: 'Week', filter_country: 'Country / Region', country_all: 'All',
+            filter_dept: 'Department', dept_all: 'All',
             weekly_title: 'Weekly report',
             sec_summary: 'Executive Summary', sec_trend: 'Trend — current vs previous week',
             sec_region_table: 'Region Summary',
@@ -394,6 +400,7 @@
             brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
             btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
             week_selector_label: 'Semana', filter_country: 'País / Región', country_all: 'Todos',
+            filter_dept: 'Departamento', dept_all: 'Todos',
             weekly_title: 'Reporte semanal',
             sec_summary: 'Executive Summary', sec_trend: 'Snapshot — semana actual vs anterior',
             sec_region_table: 'Resumen por Región',
@@ -443,6 +450,12 @@
         { key: 'LATAM', emoji: '🌎' },
         { key: 'ROW', emoji: '🌍' }
     ];
+    const DEPT_OPTIONS = [
+        { key: 'all', icon: '' },
+        { key: 'Suporte técnico', icon: '🔵' },
+        { key: 'SAC', icon: '🟠' }
+    ];
+    const REGIONS_WITH_DEPT = new Set(['all', 'Brasil']);
     const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
     const REGION_FLAGS = { Brasil: '🇧🇷', Argentina: '🇦🇷', 'México': '🇲🇽', LATAM: '🌎', USA: '🇺🇸', ROW: '🌍' };
     const AGING_BUCKETS = [
@@ -566,6 +579,7 @@
             btn.addEventListener('click', () => {
                 FilterState.update('region', key);
                 renderCountryFilter();
+                updateDeptFilterVisibility();
                 applyPage();
             });
             container.appendChild(btn);
@@ -597,6 +611,43 @@
             });
             container.appendChild(btn);
         });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // DEPARTMENT FILTER
+    // ──────────────────────────────────────────────────────────
+    function renderDeptFilter() {
+        const container = document.getElementById('filter-dept-btns');
+        if (!container) return;
+        const current = FilterState.get().department || 'all';
+        container.innerHTML = '';
+        DEPT_OPTIONS.forEach(({ key, icon }) => {
+            const label = key === 'all'
+                ? tx('dept_all')
+                : (icon ? `${icon} ${key}` : key);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.style.cssText = `padding:4px 10px;border-radius:20px;cursor:pointer;border:1px solid ${current === key ? '#1f6feb' : '#30363d'};font-size:12px;font-family:'DM Sans',sans-serif;background:${current === key ? '#1f6feb' : '#161b22'};color:${current === key ? '#fff' : '#7d8590'};`;
+            btn.addEventListener('click', () => {
+                FilterState.update('department', key);
+                renderDeptFilter();
+                applyPage();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    function updateDeptFilterVisibility() {
+        const region = FilterState.get().region || 'all';
+        const wrapper = document.getElementById('filter-dept-wrapper');
+        if (!wrapper) return;
+        const visible = REGIONS_WITH_DEPT.has(region);
+        wrapper.style.display = visible ? '' : 'none';
+        if (!visible && (FilterState.get().department || 'all') !== 'all') {
+            FilterState.update('department', 'all');
+            renderDeptFilter();
+        }
     }
 
     // ──────────────────────────────────────────────────────────
@@ -677,6 +728,8 @@
             if ([...input.options].some(o => o.value === state[key])) input.value = state[key];
         });
         renderAgentGroupFilter();
+        renderDeptFilter();
+        updateDeptFilterVisibility();
     }
 
     // ──────────────────────────────────────────────────────────
@@ -688,6 +741,7 @@
             document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
             next.region = FilterState.get().region || 'all';
             next.agentGroups = FilterState.get().agentGroups || [...DEFAULT_AGENT_GROUPS];
+            next.department = FilterState.get().department || 'all';
             const sel = document.getElementById('week-selector');
             if (sel && sel.value) {
                 const [from, to] = sel.value.split('__');
@@ -701,6 +755,7 @@
             FilterState.reset();
             FilterState.update('region', 'all');
             FilterState.update('agentGroups', [...DEFAULT_AGENT_GROUPS]);
+            FilterState.update('department', 'all');
             FilterState.update('dateFrom', weeks[0].from);
             FilterState.update('dateTo', weeks[0].to);
             document.querySelectorAll('[data-filter]').forEach(i => {
@@ -708,6 +763,8 @@
             });
             renderCountryFilter();
             renderAgentGroupFilter();
+            renderDeptFilter();
+            updateDeptFilterVisibility();
             const sel = document.getElementById('week-selector');
             if (sel) { sel.selectedIndex = 0; }
             applyPage();
@@ -1168,8 +1225,6 @@
         const curr = computeMetrics(currentClosedWeek);
         const prev = computeMetrics(previousClosedWeek);
 
-        const created = currentCreatedWeek.length;
-        const closed  = currentClosedWeek.length;
         const open    = filtered.filter(t => !t.closed_time);
         open.forEach(t => { t._aging = (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24); });
 
@@ -1179,20 +1234,50 @@
         crossBaseOpen           = [...open];
         crossBasePrevClosedWeek = [...previousClosedWeek];
 
+        // ── Executive Summary: CRIADOS / FECHADOS / SLA / MTFC / MTTS ──
+        // Usa rawData com filtro dinâmico por região, grupo e departamento.
+        // Data filtrada com offset BRT (UTC-3) explícito para portabilidade.
+        const _weekBRT = { start: filters.dateFrom || '', end: filters.dateTo || '' };
+        const _inWeekBRT = (dateStr) => {
+            if (!dateStr || !_weekBRT.start || !_weekBRT.end) return false;
+            const ms = new Date(dateStr).getTime();
+            if (!isFinite(ms)) return false;
+            const brtDate = new Date(ms - 3 * 3600000).toISOString().slice(0, 10);
+            return brtDate >= _weekBRT.start && brtDate <= _weekBRT.end;
+        };
+        const _regiao = filters.region     || 'all';
+        const _grupos = filters.agentGroups;
+        const _dept   = filters.department || 'all';
+        const _passExec = (t) =>
+            (_regiao === 'all' || getTicketRegionGroup(t) === _regiao) &&
+            (!_grupos || !Array.isArray(_grupos) || _grupos.includes(getTicketAgentGroup(t))) &&
+            (_dept   === 'all' || (t.department_name || '') === _dept);
+
+        const ticketsCriados  = rawData.filter(t => t.created_time && _inWeekBRT(t.created_time) && _passExec(t));
+        const ticketsFechados = rawData.filter(t => t.closed_time   && _inWeekBRT(t.closed_time)  && _passExec(t));
+
+        const execSlaElig = ticketsFechados.filter(t => t.is_sla_eligible);
+        const execSla     = execSlaElig.length > 0
+            ? execSlaElig.filter(t => t.sla_status_bi === 'Dentro SLA').length / execSlaElig.length * 100
+            : null;
+        const _avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
+        const execMtfc = _avg(ticketsFechados.map(t => metricNumber(t.mtfc_horas_bi, t.mtfc_horas)).filter(Number.isFinite));
+        const execMtts = _avg(ticketsFechados.map(t => metricNumber(t.mtts_dias_bi,  t.mtts_dias )).filter(Number.isFinite));
+
         // KPI values
-        setKpi('kpi-sla',      curr.eligible ? fmt(curr.slaCompliance, 2) + '%' : '--');
-        setKpi('kpi-closed',   fmt(closed, 0));
-        setKpi('kpi-created',  fmt(created, 0));
-        setKpi('kpi-mtfc',     curr.closed ? fmt(curr.avgMtfc, 2) + ' h' : '--');
-        setKpi('kpi-mtts',     curr.closed ? fmt(curr.avgMtts, 2) + ' d' : '--');
+        setKpi('kpi-sla',      execSla !== null ? fmt(execSla, 2) + '%' : '--');
+        setKpi('kpi-closed',   fmt(ticketsFechados.length, 0));
+        setKpi('kpi-created',  fmt(ticketsCriados.length, 0));
+        setKpi('kpi-mtfc',     execMtfc !== null ? fmt(execMtfc, 2) + ' h' : '--');
+        setKpi('kpi-mtts',     execMtts !== null ? fmt(execMtts, 2) + ' d' : '--');
         setKpi('kpi-backlog',  fmt(globalBacklogCount, 0));
         setKpi('kpi-open-total', fmt(open.length, 0));
 
         // KPI top bars
-        colorKpiTopBar('kpi-sla',    curr.eligible ? (curr.slaCompliance >= 80 ? 'green' : curr.slaCompliance >= 50 ? 'yellow' : 'red') : 'gray');
-        colorKpiTopBar('kpi-closed', closed > 0 ? 'green' : 'gray');
-        colorKpiTopBar('kpi-mtfc',   !curr.closed ? 'gray' : (curr.avgMtfc <= 8 ? 'green' : curr.avgMtfc <= 16 ? 'yellow' : 'red'));
-        colorKpiTopBar('kpi-mtts',   !curr.closed ? 'gray' : (curr.avgMtts <= 7 ? 'green' : curr.avgMtts <= 14 ? 'yellow' : 'red'));
+        colorKpiTopBar('kpi-sla',    execSla !== null ? (execSla >= 80 ? 'green' : execSla >= 50 ? 'yellow' : 'red') : 'gray');
+        colorKpiTopBar('kpi-closed', ticketsFechados.length > 0 ? 'green' : 'gray');
+        colorKpiTopBar('kpi-mtfc',   execMtfc === null ? 'gray' : (execMtfc <= 8 ? 'green' : execMtfc <= 16 ? 'yellow' : 'red'));
+        colorKpiTopBar('kpi-mtts',   execMtts === null ? 'gray' : (execMtts <= 7 ? 'green' : execMtts <= 14 ? 'yellow' : 'red'));
         colorKpiTopBar('kpi-backlog', globalBacklogCount <= 100 ? 'green' : globalBacklogCount <= 200 ? 'yellow' : 'red');
 
         // Week range in title
