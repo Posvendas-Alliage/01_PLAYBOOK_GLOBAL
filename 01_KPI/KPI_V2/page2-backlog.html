@@ -531,10 +531,12 @@
     }
 
     function getZohoTicketUrl(row) {
-        const org = 'alliage';
         const id = row.ticket_id || row.id;
-        if (id) return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/dv/${id}`;
-        return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/search/${row.ticket_number}`;
+        if (!id) return '#';
+        const deptName = row.department_name || row.department || '';
+        const deptSlugs = { 'Suporte técnico': 'suporte-técnico', 'SAC': 'sac' };
+        const deptSlug = deptSlugs[deptName] ?? 'suporte-técnico';
+        return `https://support.alliage-global.com/agent/alliagesa/${deptSlug}/tickets/details/${id}`;
     }
 
     function priorityBadge(priority) {

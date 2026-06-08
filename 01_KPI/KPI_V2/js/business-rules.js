@@ -71,7 +71,24 @@ const EXCLUDED_CONTACT_DOMAINS = [
 // Tickets específicos excluídos manualmente por decisão operacional.
 //   - 220822 → ticket de teste/anomalia identificado em 01/jun/2026
 // ─────────────────────────────────────────────────────
-const EXCLUDED_TICKET_NUMBERS = ['220822'];
+const EXCLUDED_TICKET_NUMBERS = ['220822', '236429', '236430'];
+
+// Regiões com dashboard próprio — não são ROW
+const REGIOES_PRINCIPAIS = [
+    'Brasil',
+    'Argentina',
+    'México',
+    'Estados Unidos',
+    'América latina - Exceto Argentina e México',
+];
+
+// Critério único de ROW — usado em todos os componentes
+function isROW(regiao) {
+    return regiao != null &&
+        regiao !== '' &&
+        regiao !== '-Nenhum-' &&
+        !REGIOES_PRINCIPAIS.includes(regiao);
+}
 
 function isExcludedTicket(ticket) {
     if (EXCLUDED_TICKET_NUMBERS.includes(String(ticket.ticket_number || ''))) return true;
@@ -224,7 +241,8 @@ function computeByRegion(tickets) {
 }
 
 function getTicketRegionGroup(ticket) {
-    return ticket.regiao_grupo || REGION_MAP[ticket.region] || ticket.region || '';
+    const raw = ticket.regiao_grupo || ticket.region || '';
+    return REGION_MAP[raw] || raw;
 }
 
 function getTicketPriority(ticket) {
@@ -272,7 +290,11 @@ function applyFilters(tickets, filters) {
     return tickets.filter(t => {
         if (isExcludedTicket(t)) return false;
         if (filters.region && filters.region !== 'all') {
-            if (getTicketRegionGroup(t) !== filters.region) return false;
+            if (filters.region === 'ROW') {
+                if (getTicketRegionGroup(t) !== 'ROW') return false;
+            } else {
+                if (getTicketRegionGroup(t) !== filters.region) return false;
+            }
         }
         if (filters.priority && filters.priority !== 'all') {
             if (getTicketPriority(t) !== filters.priority) return false;

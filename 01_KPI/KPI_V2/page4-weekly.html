@@ -43,6 +43,17 @@
         .badge-blue   { background: rgba(56,139,253,.14);  border: 1px solid rgba(56,139,253,.4);  color: #388bfd; }
         .badge-muted  { background: rgba(125,133,144,.10); border: 1px solid rgba(125,133,144,.22); color: #7d8590; }
 
+        /* ── Cross-filter chip bar ─────────────────────── */
+        .weekly-cf-bar { display:none; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px; background:rgba(31,111,235,.07); border:1px solid rgba(31,111,235,.22); border-radius:var(--radius-md); margin:0 0 16px; }
+        .cf-bar-label { font-size:.8rem; color:var(--color-text-muted); white-space:nowrap; align-self:center; }
+        .cf-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 10px 4px 12px; border-radius:20px; border:1px solid rgba(31,111,235,.5); background:rgba(31,111,235,.15); color:#388bfd; font-size:.82rem; cursor:pointer; font-family:var(--font-display); transition:background .15s; }
+        .cf-chip:hover { background:rgba(31,111,235,.3); }
+        .cf-chip-x { font-size:1rem; line-height:1; opacity:.7; margin-left:2px; }
+        .cf-clear-btn { margin-left:auto; padding:4px 12px; border-radius:20px; border:1px solid var(--color-border); background:transparent; color:var(--color-text-muted); font-size:.82rem; cursor:pointer; font-family:var(--font-display); transition:border-color .15s, color .15s; }
+        .cf-clear-btn:hover { border-color:var(--color-text-muted); color:var(--color-text); }
+        #region-table-body tr[data-region-key] { cursor:pointer; transition:opacity .3s ease; }
+        @media print { .weekly-cf-bar { display:none !important; } }
+
         /* ── Print ─────────────────────────────────────── */
         .print-only { display: none; }
         @media print {
@@ -162,6 +173,9 @@
                         <p class="tier-audience" data-i18n="audience_weekly">Coordenadores + Gerente</p>
                     </div>
                 </section>
+
+                <!-- Cross-filter active chips bar -->
+                <div id="weekly-cross-filter-bar" class="weekly-cf-bar"></div>
 
                 <!-- KPI strip -->
                 <h3 class="section-title" data-tx="sec_summary">Executive Summary</h3>
@@ -415,7 +429,7 @@
         });
     }
 
-    async function refreshData() { clearCache(); rawData = []; await init(); }
+    async function refreshData() { clearCache(); rawData = []; globalBacklogCount = 0; await init(); }
 
     // ──────────────────────────────────────────────────────────
     // CONSTANTS & STATE
@@ -440,6 +454,7 @@
     const SORT_SLA_ORDER = { 'Dentro SLA': 1, 'Não elegível': 2, 'Fora SLA': 3 };
 
     let rawData = [];
+    let globalBacklogCount = 0; // contagem canônica via bi-backlog (igual ao Daily)
     let lastCurrentClosedWeek = [];
     let sortStateRegion = { column: 'sla', direction: 'asc' };
     let weeklyClosedList = [];
@@ -448,6 +463,12 @@
     const WEEKLY_PAGE_SIZE = 50;
     let weeklySearchQuery = '';
     let sortStateWeekly = { column: 'closed_time', direction: 'desc' };
+
+    // ── Cross-filter state ─────────────────────────────────────
+    let crossFilter = { regiao: null, prioridade: null, status: null, bucketIdade: null };
+    let crossBaseClosedWeek = [];
+    let crossBaseOpen = [];
+    let crossBasePrevClosedWeek = [];
 
     // ──────────────────────────────────────────────────────────
     // UTILITY HELPERS
@@ -505,10 +526,12 @@
     }
 
     function getZohoTicketUrl(ticket) {
-        const org = 'alliage';
         const id = ticket.ticket_id || ticket.id;
-        if (id) return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/dv/${id}`;
-        return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/search/${ticket.ticket_number}`;
+        if (!id) return '#';
+        const deptName = ticket.department_name || ticket.department || '';
+        const deptSlugs = { 'Suporte técnico': 'suporte-técnico', 'SAC': 'sac' };
+        const deptSlug = deptSlugs[deptName] ?? 'suporte-técnico';
+        return `https://support.alliage-global.com/agent/alliagesa/${deptSlug}/tickets/details/${id}`;
     }
 
     function slaBadge(ticket, aging) {
@@ -801,6 +824,7 @@
                     ? (m.slaCompliance >= 80 ? `<span class="badge badge-green">${tx('badge_on_target')}</span>` : m.slaCompliance >= 50 ? `<span class="badge badge-yellow">${tx('badge_attention')}</span>` : `<span class="badge badge-red">${tx('badge_critical')}</span>`)
                     : '<span class="badge badge-muted">—</span>';
                 const tr = document.createElement('tr');
+                tr.dataset.regionKey = region;
                 tr.innerHTML = `
                     <td>${REGION_FLAGS[region] || ''} ${regionLabel(region)}</td>
                     <td class="mono">${fmt(m.closed, 0)}</td>
@@ -809,8 +833,10 @@
                     <td>${slaStr}</td>
                     <td>${statusBadge}</td>`;
                 tbody.appendChild(tr);
+                tr.addEventListener('click', () => updateCrossFilter('regiao', region));
             });
         }
+        updateRegionTableCrossFilterStyle();
         // Update sort icons
         document.querySelectorAll('#region-summary-section th.sortable').forEach(th => {
             const col = th.dataset.sort;
@@ -958,6 +984,177 @@
     }
 
     // ──────────────────────────────────────────────────────────
+    // CROSS-FILTERING (Power BI–style)
+    // ──────────────────────────────────────────────────────────
+    function hexToRgba(color, alpha) {
+        if (!color) return `rgba(31,111,235,${alpha})`;
+        if (color.startsWith('rgba(')) return color.replace(/,\s*[\d.]+\s*\)$/, `,${alpha})`);
+        if (color.startsWith('rgb(')) return color.replace('rgb(', 'rgba(').replace(')', `,${alpha})`);
+        if (color.startsWith('#')) {
+            const h = color.replace('#', '');
+            const f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+            return `rgba(${parseInt(f.slice(0,2),16)},${parseInt(f.slice(2,4),16)},${parseInt(f.slice(4,6),16)},${alpha})`;
+        }
+        return color;
+    }
+
+    function applyWeeklyCrossFilterExcept(tickets, exceptDim, isOpen) {
+        const now = new Date();
+        return tickets.filter(t => {
+            if (exceptDim !== 'regiao'     && crossFilter.regiao     !== null && getTicketRegionGroup(t) !== crossFilter.regiao)     return false;
+            if (exceptDim !== 'prioridade' && crossFilter.prioridade !== null && (t.priority || '')      !== crossFilter.prioridade) return false;
+            if (isOpen) {
+                if (exceptDim !== 'status' && crossFilter.status !== null && (t.status || '') !== crossFilter.status) return false;
+                if (exceptDim !== 'bucketIdade' && crossFilter.bucketIdade !== null) {
+                    if (t._aging === undefined) t._aging = (now - new Date(t.created_time)) / 86400000;
+                    const b = AGING_BUCKETS.find(b => b.label + ' d' === crossFilter.bucketIdade);
+                    if (b && !(t._aging >= b.min && t._aging <= b.max)) return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    function updateCrossFilter(dimension, value) {
+        crossFilter[dimension] = crossFilter[dimension] === value ? null : value;
+        renderCrossFilterChips();
+        rerenderCrossFiltered();
+    }
+
+    function clearAllCrossFilters() {
+        crossFilter = { regiao: null, prioridade: null, status: null, bucketIdade: null };
+        renderCrossFilterChips();
+        rerenderCrossFiltered();
+    }
+
+    function renderCrossFilterChips() {
+        const bar = document.getElementById('weekly-cross-filter-bar');
+        if (!bar) return;
+        const active = Object.entries(crossFilter).filter(([, v]) => v !== null);
+        if (!active.length) { bar.style.display = 'none'; return; }
+        bar.style.display = 'flex';
+        const dimIcons = { regiao: '📍', prioridade: '⚡', status: '🔵', bucketIdade: '📅' };
+        bar.innerHTML = `<span class="cf-bar-label">Filtros ativos:</span>
+            ${active.map(([dim, val]) => `<button class="cf-chip" data-dim="${dim}" type="button">${dimIcons[dim] || ''} <strong>${val}</strong><span class="cf-chip-x">×</span></button>`).join('')}
+            <button class="cf-clear-btn" type="button">Limpar todos</button>`;
+        bar.querySelectorAll('.cf-chip').forEach(chip => {
+            chip.addEventListener('click', e => { e.stopPropagation(); updateCrossFilter(chip.dataset.dim, crossFilter[chip.dataset.dim]); });
+        });
+        bar.querySelector('.cf-clear-btn').addEventListener('click', e => { e.stopPropagation(); clearAllCrossFilters(); });
+    }
+
+    function createCrossBarChart(canvasId, labels, values, colors, title, dimension, keys) {
+        const actualKeys = keys || labels;
+        const activeVal  = crossFilter[dimension];
+        const hasFilt    = activeVal !== null;
+        const bgColors   = labels.map((_, i) => hasFilt ? (actualKeys[i] === activeVal ? (colors[i] || '#1f6feb') : hexToRgba(colors[i] || '#1f6feb', 0.18)) : (colors[i] || '#1f6feb'));
+        const hvColors   = labels.map((_, i) => hexToRgba(colors[i] || '#1f6feb', hasFilt && actualKeys[i] !== activeVal ? 0.38 : 0.82));
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+        if (ctx._chartInstance) ctx._chartInstance.destroy();
+        ctx._chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ data: values, backgroundColor: bgColors, hoverBackgroundColor: hvColors, borderRadius: 6, borderSkipped: false }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 280, easing: 'easeInOutQuad' },
+                plugins: {
+                    legend: { display: false },
+                    title: { display: !!title, text: title, color: CHART_THEME.text, font: { size: 14, weight: '600', family: CHART_THEME.fontFamily } }
+                },
+                scales: {
+                    x: { ticks: { color: CHART_THEME.muted, font: { family: CHART_THEME.fontFamily } }, grid: { color: CHART_THEME.grid } },
+                    y: { ticks: { color: CHART_THEME.muted, font: { family: CHART_THEME.fontFamily } }, grid: { color: CHART_THEME.grid }, beginAtZero: true }
+                },
+                onClick(event, elements) {
+                    if (!elements.length) return;
+                    updateCrossFilter(dimension, actualKeys[elements[0].index]);
+                },
+                onHover(event, elements) {
+                    if (event.native && event.native.target)
+                        event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                }
+            }
+        });
+        return ctx._chartInstance;
+    }
+
+    function updateRegionTableCrossFilterStyle() {
+        document.querySelectorAll('#region-table-body tr[data-region-key]').forEach(tr => {
+            const isActive = crossFilter.regiao === null || tr.dataset.regionKey === crossFilter.regiao;
+            tr.style.opacity = isActive ? '1' : '0.22';
+        });
+    }
+
+    function rerenderCrossFiltered() {
+        if (!crossBaseClosedWeek.length && !crossBaseOpen.length) return;
+        const now = new Date();
+        crossBaseOpen.forEach(t => { if (t._aging === undefined) t._aging = (now - new Date(t.created_time)) / 86400000; });
+
+        const allClosed  = applyWeeklyCrossFilterExcept(crossBaseClosedWeek,     '__none__', false);
+        const allOpen    = applyWeeklyCrossFilterExcept(crossBaseOpen,           '__none__', true);
+        const allPrev    = applyWeeklyCrossFilterExcept(crossBasePrevClosedWeek, '__none__', false);
+
+        // KPI cards & deltas
+        const curr = computeMetrics(allClosed), prev = computeMetrics(allPrev);
+        setKpi('kpi-sla',        curr.eligible ? fmt(curr.slaCompliance, 2) + '%' : '--');
+        setKpi('kpi-mtfc',       curr.closed   ? fmt(curr.avgMtfc, 2) + ' h'      : '--');
+        setKpi('kpi-mtts',       curr.closed   ? fmt(curr.avgMtts, 2) + ' d'      : '--');
+        setKpi('kpi-backlog',    fmt(globalBacklogCount, 0));
+        setKpi('kpi-open-total', fmt(allOpen.length, 0));
+        colorKpiTopBar('kpi-sla',  curr.eligible ? (curr.slaCompliance >= 80 ? 'green' : curr.slaCompliance >= 50 ? 'yellow' : 'red') : 'gray');
+        colorKpiTopBar('kpi-mtfc', !curr.closed ? 'gray' : curr.avgMtfc <= 8 ? 'green' : curr.avgMtfc <= 16 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-mtts', !curr.closed ? 'gray' : curr.avgMtts <= 7 ? 'green' : curr.avgMtts <= 14 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-backlog', globalBacklogCount <= 100 ? 'green' : globalBacklogCount <= 200 ? 'yellow' : 'red');
+        setDelta('sla',  deltaPct(curr.slaCompliance, prev.slaCompliance, false), prev.eligible ? `${fmt(curr.slaCompliance,2)}% vs ${fmt(prev.slaCompliance,2)}%` : '');
+        setDelta('mtfc', deltaPct(curr.avgMtfc, prev.avgMtfc, true),              prev.closed   ? `${fmt(curr.avgMtfc,2)}h vs ${fmt(prev.avgMtfc,2)}h` : '');
+        setDelta('mtts', deltaPct(curr.avgMtts, prev.avgMtts, true),              prev.closed   ? `${fmt(curr.avgMtts,2)}d vs ${fmt(prev.avgMtts,2)}d` : '');
+
+        // Region table
+        renderRegionTable(allClosed);
+
+        // Region charts — data filtered by everything EXCEPT regiao
+        const cForRegion = applyWeeklyCrossFilterExcept(crossBaseClosedWeek, 'regiao', false);
+        const byRg = computeByRegion(cForRegion);
+        const baseRg = REGION_GROUPS.filter(g => crossBaseClosedWeek.some(t => getTicketRegionGroup(t) === g));
+        createCrossBarChart('chart-rg-sla',    baseRg.map(regionLabel), baseRg.map(r => byRg[r].eligible ? byRg[r].slaCompliance : 0),      baseRg.map(r => colorHex(byRg[r].eligible ? byRg[r].slaColor : 'gray')),                                                    tx('chart_sla_region'),    'regiao', baseRg);
+        createCrossBarChart('chart-rg-mtfc',   baseRg.map(regionLabel), baseRg.map(r => byRg[r].avgMtfc),                                   baseRg.map(() => '#1f6feb'),                                                                                                tx('chart_mtfc_region'),   'regiao', baseRg);
+        createCrossBarChart('chart-rg-mtts',   baseRg.map(regionLabel), baseRg.map(r => byRg[r].avgMtts),                                   baseRg.map(r => colorHex(byRg[r].closed ? byRg[r].mttsColor : 'gray')),                                                    tx('chart_mtts_region'),   'regiao', baseRg);
+        createCrossBarChart('chart-rg-closed', baseRg.map(regionLabel), baseRg.map(r => byRg[r].closed),                                    baseRg.map(() => '#388bfd'),                                                                                                tx('chart_closed_region'), 'regiao', baseRg);
+
+        // Priority charts — data filtered by everything EXCEPT prioridade
+        const cForPrio = applyWeeklyCrossFilterExcept(crossBaseClosedWeek, 'prioridade', false);
+        const pStats = {};
+        PRIORITY_ORDER.forEach(p => { pStats[p] = computeMetrics(cForPrio.filter(t => t.priority === p)); });
+        createCrossBarChart('chart-pr-sla',    PRIORITY_ORDER, PRIORITY_ORDER.map(p => pStats[p].eligible ? pStats[p].slaCompliance : 0), PRIORITY_ORDER.map(p => colorHex(pStats[p].eligible ? pStats[p].slaColor : 'gray')),                                                             tx('chart_sla_priority'),    'prioridade', PRIORITY_ORDER);
+        createCrossBarChart('chart-pr-mtfc',   PRIORITY_ORDER, PRIORITY_ORDER.map(p => pStats[p].avgMtfc),                                PRIORITY_ORDER.map(p => { const tgt = MTFC_TARGET[p] || 999; return colorHex(pStats[p].closed ? mtfcColor(pStats[p].avgMtfc, tgt) : 'gray'); }), tx('chart_mtfc_priority'),   'prioridade', PRIORITY_ORDER);
+        createCrossBarChart('chart-pr-mtts',   PRIORITY_ORDER, PRIORITY_ORDER.map(p => pStats[p].avgMtts),                                PRIORITY_ORDER.map(() => '#1f6feb'),                                                                                                             tx('chart_mtts_priority'),   'prioridade', PRIORITY_ORDER);
+        createCrossBarChart('chart-pr-closed', PRIORITY_ORDER, PRIORITY_ORDER.map(p => pStats[p].closed),                                 PRIORITY_ORDER.map(() => '#388bfd'),                                                                                                             tx('chart_closed_priority'), 'prioridade', PRIORITY_ORDER);
+
+        // Open backlog charts
+        const oForStatus  = applyWeeklyCrossFilterExcept(crossBaseOpen, 'status',      true);
+        const oForBucket  = applyWeeklyCrossFilterExcept(crossBaseOpen, 'bucketIdade', true);
+        const oForOpenRg  = applyWeeklyCrossFilterExcept(crossBaseOpen, 'regiao',      true);
+        const oForOpenPr  = applyWeeklyCrossFilterExcept(crossBaseOpen, 'prioridade',  true);
+
+        const baseStatuses = [...new Set(crossBaseOpen.map(t => t.status || '—'))];
+        const sCounts = {}; baseStatuses.forEach(s => { sCounts[s] = oForStatus.filter(t => (t.status || '—') === s).length; });
+        createCrossBarChart('chart-open-status', baseStatuses, baseStatuses.map(s => sCounts[s]), baseStatuses.map(() => '#1f6feb'), tx('chart_status'), 'status', baseStatuses);
+
+        const bKeys   = AGING_BUCKETS.map(b => b.label + ' d');
+        const bCounts = AGING_BUCKETS.map(b => oForBucket.filter(t => t._aging >= b.min && t._aging <= b.max).length);
+        createCrossBarChart('chart-open-aging', bKeys, bCounts, AGING_BUCKETS.map((_, i) => i <= 1 ? colorHex('green') : i === 2 ? colorHex('yellow') : colorHex('red')), tx('chart_aging'), 'bucketIdade', bKeys);
+
+        const baseOpenRg = REGION_GROUPS.filter(g => crossBaseOpen.some(t => REGION_MAP[t.region] === g));
+        createCrossBarChart('chart-open-region', baseOpenRg.map(regionLabel), baseOpenRg.map(g => oForOpenRg.filter(t => REGION_MAP[t.region] === g).length), baseOpenRg.map(() => '#1f6feb'), tx('chart_region'), 'regiao', baseOpenRg);
+
+        createCrossBarChart('chart-open-priority', PRIORITY_ORDER, PRIORITY_ORDER.map(p => oForOpenPr.filter(t => t.priority === p).length), PRIORITY_ORDER.map((_, i) => i === 0 ? colorHex('red') : i === 1 ? colorHex('yellow') : '#1f6feb'), tx('chart_priority'), 'prioridade', PRIORITY_ORDER);
+
+        // Region table row opacity
+        updateRegionTableCrossFilterStyle();
+    }
+
+    // ──────────────────────────────────────────────────────────
     // MAIN RENDER
     // ──────────────────────────────────────────────────────────
     function renderPage(filtered, filters) {
@@ -976,13 +1173,19 @@
         const open    = filtered.filter(t => !t.closed_time);
         open.forEach(t => { t._aging = (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24); });
 
+        // Cross-filter: reset on every full render (week change / filter change), then save bases
+        crossFilter = { regiao: null, prioridade: null, status: null, bucketIdade: null };
+        crossBaseClosedWeek     = [...currentClosedWeek];
+        crossBaseOpen           = [...open];
+        crossBasePrevClosedWeek = [...previousClosedWeek];
+
         // KPI values
         setKpi('kpi-sla',      curr.eligible ? fmt(curr.slaCompliance, 2) + '%' : '--');
         setKpi('kpi-closed',   fmt(closed, 0));
         setKpi('kpi-created',  fmt(created, 0));
         setKpi('kpi-mtfc',     curr.closed ? fmt(curr.avgMtfc, 2) + ' h' : '--');
         setKpi('kpi-mtts',     curr.closed ? fmt(curr.avgMtts, 2) + ' d' : '--');
-        setKpi('kpi-backlog',  fmt(open.length, 0));
+        setKpi('kpi-backlog',  fmt(globalBacklogCount, 0));
         setKpi('kpi-open-total', fmt(open.length, 0));
 
         // KPI top bars
@@ -990,7 +1193,7 @@
         colorKpiTopBar('kpi-closed', closed > 0 ? 'green' : 'gray');
         colorKpiTopBar('kpi-mtfc',   !curr.closed ? 'gray' : (curr.avgMtfc <= 8 ? 'green' : curr.avgMtfc <= 16 ? 'yellow' : 'red'));
         colorKpiTopBar('kpi-mtts',   !curr.closed ? 'gray' : (curr.avgMtts <= 7 ? 'green' : curr.avgMtts <= 14 ? 'yellow' : 'red'));
-        colorKpiTopBar('kpi-backlog', open.length <= 100 ? 'green' : open.length <= 200 ? 'yellow' : 'red');
+        colorKpiTopBar('kpi-backlog', globalBacklogCount <= 100 ? 'green' : globalBacklogCount <= 200 ? 'yellow' : 'red');
 
         // Week range in title
         const fromFmt = period.from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -1006,49 +1209,55 @@
         // Region table (new)
         renderRegionTable(currentClosedWeek);
 
-        // Charts by region
+        // Charts by region (cross-filter aware)
         const byRegion = computeByRegion(currentClosedWeek);
         const regions = REGION_GROUPS.filter(g => byRegion[g].total > 0);
-        createBarChart('chart-rg-sla', regions.map(regionLabel), regions.map(r => byRegion[r].eligible ? byRegion[r].slaCompliance : 0), regions.map(r => colorHex(byRegion[r].eligible ? byRegion[r].slaColor : 'gray')), tx('chart_sla_region'));
-        createBarChart('chart-rg-mtfc', regions.map(regionLabel), regions.map(r => byRegion[r].avgMtfc), regions.map(() => '#1f6feb'), tx('chart_mtfc_region'));
-        createBarChart('chart-rg-mtts', regions.map(regionLabel), regions.map(r => byRegion[r].avgMtts), regions.map(r => colorHex(byRegion[r].closed ? byRegion[r].mttsColor : 'gray')), tx('chart_mtts_region'));
-        createBarChart('chart-rg-closed', regions.map(regionLabel), regions.map(r => byRegion[r].closed), regions.map(() => '#388bfd'), tx('chart_closed_region'));
+        createCrossBarChart('chart-rg-sla',    regions.map(regionLabel), regions.map(r => byRegion[r].eligible ? byRegion[r].slaCompliance : 0), regions.map(r => colorHex(byRegion[r].eligible ? byRegion[r].slaColor : 'gray')), tx('chart_sla_region'),    'regiao', regions);
+        createCrossBarChart('chart-rg-mtfc',   regions.map(regionLabel), regions.map(r => byRegion[r].avgMtfc),                                  regions.map(() => '#1f6feb'),                                                       tx('chart_mtfc_region'),   'regiao', regions);
+        createCrossBarChart('chart-rg-mtts',   regions.map(regionLabel), regions.map(r => byRegion[r].avgMtts),                                  regions.map(r => colorHex(byRegion[r].closed ? byRegion[r].mttsColor : 'gray')),   tx('chart_mtts_region'),   'regiao', regions);
+        createCrossBarChart('chart-rg-closed', regions.map(regionLabel), regions.map(r => byRegion[r].closed),                                   regions.map(() => '#388bfd'),                                                       tx('chart_closed_region'), 'regiao', regions);
 
-        // Charts by priority
+        // Charts by priority (cross-filter aware)
         const priorityStats = {};
         PRIORITY_ORDER.forEach(p => { priorityStats[p] = computeMetrics(currentClosedWeek.filter(t => t.priority === p)); });
-        createBarChart('chart-pr-sla', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].eligible ? priorityStats[p].slaCompliance : 0), PRIORITY_ORDER.map(p => colorHex(priorityStats[p].eligible ? priorityStats[p].slaColor : 'gray')), tx('chart_sla_priority'));
-        createBarChart('chart-pr-mtfc', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].avgMtfc), PRIORITY_ORDER.map(p => { const tgt = MTFC_TARGET[p] || 999; return colorHex(priorityStats[p].closed ? mtfcColor(priorityStats[p].avgMtfc, tgt) : 'gray'); }), tx('chart_mtfc_priority'));
-        createBarChart('chart-pr-mtts', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].avgMtts), PRIORITY_ORDER.map(() => '#1f6feb'), tx('chart_mtts_priority'));
-        createBarChart('chart-pr-closed', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].closed), PRIORITY_ORDER.map(() => '#388bfd'), tx('chart_closed_priority'));
+        createCrossBarChart('chart-pr-sla',    PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].eligible ? priorityStats[p].slaCompliance : 0), PRIORITY_ORDER.map(p => colorHex(priorityStats[p].eligible ? priorityStats[p].slaColor : 'gray')),                                                    tx('chart_sla_priority'),    'prioridade', PRIORITY_ORDER);
+        createCrossBarChart('chart-pr-mtfc',   PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].avgMtfc),                                        PRIORITY_ORDER.map(p => { const tgt = MTFC_TARGET[p] || 999; return colorHex(priorityStats[p].closed ? mtfcColor(priorityStats[p].avgMtfc, tgt) : 'gray'); }), tx('chart_mtfc_priority'),   'prioridade', PRIORITY_ORDER);
+        createCrossBarChart('chart-pr-mtts',   PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].avgMtts),                                        PRIORITY_ORDER.map(() => '#1f6feb'),                                                                                                                   tx('chart_mtts_priority'),   'prioridade', PRIORITY_ORDER);
+        createCrossBarChart('chart-pr-closed', PRIORITY_ORDER, PRIORITY_ORDER.map(p => priorityStats[p].closed),                                         PRIORITY_ORDER.map(() => '#388bfd'),                                                                                                                   tx('chart_closed_priority'), 'prioridade', PRIORITY_ORDER);
 
-        // Open backlog charts
-        const statusCounts = {};
-        open.forEach(t => { const s = t.status || '—'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
-        const statusLabels = Object.keys(statusCounts);
-        createBarChart('chart-open-status', statusLabels, statusLabels.map(s => statusCounts[s]), statusLabels.map(() => '#1f6feb'), tx('chart_status'));
-        const bucketCounts = AGING_BUCKETS.map(b => open.filter(t => t._aging >= b.min && t._aging <= b.max).length);
-        createBarChart('chart-open-aging', AGING_BUCKETS.map(b => b.label + ' d'), bucketCounts, AGING_BUCKETS.map((b, i) => i <= 1 ? colorHex('green') : i === 2 ? colorHex('yellow') : colorHex('red')), tx('chart_aging'));
+        // Open backlog charts (cross-filter aware)
+        const statusLabels = [...new Set(open.map(t => t.status || '—'))];
+        const statusCounts = {}; statusLabels.forEach(s => { statusCounts[s] = open.filter(t => (t.status || '—') === s).length; });
+        createCrossBarChart('chart-open-status', statusLabels, statusLabels.map(s => statusCounts[s]), statusLabels.map(() => '#1f6feb'), tx('chart_status'), 'status', statusLabels);
+
+        const bKeys   = AGING_BUCKETS.map(b => b.label + ' d');
+        const bCounts = AGING_BUCKETS.map(b => open.filter(t => t._aging >= b.min && t._aging <= b.max).length);
+        createCrossBarChart('chart-open-aging', bKeys, bCounts, AGING_BUCKETS.map((_, i) => i <= 1 ? colorHex('green') : i === 2 ? colorHex('yellow') : colorHex('red')), tx('chart_aging'), 'bucketIdade', bKeys);
+
         const openByRegion = REGION_GROUPS.filter(g => open.some(t => REGION_MAP[t.region] === g));
-        createBarChart('chart-open-region', openByRegion.map(regionLabel), openByRegion.map(g => open.filter(t => REGION_MAP[t.region] === g).length), openByRegion.map(() => '#1f6feb'), tx('chart_region'));
-        createBarChart('chart-open-priority', PRIORITY_ORDER, PRIORITY_ORDER.map(p => open.filter(t => t.priority === p).length), PRIORITY_ORDER.map((p, i) => i === 0 ? colorHex('red') : i === 1 ? colorHex('yellow') : '#1f6feb'), tx('chart_priority'));
+        createCrossBarChart('chart-open-region', openByRegion.map(regionLabel), openByRegion.map(g => open.filter(t => REGION_MAP[t.region] === g).length), openByRegion.map(() => '#1f6feb'), tx('chart_region'), 'regiao', openByRegion);
 
-        // Follow-up table (open tickets created in week)
+        createCrossBarChart('chart-open-priority', PRIORITY_ORDER, PRIORITY_ORDER.map(p => open.filter(t => t.priority === p).length), PRIORITY_ORDER.map((_, i) => i === 0 ? colorHex('red') : i === 1 ? colorHex('yellow') : '#1f6feb'), tx('chart_priority'), 'prioridade', PRIORITY_ORDER);
+
+        // Render chip bar (hidden on first render; shows when user interacts)
+        renderCrossFilterChips();
+
+        // Follow-up table (all open tickets — backlog semanal)
         const tbody = document.getElementById('followup-body');
         tbody.innerHTML = '';
-        const openInWeek = open.filter(t => inCreatedRange(t, period.from, period.to)).sort((a, b) => b._aging - a._aging).slice(0, 30);
-        if (!openInWeek.length) {
+        const openFollowup = [...open].sort((a, b) => b._aging - a._aging).slice(0, 30);
+        if (!openFollowup.length) {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td colspan="9" class="empty-state">${tx('no_data')}</td>`;
             tbody.appendChild(tr);
         } else {
-            openInWeek.forEach(t => {
+            openFollowup.forEach(t => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="mono">${t.ticket_number || t.id || '--'}</td>
+                    <td><a href="${getZohoTicketUrl(t)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Abrir #${t.ticket_number} no Zoho Desk">#${t.ticket_number || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
                     <td class="mono">${fmt(t._aging, 1)}</td>
                     <td>${priorityBadge(t.priority)}</td>
-                    <td>${regionLabel(REGION_MAP[t.region])}</td>
+                    <td>${regionLabel(getTicketRegionGroup(t))}</td>
                     <td>${t.solicitante || '--'}</td>
                     <td>${t.assignee_id || '--'}</td>
                     <td>${t.tipo_atendimento || '--'}</td>
@@ -1097,7 +1306,12 @@
         try {
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-            rawData = (await fetchDashboardBiTickets()).tickets;
+            const [ticketsResult, backlogResult] = await Promise.all([
+                fetchDashboardBiTickets(),
+                fetchDashboardBiBacklog()
+            ]);
+            rawData = ticketsResult.tickets;
+            globalBacklogCount = backlogResult.backlog.length;
             populateFilterOptions(rawData);
             applyExtraI18n();
             showLoading(false);

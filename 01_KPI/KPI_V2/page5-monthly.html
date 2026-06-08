@@ -862,10 +862,12 @@
     }
 
     function getZohoTicketUrl(ticket) {
-        const org = 'alliage';
         const id = ticket.ticket_id || ticket.id;
-        if (id) return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/dv/${id}`;
-        return `https://desk.zoho.com/support/${org}/ShowHomePage.do#Cases/search/${ticket.ticket_number}`;
+        if (!id) return '#';
+        const deptName = ticket.department_name || ticket.department || '';
+        const deptSlugs = { 'Suporte técnico': 'suporte-técnico', 'SAC': 'sac' };
+        const deptSlug = deptSlugs[deptName] ?? 'suporte-técnico';
+        return `https://support.alliage-global.com/agent/alliagesa/${deptSlug}/tickets/details/${id}`;
     }
 
     function bindTableSort() {
