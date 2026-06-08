@@ -49,6 +49,7 @@
                 <div class="app-brand">
                     <p class="app-brand-title" data-tx="brand_title">Global Service Governance</p>
                     <p class="app-brand-subtitle" data-tx="brand_subtitle">Playbook Global | KPI</p>
+                    <p id="last-sync" style="font-size:0.7rem;color:var(--color-text-muted);margin:2px 0 0;opacity:.8;">--</p>
                 </div>
                 <div class="app-header-actions">
                     <a href="../../index.html" class="back-link">
@@ -859,6 +860,12 @@
                 applyExtraI18n();
                 showLoading(false);
                 applyPage();
+                fetchSyncHealth().then(({ health }) => {
+                    const ts = health && (health.freshness && health.freshness.updated_in_supabase_at || health.last_sync_at || health.synced_at);
+                    if (!ts) return;
+                    const el = document.getElementById('last-sync');
+                    if (el) el.textContent = t('last_sync_label') + ' ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                }).catch(() => {});
             } catch (e) {
                 showError((e && e.message) ? e.message + ' - ' + t('error_fetch') : t('error_fetch'));
             }

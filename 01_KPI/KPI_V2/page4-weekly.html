@@ -436,7 +436,7 @@
         });
     }
 
-    async function refreshData() { clearCache(); rawData = []; globalBacklogCount = 0; await init(); }
+    async function refreshData() { clearCache(); rawData = []; globalBacklogList = []; globalBacklogCount = 0; await init(); }
 
     // ──────────────────────────────────────────────────────────
     // CONSTANTS & STATE
@@ -467,7 +467,8 @@
     const SORT_SLA_ORDER = { 'Dentro SLA': 1, 'Não elegível': 2, 'Fora SLA': 3 };
 
     let rawData = [];
-    let globalBacklogCount = 0; // contagem canônica via bi-backlog (igual ao Daily)
+    let globalBacklogList = []; // linhas canônicas via bi-backlog (igual ao Daily)
+    let globalBacklogCount = 0; // contagem do backlog canônico após filtros dimensionais ativos
     let lastCurrentClosedWeek = [];
     let sortStateRegion = { column: 'sla', direction: 'asc' };
     let weeklyClosedList = [];
@@ -1228,6 +1229,11 @@
         const open    = filtered.filter(t => !t.closed_time);
         open.forEach(t => { t._aging = (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24); });
 
+        // Backlog canônico (bi-backlog) recalculado com os mesmos filtros dimensionais
+        // (região, departamento, tipo, prioridade, produto, grupo do agente) — igual ao Daily.
+        const backlogDimFilters = { ...filters, dateFrom: '', dateTo: '' };
+        globalBacklogCount = applyFilters(globalBacklogList, backlogDimFilters).length;
+
         // Cross-filter: reset on every full render (week change / filter change), then save bases
         crossFilter = { regiao: null, prioridade: null, status: null, bucketIdade: null };
         crossBaseClosedWeek     = [...currentClosedWeek];
@@ -1396,7 +1402,7 @@
                 fetchDashboardBiBacklog()
             ]);
             rawData = ticketsResult.tickets;
-            globalBacklogCount = backlogResult.backlog.length;
+            globalBacklogList = backlogResult.backlog;
             populateFilterOptions(rawData);
             applyExtraI18n();
             showLoading(false);
