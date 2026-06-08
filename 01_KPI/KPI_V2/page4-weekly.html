@@ -582,11 +582,14 @@
     function buildWeekOptions() {
         const weeks = [];
         const today = new Date();
+        // Anchor to the most recent Sunday (getDay() = 0 → Sunday)
+        const thisSunday = new Date(today);
+        thisSunday.setDate(today.getDate() - today.getDay());
         for (let i = 0; i < 8; i++) {
-            const toDate = new Date(today);
-            toDate.setDate(today.getDate() - i * 7);
-            const fromDate = new Date(toDate);
-            fromDate.setDate(toDate.getDate() - 6);
+            const fromDate = new Date(thisSunday);
+            fromDate.setDate(thisSunday.getDate() - i * 7);
+            const toDate = new Date(fromDate);
+            toDate.setDate(fromDate.getDate() + 6); // Saturday
             weeks.push({
                 from: isoDate(fromDate),
                 to: isoDate(toDate),

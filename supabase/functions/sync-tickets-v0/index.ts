@@ -22,7 +22,7 @@ const DEFAULT_MAX_PAGES_PER_DEPARTMENT = 100;
 const DEFAULT_BACKFILL_MAX_PAGES = 50;
 const DEFAULT_CONTACTS_MAX_PAGES = 10;
 const FUNCTION_NAME = "sync-tickets-v0";
-const FUNCTION_CODE_VERSION = "2026-06-02-v35-404-marks-deleted-and-deletion-sweep";
+const FUNCTION_CODE_VERSION = "2026-06-08-v36d-ignore-workshop-in-sweeps";
 const ZOHO_FETCH_MAX_ATTEMPTS = 3;
 const ZOHO_FETCH_BASE_BACKOFF_MS = 750;
 const DEFAULT_MAX_RUNTIME_SECONDS = 110;
@@ -50,6 +50,13 @@ const DEFAULT_DELETION_SWEEP_MAX_TICKETS = 50;
 const MAX_DELETION_SWEEP_MAX_TICKETS = 200;
 const DEFAULT_DELETION_SWEEP_STALE_DAYS = 30;
 const MIN_DELETION_SWEEP_STALE_DAYS = 7;
+const TICKET_HISTORY_LOAD_STRATEGY = "v1g_ticket_history_sync";
+const DEFAULT_HISTORY_MAX_TICKETS = 100;
+const MAX_HISTORY_MAX_TICKETS = 500;
+const HISTORY_STALE_DAYS = 1;
+const TICKET_HISTORY_PAGE_LIMIT = 50;
+const MAX_TICKET_HISTORY_PAGES = 10;
+const WORKSHOP_DEPARTMENT_ID = "1128522000008788112";
 
 const DEPARTMENT_IDS = [
   "1128522000000453544",
@@ -991,7 +998,16 @@ async function fetchTicketDetail(accessToken: string, ticketId: string): Promise
   );
 
   if (payload !== null && typeof payload === "object" && !Array.isArray(payload)) {
-    return payload as JsonRecord;
+    const detail = payload as JsonRecord;
+    if (toBool(detail.isTrashed) === true || toBool(detail.isDeleted) === true) {
+      throw new ZohoTicketDetailFetchError(
+        `Ticket ${ticketId} esta na lixeira do Zoho (isTrashed/isDeleted=true)`,
+        detail,
+        410,
+      );
+    }
+
+    return detail;
   }
 
   throw new ZohoTicketDetailFetchError(`Detalhe do ticket ${ticketId} retornou payload invalido`, payload);
@@ -1049,8 +1065,8 @@ function isZohoTicketNotFoundError(error: unknown): boolean {
     haystack.includes("invalid ticket");
 }
 
-function isZohoTicketDetailNotFound404(error: unknown): boolean {
-  return error instanceof ZohoTicketDetailFetchError && error.httpStatus === 404;
+function isZohoTicketDetailNotFoundOrGone(error: unknown): boolean {
+  return error instanceof ZohoTicketDetailFetchError && (error.httpStatus === 404 || error.httpStatus === 410);
 }
 
 async function markZohoTicketDeletedInSupabase(
@@ -1137,7 +1153,27 @@ async function checkTicketExistsInZoho(
         orgId: getRequiredEnv("ZOHO_ORG_ID"),
       },
     });
-    if (response.status === 200) return true;
+    if (response.status === 200) {
+      const responseText = await response.text();
+      let payload: JsonRecord = {};
+      try {
+        const parsed = JSON.parse(responseText) as unknown;
+        if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+          payload = parsed as JsonRecord;
+        }
+      } catch {
+        payload = {};
+      }
+
+      if (toBool(payload.isTrashed) === true || toBool(payload.isDeleted) === true) {
+        console.log(
+          `checkTicketExistsInZoho: ticket ${ticketId} esta na lixeira — tratando como nao existente`,
+        );
+        return false;
+      }
+
+      return true;
+    }
     if (response.status === 404) return false;
     // Qualquer outro erro (401, 429, 500) — assume que existe.
     // NUNCA deletar por engano devido a erro de rede ou rate limit.
@@ -1152,6 +1188,195 @@ async function checkTicketExistsInZoho(
     );
     return true;
   }
+}
+
+async function fetchTicketHistory(
+  accessToken: string,
+  ticketId: string,
+): Promise<JsonRecord[]> {
+  const fetchHistoryPage = async (pageFrom: number, filterByStatus: boolean): Promise<JsonRecord[]> => {
+    const url = new URL(`${ZOHO_TICKETS_URL.replace(/\/$/, "")}/${encodeURIComponent(ticketId)}/History`);
+    url.searchParams.set("limit", String(TICKET_HISTORY_PAGE_LIMIT));
+    url.searchParams.set("from", String(pageFrom));
+    if (filterByStatus) {
+      url.searchParams.set("fieldName", "status");
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Zoho-oauthtoken ${accessToken}`,
+        orgId: getRequiredEnv("ZOHO_ORG_ID"),
+      },
+    });
+
+    const responseText = await response.text();
+    if (response.status === 404) {
+      return [];
+    }
+
+    if (!response.ok) {
+      throw new Error(`fetchTicketHistory ${ticketId}: ${response.status} ${responseText.slice(0, 200)}`);
+    }
+
+    let payload: unknown = {};
+    try {
+      payload = JSON.parse(responseText) as unknown;
+    } catch {
+      payload = {};
+    }
+
+    const payloadRecord = asRecord(payload);
+    const data = payloadRecord.data;
+    let pageEvents: JsonRecord[] = [];
+    if (Array.isArray(data)) {
+      pageEvents = data.filter((item): item is JsonRecord =>
+        item !== null && typeof item === "object" && !Array.isArray(item)
+      );
+    } else if (Array.isArray(payload)) {
+      pageEvents = payload.filter((item): item is JsonRecord =>
+        item !== null && typeof item === "object" && !Array.isArray(item)
+      );
+    }
+
+    return pageEvents;
+  };
+
+  const fetchHistoryPages = async (filterByStatus: boolean): Promise<JsonRecord[]> => {
+    const allEvents: JsonRecord[] = [];
+    for (let pageIndex = 0; pageIndex < MAX_TICKET_HISTORY_PAGES; pageIndex += 1) {
+      const pageEvents = await fetchHistoryPage(pageIndex * TICKET_HISTORY_PAGE_LIMIT, filterByStatus);
+      allEvents.push(...pageEvents);
+      if (pageEvents.length < TICKET_HISTORY_PAGE_LIMIT) {
+        break;
+      }
+    }
+
+    return allEvents;
+  };
+
+  const filteredEvents = await fetchHistoryPages(true);
+  if (filteredEvents.length > 0) {
+    return filteredEvents;
+  }
+
+  return await fetchHistoryPages(false);
+}
+
+function toIsoDateText(value: unknown): string | null {
+  const text = toText(value);
+  if (!text) {
+    return null;
+  }
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function stablePositiveBigintText(value: string): string {
+  const maxBigint = 9_223_372_036_854_775_783n;
+  let hash = 1_469_598_103_934_665_603n;
+
+  for (const char of value) {
+    hash ^= BigInt(char.codePointAt(0) ?? 0);
+    hash = (hash * 1_099_511_628_211n) % maxBigint;
+  }
+
+  return (hash === 0n ? 1n : hash).toString();
+}
+
+function historyEventText(event: JsonRecord, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = toText(event[key]);
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function parseHistoryEvents(ticketId: string, events: JsonRecord[]): JsonRecord[] {
+  const now = new Date().toISOString();
+  const rows: JsonRecord[] = [];
+  const sortedEvents = [...events].sort((a, b) => {
+    const timeA = new Date(toText(a.eventTime) ?? "").getTime();
+    const timeB = new Date(toText(b.eventTime) ?? "").getTime();
+    return (Number.isFinite(timeA) ? timeA : 0) - (Number.isFinite(timeB) ? timeB : 0);
+  });
+
+  sortedEvents.forEach((event, eventIndex) => {
+    const eventTime = toIsoDateText(event.eventTime);
+    if (!eventTime) {
+      return;
+    }
+
+    const actor = asRecord(event.actor);
+    const eventName = toText(event.eventName);
+    const eventInfo = Array.isArray(event.eventInfo)
+      ? event.eventInfo.filter((item): item is JsonRecord =>
+        item !== null && typeof item === "object" && !Array.isArray(item)
+      )
+      : [];
+
+    for (const info of eventInfo) {
+      const propertyName = toText(info.propertyName);
+      if (propertyName?.trim().toLowerCase() !== "status") {
+        continue;
+      }
+
+      const propertyValue = info.propertyValue;
+      let previousStatus: string | null = null;
+      let newStatus: string | null = null;
+
+      if (typeof propertyValue === "string") {
+        newStatus = propertyValue;
+      } else if (propertyValue !== null && typeof propertyValue === "object" && !Array.isArray(propertyValue)) {
+        const propertyValueRecord = asRecord(propertyValue);
+        previousStatus = toText(propertyValueRecord.previousValue);
+        newStatus = toText(propertyValueRecord.updatedValue);
+      }
+
+      if (!newStatus) {
+        continue;
+      }
+
+      const nextEvent = sortedEvents[eventIndex + 1];
+      const nextEventTime = nextEvent ? toIsoDateText(nextEvent.eventTime) : null;
+      let timeInPreviousStatusHours: number | null = null;
+      let timeInPreviousStatusMinutes: number | null = null;
+
+      if (nextEventTime) {
+        const diffMs = new Date(nextEventTime).getTime() - new Date(eventTime).getTime();
+        if (Number.isFinite(diffMs) && diffMs > 0) {
+          timeInPreviousStatusHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+          timeInPreviousStatusMinutes = Math.round(diffMs / (1000 * 60));
+        }
+      }
+
+      const eventId = `${ticketId}_${eventTime.replace(/[^0-9]/g, "")}_${newStatus.replace(/\s/g, "_")}`;
+      rows.push({
+        id: stablePositiveBigintText(`${ticketId}:${eventId}`),
+        ticket_id: ticketId,
+        event_id: eventId,
+        event_time: eventTime,
+        previous_status: previousStatus,
+        new_status: newStatus,
+        actor_id: toText(actor.id),
+        actor_name: toText(actor.name),
+        actor_email: null,
+        source_event_type: eventName,
+        source_field_name: "status",
+        next_event_time: nextEventTime,
+        time_in_previous_status_hours: timeInPreviousStatusHours,
+        time_in_previous_status_minutes: timeInPreviousStatusMinutes,
+        raw_event: event,
+        synced_at: now,
+      });
+    }
+  });
+
+  return rows;
 }
 
 function convertTimeTextToHours(value: unknown): number | null {
@@ -2010,7 +2235,7 @@ Deno.serve(async (req) => {
           requestedMode === "open_tickets_sweep" || requestedMode === "missing_metrics_sweep" ||
           requestedMode === "single_ticket_debug" || requestedMode === "targeted_reconciliation_backfill" ||
           requestedMode === "targeted_modified_tickets_sync" ||
-          requestedMode === "deletion_sweep"
+          requestedMode === "deletion_sweep" || requestedMode === "ticket_history_sync"
       ? requestedMode
       : "window";
 
@@ -2120,6 +2345,7 @@ Deno.serve(async (req) => {
           "id, ticket_number, status, modified_time, created_time, regiao, department_id",
         )
         .eq("is_deleted", false)
+        .neq("department_id", WORKSHOP_DEPARTMENT_ID)
         .is("closed_time", null)
         .lt("modified_time", staleDate)
         .not("status", "in", '("Fechado","Resolvido","closed","resolved")')
@@ -2261,6 +2487,168 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (mode === "ticket_history_sync") {
+      supabase = createServiceClient();
+      const startedAt = Date.now();
+      const runtimeGuard = createRuntimeGuard(startedAt, DEFAULT_MAX_RUNTIME_SECONDS);
+      const requestRecord = asRecord(requestBody);
+      const rawMaxTickets = toNumber(requestRecord.maxTickets ?? requestRecord.max_tickets);
+      const maxTickets = Math.min(
+        rawMaxTickets === null ? DEFAULT_HISTORY_MAX_TICKETS : Math.max(1, Math.trunc(rawMaxTickets)),
+        MAX_HISTORY_MAX_TICKETS,
+      );
+      const rawStartOffset = toNumber(requestRecord.startOffset ?? requestRecord.start_offset);
+      const startOffset = rawStartOffset === null ? 0 : Math.max(0, Math.trunc(rawStartOffset));
+      const requestedSyncMode = toText(requestRecord.syncMode ?? requestRecord.sync_mode)?.trim().toLowerCase();
+      const syncMode = requestedSyncMode === "all" ? "all" : "recent";
+      const dryRun = toBool(requestRecord.dryRun ?? requestRecord.dry_run) ?? false;
+      const staleRunsMarked = await markStaleRunningSyncRuns(supabase);
+
+      syncRunId = await createSyncRun(
+        supabase,
+        new Date(startedAt).toISOString(),
+        TICKET_HISTORY_LOAD_STRATEGY,
+        `Ticket history sync iniciado (mode=${syncMode})`,
+        undefined,
+        undefined,
+        crypto.randomUUID(),
+        { tickets_planned: maxTickets },
+      );
+
+      let ticketsQuery = supabase
+        .from("zoho_tickets")
+        .select("id,ticket_number,status,created_time,closed_time,regiao,modified_time")
+        .eq("is_deleted", false)
+        .neq("department_id", WORKSHOP_DEPARTMENT_ID)
+        .order("modified_time", { ascending: false })
+        .range(startOffset, startOffset + maxTickets - 1);
+
+      if (syncMode === "recent") {
+        const sinceDate = new Date(Date.now() - HISTORY_STALE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+        ticketsQuery = ticketsQuery.gte("modified_time", sinceDate);
+      }
+
+      const ticketsResult = await ticketsQuery as SupabaseCallResult<JsonRecord[]> | undefined;
+      if (!ticketsResult || ticketsResult.error) {
+        throw new Error(
+          `Falha ao buscar tickets para historico: ${supabaseErrorMessage(ticketsResult, "retorno vazio")}`,
+        );
+      }
+
+      const tickets = Array.isArray(ticketsResult.data) ? ticketsResult.data : [];
+      const accessToken = await getZohoAccessToken();
+      let historyTicketsProcessed = 0;
+      let historyEventsInserted = 0;
+      let historyErrors = 0;
+      let stoppedByRuntimeGuard = false;
+      const failedTickets: string[] = [];
+
+      for (const ticket of tickets) {
+        if (runtimeGuard.shouldStopSweep()) {
+          stoppedByRuntimeGuard = true;
+          break;
+        }
+
+        const ticketId = toText(ticket.id);
+        const ticketNumber = toText(ticket.ticket_number);
+        if (!ticketId) {
+          continue;
+        }
+
+        historyTicketsProcessed += 1;
+
+        try {
+          const events = await fetchTicketHistory(accessToken, ticketId);
+          const rows = parseHistoryEvents(ticketId, events);
+
+          if (rows.length > 0 && !dryRun) {
+            const upsertResult = await supabase
+              .from("zoho_ticket_status_history")
+              .upsert(rows, { onConflict: "ticket_id,event_id" }) as SupabaseCallResult | undefined;
+
+            if (!upsertResult || upsertResult.error) {
+              throw new Error(
+                `Falha no upsert historico ticket ${ticketNumber ?? ticketId}: ${
+                  supabaseErrorMessage(upsertResult, "retorno vazio")
+                }`,
+              );
+            }
+          }
+
+          historyEventsInserted += rows.length;
+          console.log(
+            `history_sync: #${ticketNumber} -> ${events.length} eventos totais, ${rows.length} mudancas de status${
+              dryRun ? " [DRY RUN]" : ""
+            }`,
+          );
+        } catch (error) {
+          historyErrors += 1;
+          failedTickets.push(ticketNumber ?? ticketId);
+          await logError(
+            supabase,
+            syncRunId,
+            TICKET_HISTORY_LOAD_STRATEGY,
+            ticketId,
+            error,
+            { ticket_id: ticketId, ticket_number: ticketNumber },
+            "ticket_history_sync",
+            `/api/v1/tickets/${ticketId}/history`,
+          );
+        }
+
+        await sleep(150);
+      }
+
+      const historyStatus: SyncStatus = historyErrors > 0 || stoppedByRuntimeGuard ? "partial_success" : "success";
+
+      await finishSyncRun(
+        supabase,
+        syncRunId,
+        historyStatus,
+        {
+          totalRecords: tickets.length,
+          successRecords: historyTicketsProcessed - historyErrors,
+          errorRecords: historyErrors,
+          ticketsProcessed: historyTicketsProcessed,
+          ticketsUpdated: historyTicketsProcessed - historyErrors,
+          metricsFetched: historyEventsInserted,
+          metricsUpdated: dryRun ? 0 : historyEventsInserted,
+          ticketsPending: stoppedByRuntimeGuard ? Math.max(0, tickets.length - historyTicketsProcessed) : 0,
+          hasMore: stoppedByRuntimeGuard,
+          warningsCount: historyErrors > 0 || stoppedByRuntimeGuard ? 1 : 0,
+          observations: [
+            "ticket_history_sync=true",
+            `sync_mode=${syncMode}`,
+            `start_offset=${startOffset}`,
+            `dry_run=${dryRun}`,
+            `tickets_processed=${historyTicketsProcessed}`,
+            `events_inserted=${historyEventsInserted}`,
+            `errors=${historyErrors}`,
+            stoppedByRuntimeGuard ? "runtime_guard=true" : "runtime_guard=false",
+            failedTickets.length > 0 ? `failed=${failedTickets.slice(0, 10).join(",")}` : "",
+            `stale_runs_marked=${staleRunsMarked}`,
+          ].filter(Boolean).join("; "),
+        },
+        "Ticket history sync finalizado",
+      );
+
+      return jsonResponse({
+        status: historyStatus,
+        mode,
+        sync_run_id: syncRunId,
+        dry_run: dryRun,
+        sync_mode: syncMode,
+        start_offset: startOffset,
+        tickets_processed: historyTicketsProcessed,
+        events_inserted: historyEventsInserted,
+        errors: historyErrors,
+        failed_tickets: failedTickets,
+        runtime_guard: stoppedByRuntimeGuard,
+        stale_runs_marked: staleRunsMarked,
+        function_version: FUNCTION_CODE_VERSION,
+      });
+    }
+
     if (mode === "open_tickets_sweep") {
       supabase = createServiceClient();
       const startedAt = Date.now();
@@ -2386,10 +2774,11 @@ Deno.serve(async (req) => {
               metricsUpdated += 1;
             }
           } catch (error) {
-            if (isZohoTicketDetailNotFound404(error)) {
+            if (isZohoTicketDetailNotFoundOrGone(error)) {
               const ticketNumber = toText(ticket.ticket_number);
+              const detailHttpStatus = error instanceof ZohoTicketDetailFetchError ? error.httpStatus : null;
               console.log(
-                `open_tickets_sweep: ticket #${ticketNumber} retornou 404 — marcando como deletado${
+                `open_tickets_sweep: ticket #${ticketNumber} retornou ${detailHttpStatus ?? "deleted"} — marcando como deletado${
                   params.dryRun ? " [DRY RUN]" : ""
                 }`,
               );
@@ -2407,7 +2796,7 @@ Deno.serve(async (req) => {
                   "open_tickets_sweep",
                   ticketId,
                   deleteError,
-                  { ticket_id: ticketId, ticket_number: ticketNumber, reason: "failed_to_mark_deleted_after_404" },
+                  { ticket_id: ticketId, ticket_number: ticketNumber, reason: "failed_to_mark_deleted_after_missing_or_gone" },
                   "open_tickets_sweep_mark_deleted",
                   endpoint,
                 );
@@ -3218,10 +3607,11 @@ Deno.serve(async (req) => {
             incrementalOpenTicketSweepUpdated += 1;
             incrementalDetailsUpdated += 1;
           } catch (error) {
-            if (isZohoTicketDetailNotFound404(error)) {
+            if (isZohoTicketDetailNotFoundOrGone(error)) {
               const ticketNumber = toText(ticket.ticket_number);
+              const detailHttpStatus = error instanceof ZohoTicketDetailFetchError ? error.httpStatus : null;
               console.log(
-                `incremental open_sweep: ticket #${ticketNumber} retornou 404 — marcando como deletado${
+                `incremental open_sweep: ticket #${ticketNumber} retornou ${detailHttpStatus ?? "deleted"} — marcando como deletado${
                   incrementalParams.dryRun ? " [DRY RUN]" : ""
                 }`,
               );
@@ -3238,7 +3628,7 @@ Deno.serve(async (req) => {
                   incrementalSyncType,
                   ticketId,
                   deleteError,
-                  { ticket_id: ticketId, ticket_number: ticketNumber, reason: "failed_to_mark_deleted_after_404" },
+                  { ticket_id: ticketId, ticket_number: ticketNumber, reason: "failed_to_mark_deleted_after_missing_or_gone" },
                   "zoho_ticket_incremental_open_sweep_mark_deleted",
                   endpoint,
                 );
@@ -4232,6 +4622,8 @@ Deno.serve(async (req) => {
       ? `${mode} falhou: ${errorMessage(error)}`
       : mode === "deletion_sweep"
       ? `Deletion sweep falhou: ${errorMessage(error)}`
+      : mode === "ticket_history_sync"
+      ? `Ticket history sync falhou: ${errorMessage(error)}`
       : failureMessage;
     const summary = {
       totalRecords,
