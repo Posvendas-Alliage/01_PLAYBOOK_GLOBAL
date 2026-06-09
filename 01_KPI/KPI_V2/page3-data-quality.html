@@ -526,7 +526,7 @@
                 showLoading(false);
                 applyPage();
                 fetchSyncHealth().then(({ health }) => {
-                    const ts = health && (health.last_sync_at || health.synced_at);
+                    const ts = health && (health.freshness && health.freshness.updated_in_supabase_at || health.last_sync_at || health.synced_at);
                     if (!ts) return;
                     const el = document.getElementById('last-sync');
                     if (el) el.textContent = t('last_sync_label') + ' ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
