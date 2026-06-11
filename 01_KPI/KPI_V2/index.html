@@ -51,7 +51,7 @@
                 </div>
             </section>
 
-            <section class="hub-grid hub-grid-three">
+            <section class="hub-grid hub-grid-three" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
                 <a href="page2-backlog.html" class="hub-card" aria-labelledby="hub-card-daily">
                     <span class="hub-card-icon" aria-hidden="true">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -79,6 +79,16 @@
                     <span class="hub-card-audience" data-i18n="audience_monthly">Gerente + Diretor</span>
                     <h3 id="hub-card-monthly" data-i18n="nav_monthly">Monthly</h3>
                     <p data-i18n="hub_monthly_desc">Visao mensal direta para diretoria: key metrics do periodo e backlog consolidado por regiao.</p>
+                    <span class="btn btn-primary btn-sm" data-i18n="btn_open">Abrir</span>
+                </a>
+
+                <a href="kanban-status.html" class="hub-card" aria-labelledby="hub-card-kanban">
+                    <span class="hub-card-icon" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="11" rx="1"/><rect x="17" y="3" width="4" height="15" rx="1"/></svg>
+                    </span>
+                    <span class="hub-card-audience" data-i18n="audience_weekly">Coordenadores + Gerente</span>
+                    <h3 id="hub-card-kanban" data-i18n="nav_kanban">Kanban de Status</h3>
+                    <p data-i18n="hub_kanban_desc">Visao kanban dos status operacionais com metricas de tempo e deteccao de gargalos por regiao.</p>
                     <span class="btn btn-primary btn-sm" data-i18n="btn_open">Abrir</span>
                 </a>
             </section>

@@ -22,7 +22,7 @@ const DEFAULT_MAX_PAGES_PER_DEPARTMENT = 100;
 const DEFAULT_BACKFILL_MAX_PAGES = 50;
 const DEFAULT_CONTACTS_MAX_PAGES = 10;
 const FUNCTION_NAME = "sync-tickets-v0";
-const FUNCTION_CODE_VERSION = "2026-06-08-v36d-ignore-workshop-in-sweeps";
+const FUNCTION_CODE_VERSION = "2026-06-09-v37b-status-history-backlog-dedupe";
 const ZOHO_FETCH_MAX_ATTEMPTS = 3;
 const ZOHO_FETCH_BASE_BACKOFF_MS = 750;
 const DEFAULT_MAX_RUNTIME_SECONDS = 110;
@@ -1376,7 +1376,17 @@ function parseHistoryEvents(ticketId: string, events: JsonRecord[]): JsonRecord[
     }
   });
 
-  return rows;
+  const uniqueRowsByEventId = new Map<string, JsonRecord>();
+  for (const row of rows) {
+    const eventId = toText(row.event_id);
+    if (!eventId) {
+      continue;
+    }
+
+    uniqueRowsByEventId.set(`${ticketId}:${eventId}`, row);
+  }
+
+  return Array.from(uniqueRowsByEventId.values());
 }
 
 function convertTimeTextToHours(value: unknown): number | null {
@@ -2500,7 +2510,11 @@ Deno.serve(async (req) => {
       const rawStartOffset = toNumber(requestRecord.startOffset ?? requestRecord.start_offset);
       const startOffset = rawStartOffset === null ? 0 : Math.max(0, Math.trunc(rawStartOffset));
       const requestedSyncMode = toText(requestRecord.syncMode ?? requestRecord.sync_mode)?.trim().toLowerCase();
-      const syncMode = requestedSyncMode === "all" ? "all" : "recent";
+      const syncMode = requestedSyncMode === "all"
+        ? "all"
+        : requestedSyncMode === "backlog" || requestedSyncMode === "missing_or_stale"
+        ? "backlog"
+        : "recent";
       const dryRun = toBool(requestRecord.dryRun ?? requestRecord.dry_run) ?? false;
       const staleRunsMarked = await markStaleRunningSyncRuns(supabase);
 
@@ -2515,13 +2529,22 @@ Deno.serve(async (req) => {
         { tickets_planned: maxTickets },
       );
 
-      let ticketsQuery = supabase
-        .from("zoho_tickets")
-        .select("id,ticket_number,status,created_time,closed_time,regiao,modified_time")
-        .eq("is_deleted", false)
-        .neq("department_id", WORKSHOP_DEPARTMENT_ID)
-        .order("modified_time", { ascending: false })
-        .range(startOffset, startOffset + maxTickets - 1);
+      let ticketsQuery = syncMode === "backlog"
+        ? supabase
+          .from("vw_ticket_history_sync_backlog")
+          .select(
+            "id,ticket_number,status,created_time,closed_time,regiao,modified_time,history_events,last_history_synced_at,sync_priority,sync_reason",
+          )
+          .order("sync_priority", { ascending: true })
+          .order("modified_time", { ascending: false, nullsFirst: false })
+          .range(startOffset, startOffset + maxTickets - 1)
+        : supabase
+          .from("zoho_tickets")
+          .select("id,ticket_number,status,created_time,closed_time,regiao,modified_time")
+          .eq("is_deleted", false)
+          .neq("department_id", WORKSHOP_DEPARTMENT_ID)
+          .order("modified_time", { ascending: false })
+          .range(startOffset, startOffset + maxTickets - 1);
 
       if (syncMode === "recent") {
         const sinceDate = new Date(Date.now() - HISTORY_STALE_DAYS * 24 * 60 * 60 * 1000).toISOString();
@@ -2827,7 +2850,9 @@ Deno.serve(async (req) => {
       const openTicketsPending = openTicketsTotal === null ? null : Math.max(0, openTicketsTotal - ticketsProcessed);
       const hasMore = openTickets.length > maxTicketsToProcess || stoppedByRuntimeGuard ||
         remainingFromFetch > 0 || (openTicketsPending ?? 0) > 0;
-      const status: SyncStatus = hasMore || errorRecords > 0 || staleRunsMarked > 0 ? "partial_success" : "success";
+      const status: SyncStatus = errorRecords > 0 || stoppedByRuntimeGuard || staleRunsMarked > 0
+        ? "partial_success"
+        : "success";
       const message = stoppedByRuntimeGuard
         ? "Open tickets sweep pausado por guarda de tempo"
         : hasMore
@@ -2861,7 +2886,7 @@ Deno.serve(async (req) => {
           openTicketsTotal,
           openTicketsChecked: ticketsProcessed,
           openTicketsPending,
-          warningsCount: hasMore || staleRunsMarked > 0 ? 1 : 0,
+          warningsCount: status === "partial_success" ? 1 : 0,
           observations:
             `stale_runs_marked=${staleRunsMarked}; runtime_guard=${stoppedByRuntimeGuard}; dry_run=${params.dryRun}`,
         },

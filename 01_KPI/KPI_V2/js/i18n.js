@@ -215,6 +215,15 @@ const TRANSLATIONS = {
         hub_quality_desc: "Completude dos campos obrigatórios usando a mesma base BI filtrada do report.",
         hub_weekly_desc: "Leitura semanal em formato de report, com indicadores comparativos e follow-up operacional.",
         hub_monthly_desc: "Visao mensal direta para diretoria: key metrics do periodo e backlog consolidado por regiao.",
+        // ── Kanban de Status ──────────────────────────────────
+        nav_kanban: "Kanban de Status",
+        hub_kanban_desc: "Visão kanban dos status operacionais com métricas de tempo e detecção de gargalos por região.",
+        kanban_tickets_in_status: "Tickets neste status",
+        kanban_avg_time: "Tempo médio",
+        kanban_median: "Mediana",
+        kanban_bottleneck: "Gargalo detectado",
+        kanban_top_bottlenecks: "Principais Gargalos",
+        kanban_apply_filters: "Aplicar filtros",
     },
     en: {
         // ── Navegação ─────────────────────────────────────────
@@ -432,6 +441,15 @@ const TRANSLATIONS = {
         hub_quality_desc: "Required-field completeness using the same filtered BI base as the report.",
         hub_weekly_desc: "Weekly report view with comparative indicators and operational follow-up.",
         hub_monthly_desc: "Direct executive monthly view: period key metrics and consolidated backlog by region.",
+        // ── Kanban de Status ──────────────────────────────────
+        nav_kanban: "Status Kanban",
+        hub_kanban_desc: "Kanban view of operational statuses with time metrics and bottleneck detection by region.",
+        kanban_tickets_in_status: "Tickets in this status",
+        kanban_avg_time: "Avg time",
+        kanban_median: "Median",
+        kanban_bottleneck: "Bottleneck detected",
+        kanban_top_bottlenecks: "Top Bottlenecks",
+        kanban_apply_filters: "Apply filters",
     },
     es: {
         // ── Navegação ─────────────────────────────────────────
@@ -649,6 +667,15 @@ const TRANSLATIONS = {
         hub_quality_desc: "Completitud de campos obligatorios usando la misma base BI filtrada del reporte.",
         hub_weekly_desc: "Vista semanal en formato de reporte, con indicadores comparativos y follow-up operacional.",
         hub_monthly_desc: "Vista mensual directa para direccion: key metrics del periodo y backlog consolidado por region.",
+        // ── Kanban de Status ──────────────────────────────────
+        nav_kanban: "Kanban de Estado",
+        hub_kanban_desc: "Vista kanban de los estados operativos con métricas de tiempo y detección de cuellos de botella por región.",
+        kanban_tickets_in_status: "Tickets en este estado",
+        kanban_avg_time: "Tiempo promedio",
+        kanban_median: "Mediana",
+        kanban_bottleneck: "Cuello de botella detectado",
+        kanban_top_bottlenecks: "Principales Cuellos de Botella",
+        kanban_apply_filters: "Aplicar filtros",
     }
 };
 

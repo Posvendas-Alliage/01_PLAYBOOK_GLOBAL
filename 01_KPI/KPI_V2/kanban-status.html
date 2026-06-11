@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban de Status — Global Service Governance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        /* ── Kanban board (5 colunas) ──────────────────── */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+        }
+        @media (max-width: 1200px) { .kanban-board { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 800px)  { .kanban-board { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 520px)  { .kanban-board { grid-template-columns: 1fr; } }
+
+        .kanban-col {
+            background: var(--color-surface);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .kanban-col:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.26);
+        }
+        .kanban-col-header {
+            padding: 12px 15px 10px;
+            font-weight: 700;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            line-height: 1.3;
+            min-height: 46px;
+            display: flex;
+            align-items: center;
+        }
+        .kanban-col-body {
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .kanban-count {
+            font-size: 2.9rem;
+            font-weight: 700;
+            font-family: var(--font-mono, monospace);
+            line-height: 1;
+            margin: 0 0 2px;
+        }
+        .kanban-count-label {
+            font-size: 0.69rem;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 0 14px;
+        }
+        .kanban-metrics {
+            display: flex;
+            flex-direction: column;
+            margin-top: auto;
+        }
+        .kanban-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-top: 1px solid var(--color-border);
+        }
+        .kanban-metric-label {
+            color: var(--color-text-muted);
+            font-size: 0.72rem;
+        }
+        .kanban-metric-value {
+            font-weight: 600;
+            font-family: var(--font-mono, monospace);
+            font-size: 0.88rem;
+        }
+        .kanban-badge-bottleneck {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 9px;
+            background: rgba(227,20,36,0.13);
+            border: 1px solid rgba(227,20,36,0.38);
+            border-radius: 20px;
+            color: #E31424;
+            font-size: 0.69rem;
+            font-weight: 700;
+            margin-top: 12px;
+            width: fit-content;
+        }
+
+        /* ── Top Bottlenecks ───────────────────────────── */
+        .bottleneck-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .bottleneck-item {
+            background: var(--color-surface);
+            border-radius: 10px;
+            padding: 13px 16px 13px 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            border-left: 4px solid var(--color-border);
+        }
+        .bottleneck-rank {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: var(--font-mono, monospace);
+            color: var(--color-text-muted);
+            min-width: 28px;
+            line-height: 1;
+            padding-top: 4px;
+        }
+        .bottleneck-content { flex: 1; }
+        .bottleneck-status { font-weight: 600; font-size: 0.9rem; margin: 0 0 2px; }
+        .bottleneck-detail { font-size: 0.77rem; color: var(--color-text-muted); }
+        .bottleneck-rec    { font-size: 0.75rem; color: #E4BF14; margin-top: 5px; font-style: italic; }
+        .bottleneck-time   { font-size: 1.1rem; font-weight: 700; font-family: var(--font-mono, monospace); text-align: right; white-space: nowrap; padding-top: 4px; }
+
+        /* ── Tooltip ───────────────────────────────────── */
+        [data-tooltip] { position: relative; cursor: help; }
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 400;
+            padding: 5px 10px;
+            border-radius: 6px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 200;
+            width: max-content;
+            max-width: 210px;
+            white-space: normal;
+            text-align: center;
+            line-height: 1.4;
+        }
+        [data-tooltip]:hover::after { opacity: 1; }
+
+        /* ── Skeleton (5 colunas) ──────────────────────── */
+        .kanban-skeleton {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+        }
+        @media (max-width: 1200px) { .kanban-skeleton { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 800px)  { .kanban-skeleton { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 520px)  { .kanban-skeleton { grid-template-columns: 1fr; } }
+        .kanban-skeleton-col {
+            background: var(--color-surface);
+            border-radius: 12px;
+            height: 230px;
+            opacity: 0.7;
+            animation: kb-shimmer 1.6s ease-in-out infinite;
+        }
+        .kanban-skeleton-col:nth-child(2) { animation-delay: .12s; }
+        .kanban-skeleton-col:nth-child(3) { animation-delay: .24s; }
+        .kanban-skeleton-col:nth-child(4) { animation-delay: .36s; }
+        .kanban-skeleton-col:nth-child(5) { animation-delay: .48s; }
+        @keyframes kb-shimmer {
+            0%, 100% { opacity: 0.5; }
+            50%       { opacity: 0.85; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-shell">
+
+        <!-- ── Header ─────────────────────────────────── -->
+        <header class="app-header">
+            <div class="app-header-inner">
+                <div class="app-brand">
+                    <a href="../../index.html" class="back-link" data-i18n="back_to_playbook">Voltar</a>
+                    <div>
+                        <p class="app-brand-title" data-tx="page_title">Kanban de Gargalos por Status</p>
+                        <p class="app-brand-subtitle" data-i18n="app_subtitle">Playbook Global | Módulo KPI</p>
+                    </div>
+                </div>
+                <div class="app-header-actions">
+                    <div class="lang-switch" role="group" aria-label="Language">
+                        <button type="button" data-lang="pt">PT</button>
+                        <button type="button" data-lang="en">EN</button>
+                        <button type="button" data-lang="es">ES</button>
+                    </div>
+                    <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-sm" style="padding:6px 10px;font-size:15px;line-height:1;">🌙</button>
+                    <button type="button" id="btn-refresh" class="btn btn-ghost btn-sm" data-i18n="btn_refresh">Atualizar</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── Navigation ─────────────────────────────── -->
+        <nav class="app-nav" aria-label="Dashboard pages">
+            <div class="app-nav-inner">
+                <a href="page2-backlog.html" data-i18n="nav_backlog">Daily</a>
+                <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
+                <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
+                <a href="kanban-status.html" class="is-active" data-i18n="nav_kanban">Kanban de Status</a>
+            </div>
+        </nav>
+
+        <!-- ── Banner validity ────────────────────────── -->
+        <div id="banner-validity" class="banner-validity" style="display:none;">
+            <span class="banner-validity-icon" aria-hidden="true">⚠️</span>
+            <span id="banner-validity-text" class="banner-validity-text"></span>
+            <button class="banner-validity-close" aria-label="Fechar">×</button>
+        </div>
+
+        <main class="app-main">
+
+            <!-- ── Filters ──────────────────────────────── -->
+            <section class="filter-bar" aria-label="Filtros">
+                <div class="filter-field">
+                    <label for="filter-region" data-i18n="filter_region">Região</label>
+                    <select id="filter-region">
+                        <option value="" data-i18n="filter_all">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-department" data-i18n="filter_department">Departamento</label>
+                    <select id="filter-department">
+                        <option value="" data-i18n="filter_all">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
+                    <select id="filter-priority">
+                        <option value="" data-i18n="filter_all">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-apply" data-tx="btn_apply_filters">Aplicar filtros</button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="btn-clear" data-i18n="btn_clear">Limpar</button>
+                </div>
+            </section>
+
+            <!-- ── Error banner ─────────────────────────── -->
+            <div id="error-banner" class="banner-error" style="display:none;">
+                <span id="error-banner-text"></span>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-retry" style="margin-left:12px" data-i18n="btn_retry">Tentar novamente</button>
+            </div>
+
+            <!-- ── Loading (skeleton 5 colunas) ─────────── -->
+            <div id="loading" class="loading-block">
+                <div class="kanban-skeleton">
+                    <div class="kanban-skeleton-col"></div>
+                    <div class="kanban-skeleton-col"></div>
+                    <div class="kanban-skeleton-col"></div>
+                    <div class="kanban-skeleton-col"></div>
+                    <div class="kanban-skeleton-col"></div>
+                </div>
+            </div>
+
+            <!-- ── Page body ──────────────────────────────── -->
+            <div id="page-body" style="display:none;">
+
+                <section class="tier-heading" style="margin-bottom:20px;">
+                    <div>
+                        <p class="tier-kicker" data-tx="page_kicker">Kanban</p>
+                        <h2 data-tx="page_title">Kanban de Gargalos por Status</h2>
+                        <p class="tier-audience" data-tx="page_audience">Coordenadores + Gerente</p>
+                    </div>
+                    <span id="last-update-label" style="font-size:0.77rem;color:var(--color-text-muted);align-self:flex-end;"></span>
+                </section>
+
+                <div id="kanban-board" class="kanban-board"></div>
+
+                <section class="card" style="padding:20px 22px;margin-top:22px;">
+                    <h3 style="margin:0 0 3px;font-size:0.98rem;" data-tx="top_bottlenecks_title">Principais Gargalos</h3>
+                    <p style="font-size:0.77rem;color:var(--color-text-muted);margin:0 0 16px;" data-tx="top_bottlenecks_desc">Os 3 status com maior tempo médio no backlog atual</p>
+                    <div id="top-bottlenecks-list" class="bottleneck-list"></div>
+                </section>
+
+            </div>
+        </main>
+
+        <footer class="app-footer" data-i18n="app_footer">Playbook Global - Global Service - Módulo KPI</footer>
+    </div>
+
+    <script src="../../config/supabase.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script>
+    // ═══════════════════════════════════════════════════════
+    // PAGE-SPECIFIC TRANSLATIONS
+    // ═══════════════════════════════════════════════════════
+    const EXTRA_I18N = {
+        pt: {
+            page_title:            'Kanban de Gargalos por Status',
+            page_kicker:           'Kanban',
+            page_audience:         'Coordenadores + Gerente',
+            btn_apply_filters:     'Aplicar filtros',
+            top_bottlenecks_title: 'Principais Gargalos',
+            top_bottlenecks_desc:  'Os 3 status com maior tempo médio histórico',
+            label_tickets_agora:   'tickets agora',
+            label_passagens:       'passagens históricas',
+            label_tickets_unicos:  'tickets únicos',
+            label_avg_time:        'Tempo médio',
+            label_median:          'Mediana',
+            label_p90:             'P90',
+            label_bottleneck:      '⚠ Gargalo',
+            rec_prefix:            'Revisar fila:',
+            rec_suffix_days:       'dias de média',
+            rec_suffix_hours:      'h de média',
+            last_update:           'Atualizado',
+            no_data:               'Sem dados para os filtros selecionados.',
+            err_fetch:             'Erro ao carregar dados. Verifique a conexão.',
+            err_credentials:       'Supabase não configurado. Adicione o arquivo config/supabase.js.',
+            p90_tooltip:           '90% das passagens ficaram menos que este tempo neste status',
+            loading_filtered:      'Aplicando filtros…',
+        },
+        en: {
+            page_title:            'Status Bottleneck Kanban',
+            page_kicker:           'Kanban',
+            page_audience:         'Coordinators + Manager',
+            btn_apply_filters:     'Apply filters',
+            top_bottlenecks_title: 'Top Bottlenecks',
+            top_bottlenecks_desc:  'The 3 statuses with highest historical average time',
+            label_tickets_agora:   'tickets now',
+            label_passagens:       'historical passes',
+            label_tickets_unicos:  'unique tickets',
+            label_avg_time:        'Avg time',
+            label_median:          'Median',
+            label_p90:             'P90',
+            label_bottleneck:      '⚠ Bottleneck',
+            rec_prefix:            'Review queue:',
+            rec_suffix_days:       'days avg',
+            rec_suffix_hours:      'h avg',
+            last_update:           'Updated',
+            no_data:               'No data for selected filters.',
+            err_fetch:             'Error loading data. Check your connection.',
+            err_credentials:       'Supabase not configured. Add the config/supabase.js file.',
+            p90_tooltip:           '90% of passes stayed less than this time in this status',
+            loading_filtered:      'Applying filters…',
+        },
+        es: {
+            page_title:            'Kanban de Cuellos de Botella',
+            page_kicker:           'Kanban',
+            page_audience:         'Coordinadores + Gerente',
+            btn_apply_filters:     'Aplicar filtros',
+            top_bottlenecks_title: 'Principales Cuellos de Botella',
+            top_bottlenecks_desc:  'Los 3 estados con mayor tiempo promedio histórico',
+            label_tickets_agora:   'tickets ahora',
+            label_passagens:       'pasos históricos',
+            label_tickets_unicos:  'tickets únicos',
+            label_avg_time:        'Tiempo promedio',
+            label_median:          'Mediana',
+            label_p90:             'P90',
+            label_bottleneck:      '⚠ Cuello de botella',
+            rec_prefix:            'Revisar cola:',
+            rec_suffix_days:       'días promedio',
+            rec_suffix_hours:      'h promedio',
+            last_update:           'Actualizado',
+            no_data:               'Sin datos para los filtros seleccionados.',
+            err_fetch:             'Error al cargar datos. Verifique la conexión.',
+            err_credentials:       'Supabase no configurado. Agregue el archivo config/supabase.js.',
+            p90_tooltip:           '90% de los pasos estuvieron menos de este tiempo en este estado',
+            loading_filtered:      'Aplicando filtros…',
+        }
+    };
+
+    function tx(key) {
+        const lang = getLang();
+        return (EXTRA_I18N[lang] && EXTRA_I18N[lang][key]) || t(key) || key;
+    }
+    function applyExtraI18n() {
+        document.querySelectorAll('[data-tx]').forEach(el => {
+            el.textContent = tx(el.getAttribute('data-tx'));
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // STATUS CONFIGURATION (5 status — sem Resolvido)
+    // ═══════════════════════════════════════════════════════
+    const STATUS_ORDER = [
+        'Aberto',
+        'Em atendimento',
+        'Aguardando Cliente',
+        'Aguardando Peça',
+        'Aguardando Terceiro / Visita Técnica',
+    ];
+
+    const STATUS_CONFIG = {
+        'Aberto':                              { color: '#E31424', textColor: '#fff', threshold: 48 },
+        'Em atendimento':                       { color: '#5C2ABF', textColor: '#fff', threshold: 72 },
+        'Aguardando Cliente':                   { color: '#E4BF14', textColor: '#000', threshold: 120 },
+        'Aguardando Peça':                      { color: '#E07D14', textColor: '#fff', threshold: 168 },
+        'Aguardando Terceiro / Visita Técnica': { color: '#C05A10', textColor: '#fff', threshold: 168 },
+    };
+
+    // ═══════════════════════════════════════════════════════
+    // FORMATAÇÃO
+    // ═══════════════════════════════════════════════════════
+    function fmtHoras(h) {
+        if (h === null || h === undefined) return '--';
+        const n = parseFloat(h);
+        if (isNaN(n)) return '--';
+        if (n < 1)  return `${Math.round(n * 60)}min`;
+        if (n < 24) return `${n.toFixed(1)}h`;
+        return `${(n / 24).toFixed(1)} dias`;
+    }
+
+    function fmtNum(n) {
+        if (n === null || n === undefined) return '--';
+        return Number(n).toLocaleString('pt-BR');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // FETCH — RPC server-side (retorna 5-11 linhas pré-agregadas)
+    // ═══════════════════════════════════════════════════════
+    async function fetchKanbanMetrics(regiao, dept, priority) {
+        const body = {};
+        if (regiao)   body.p_regiao   = regiao;
+        if (dept)     body.p_dept     = dept;
+        if (priority) body.p_priority = priority;
+
+        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/fn_kanban_status_metrics`, {
+            method: 'POST',
+            headers: supabaseHeaders(),
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const txt = await res.text().catch(() => '');
+            throw new Error(`fn_kanban_status_metrics HTTP ${res.status}: ${txt}`);
+        }
+        return await res.json();
+    }
+
+    async function fetchFilterOptions() {
+        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/fn_kanban_filter_options`, {
+            method: 'POST',
+            headers: supabaseHeaders(),
+            body: '{}'
+        });
+        if (!res.ok) return { regioes: [], departamentos: [], prioridades: [] };
+        return await res.json();
+    }
+
+    async function fetchSnapshotAtual() {
+        const url = `${window.SUPABASE_URL}/rest/v1/vw_tickets_bi_base` +
+            `?select=status` +
+            `&is_weekly_report_filter_included=eq.true` +
+            `&is_open=eq.true` +
+            `&closed_time=is.null` +
+            `&status=not.in.(Fechado,Resolvido,Closed)`;
+        const res = await fetch(url, { headers: supabaseHeaders() });
+        if (!res.ok) throw new Error(`fetchSnapshotAtual HTTP ${res.status}`);
+        const rows = await res.json();
+        const contagem = {};
+        rows.forEach(r => {
+            let s = r.status || '';
+            if (s.includes('Visita Tecnica') || s.includes('Visita Técnica')) {
+                s = 'Aguardando Terceiro / Visita Técnica';
+            }
+            contagem[s] = (contagem[s] || 0) + 1;
+        });
+        return contagem;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // POPULAR FILTROS A PARTIR DAS OPÇÕES DO RPC
+    // ═══════════════════════════════════════════════════════
+    function populateFilters(opts) {
+        const regioes = Array.isArray(opts.regioes)      ? opts.regioes      : [];
+        const depts   = Array.isArray(opts.departamentos) ? opts.departamentos : [];
+        const prios   = Array.isArray(opts.prioridades)   ? opts.prioridades   : [];
+
+        const rSel = document.getElementById('filter-region');
+        const dSel = document.getElementById('filter-department');
+        const pSel = document.getElementById('filter-priority');
+        const curR = rSel.value;
+        const curD = dSel.value;
+        const curP = pSel.value;
+
+        rSel.innerHTML = `<option value="">${t('filter_all')}</option>` +
+            regioes.map(v => `<option value="${v}"${v === curR ? ' selected' : ''}>${v}</option>`).join('');
+        dSel.innerHTML = `<option value="">${t('filter_all')}</option>` +
+            depts.map(v => `<option value="${v}"${v === curD ? ' selected' : ''}>${v}</option>`).join('');
+        pSel.innerHTML = `<option value="">${t('filter_all')}</option>` +
+            prios.map(v => `<option value="${v}"${v === curP ? ' selected' : ''}>${v}</option>`).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // RENDER KANBAN
+    // ═══════════════════════════════════════════════════════
+    function renderKanban(rpcRows, snapshot) {
+        const board  = document.getElementById('kanban-board');
+        const p90Tip = tx('p90_tooltip');
+        board.innerHTML = '';
+
+        const byStatus = {};
+        rpcRows.forEach(r => { byStatus[r.status_norm] = r; });
+
+        STATUS_ORDER.forEach(status => {
+            const item         = byStatus[status];
+            const cfg          = STATUS_CONFIG[status] || { color: '#888', textColor: '#fff', threshold: 999 };
+            const avgH         = item ? parseFloat(item.avg_horas) : null;
+            const isBottleneck = avgH !== null && !isNaN(avgH) && avgH > cfg.threshold;
+            const ticketsAgora = (snapshot && snapshot[status] != null) ? snapshot[status] : null;
+
+            const col = document.createElement('div');
+            col.className = 'kanban-col';
+            col.innerHTML = `
+                <div class="kanban-col-header" style="background:${cfg.color};color:${cfg.textColor};">
+                    ${status}
+                </div>
+                <div class="kanban-col-body">
+                    <div class="kanban-count">${ticketsAgora !== null ? fmtNum(ticketsAgora) : '0'}</div>
+                    <p class="kanban-count-label">${tx('label_tickets_agora')}</p>
+                    <p style="font-size:0.71rem;color:var(--color-text-muted);margin:-8px 0 14px;line-height:1.5;">
+                        ${item ? fmtNum(item.total_intervalos) : '0'} ${tx('label_passagens')} &middot;
+                        ${item ? fmtNum(item.tickets_distintos) : '0'} ${tx('label_tickets_unicos')}
+                    </p>
+                    <div class="kanban-metrics">
+                        <div class="kanban-metric">
+                            <span class="kanban-metric-label">${tx('label_avg_time')}</span>
+                            <span class="kanban-metric-value">${fmtHoras(item ? item.avg_horas : null)}</span>
+                        </div>
+                        <div class="kanban-metric">
+                            <span class="kanban-metric-label">${tx('label_median')}</span>
+                            <span class="kanban-metric-value">${fmtHoras(item ? item.mediana_horas : null)}</span>
+                        </div>
+                        <div class="kanban-metric">
+                            <span class="kanban-metric-label">${tx('label_p90')}</span>
+                            <span class="kanban-metric-value" data-tooltip="${p90Tip}">${fmtHoras(item ? item.p90_horas : null)}</span>
+                        </div>
+                    </div>
+                    ${isBottleneck ? `<span class="kanban-badge-bottleneck">${tx('label_bottleneck')}</span>` : ''}
+                </div>
+            `;
+            board.appendChild(col);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // RENDER TOP BOTTLENECKS
+    // ═══════════════════════════════════════════════════════
+    function renderTopBottlenecks(rpcRows) {
+        const list = document.getElementById('top-bottlenecks-list');
+        const sorted = rpcRows
+            .filter(r => STATUS_ORDER.includes(r.status_norm) && parseFloat(r.total_intervalos) > 0)
+            .sort((a, b) => parseFloat(b.avg_horas) - parseFloat(a.avg_horas))
+            .slice(0, 3);
+
+        if (!sorted.length) {
+            list.innerHTML = `<p style="color:var(--color-text-muted);font-size:.83rem;">${tx('no_data')}</p>`;
+            return;
+        }
+
+        const ranks = ['1º', '2º', '3º'];
+        list.innerHTML = sorted.map((item, i) => {
+            const cfg     = STATUS_CONFIG[item.status_norm] || { color: '#888' };
+            const avgH    = parseFloat(item.avg_horas);
+            const timeStr = fmtHoras(avgH);
+            const recTime = avgH < 24
+                ? `${avgH.toFixed(1)} ${tx('rec_suffix_hours')}`
+                : `${(avgH / 24).toFixed(1)} ${tx('rec_suffix_days')}`;
+            const rec = `${tx('rec_prefix')} ${item.status_norm} — ${recTime}`;
+            return `
+                <div class="bottleneck-item" style="border-left-color:${cfg.color};">
+                    <div class="bottleneck-rank">${ranks[i]}</div>
+                    <div class="bottleneck-content">
+                        <p class="bottleneck-status">${item.status_norm}</p>
+                        <p class="bottleneck-detail">${fmtNum(item.total_intervalos)} passagens · ${fmtNum(item.tickets_distintos)} tickets · p90: ${fmtHoras(item.p90_horas)}</p>
+                        <p class="bottleneck-rec">${rec}</p>
+                    </div>
+                    <div class="bottleneck-time">${timeStr}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // UI STATE
+    // ═══════════════════════════════════════════════════════
+    function showLoading(msg) {
+        document.getElementById('loading').style.display     = '';
+        document.getElementById('page-body').style.display   = 'none';
+        document.getElementById('error-banner').style.display = 'none';
+    }
+    function showPage() {
+        document.getElementById('loading').style.display     = 'none';
+        document.getElementById('page-body').style.display   = '';
+        document.getElementById('error-banner').style.display = 'none';
+    }
+    function showError(msg) {
+        document.getElementById('loading').style.display     = 'none';
+        document.getElementById('page-body').style.display   = 'none';
+        document.getElementById('error-banner').style.display = '';
+        document.getElementById('error-banner-text').textContent = msg;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // CARGA INICIAL (busca dados + opções de filtro em paralelo)
+    // ═══════════════════════════════════════════════════════
+    let activeFilters    = { regiao: '', department: '', priority: '' };
+    let filterOptionsCache = null;
+    let snapshotCache      = null;  // snapshot atual — fixo, não muda com filtros
+
+    async function loadData() {
+        showLoading();
+        try {
+            const [metrics, filterOpts, snapshot] = await Promise.all([
+                fetchKanbanMetrics('', '', ''),
+                filterOptionsCache ? Promise.resolve(filterOptionsCache) : fetchFilterOptions(),
+                fetchSnapshotAtual()
+            ]);
+            filterOptionsCache = filterOpts;
+            snapshotCache      = snapshot;
+
+            populateFilters(filterOpts);
+            // reset filtros ao recarregar
+            activeFilters = { regiao: '', department: '', priority: '' };
+            document.getElementById('filter-region').value     = '';
+            document.getElementById('filter-department').value = '';
+            document.getElementById('filter-priority').value   = '';
+
+            renderKanban(metrics, snapshotCache);
+            renderTopBottlenecks(metrics);
+
+            const locale = getLang() === 'pt' ? 'pt-BR' : getLang() === 'es' ? 'es-MX' : 'en-US';
+            const now = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(new Date());
+            const lbl = document.getElementById('last-update-label');
+            if (lbl) lbl.textContent = `${tx('last_update')}: ${now}`;
+
+            showPage();
+        } catch (err) {
+            console.error('[Kanban] fetch error:', err);
+            showError(`${tx('err_fetch')} (${err.message})`);
+        }
+    }
+
+    async function applyFilters() {
+        showLoading();
+        try {
+            const metrics = await fetchKanbanMetrics(
+                activeFilters.regiao,
+                activeFilters.department,
+                activeFilters.priority
+            );
+            // snapshot não muda com filtros — representa estado atual real
+            renderKanban(metrics, snapshotCache);
+            renderTopBottlenecks(metrics);
+            showPage();
+        } catch (err) {
+            console.error('[Kanban] filter error:', err);
+            showError(`${tx('err_fetch')} (${err.message})`);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+        applyExtraI18n();
+
+        document.getElementById('btn-apply').addEventListener('click', () => {
+            activeFilters = {
+                regiao:     document.getElementById('filter-region').value,
+                department: document.getElementById('filter-department').value,
+                priority:   document.getElementById('filter-priority').value,
+            };
+            applyFilters();
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            document.getElementById('filter-region').value     = '';
+            document.getElementById('filter-department').value = '';
+            document.getElementById('filter-priority').value   = '';
+            activeFilters = { regiao: '', department: '', priority: '' };
+            applyFilters();
+        });
+
+        document.getElementById('btn-refresh').addEventListener('click', () => {
+            filterOptionsCache = null;
+            snapshotCache      = null;
+            loadData();
+        });
+        document.getElementById('btn-retry').addEventListener('click', loadData);
+
+        document.addEventListener('langchange', () => {
+            applyExtraI18n();
+            ['filter-region', 'filter-department', 'filter-priority'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (sel && sel.options[0]) sel.options[0].textContent = t('filter_all');
+            });
+        });
+
+        showLoading();
+    });
+
+    window.addEventListener('load', async () => {
+        if (!hasSupabaseCredentials()) {
+            showError(tx('err_credentials'));
+            return;
+        }
+        await loadData();
+    });
+    </script>
+</body>
+</html>
