@@ -52,6 +52,16 @@
         .ticket-link { color: #388bfd; text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 2px; }
         .ticket-link:hover { color: #58a6ff; text-decoration: underline; }
 
+        /* ── Delta grid (Trend cards) ────────────────────── */
+        .delta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+        .delta-card { display: flex; flex-direction: column; gap: 6px; }
+        .delta-arrow { font-size: 1.4rem; line-height: 1; }
+        @media (max-width: 720px) { .delta-grid { grid-template-columns: 1fr; } }
+
+        /* ── Monthly Region Map layout ───────────────────── */
+        .mrm-layout { display: grid; grid-template-columns: 45% 55%; gap: 14px; }
+        @media (max-width: 768px) { .mrm-layout { grid-template-columns: 1fr; } }
+
         /* ── Print ───────────────────────────────────────── */
         .print-only { display: none; }
         @media print {
@@ -106,6 +116,7 @@
                 <a href="page2-backlog.html" data-i18n="nav_backlog">Daily</a>
                 <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
                 <a href="page5-monthly.html" class="is-active" data-i18n="nav_monthly">Monthly</a>
+                <a href="kanban-status.html" data-i18n="nav_kanban">Kanban de Status</a>
             </div>
         </nav>
         <div id="banner-validity" class="banner-validity">
@@ -205,6 +216,83 @@
                         <div class="kpi-number mono" id="monthly-kpi-backlog">--</div>
                     </article>
                 </section>
+
+                <!-- ── Region Map + Table + Trend (new) ───────────── -->
+                <div id="monthly-mrm-section" style="display:none;margin-top:22px;">
+                    <h3 class="section-title" data-tx="sec_region_map">Visão Global por Região</h3>
+                    <div class="mrm-layout">
+                        <!-- LEFT 45%: World Map -->
+                        <div>
+                            <div class="card" style="padding:16px;position:relative;">
+                                <div class="map-container" style="position:relative;">
+                                    <svg id="world-map-svg"
+                                         viewBox="0 0 960 480"
+                                         width="100%"
+                                         style="display:block;border-radius:8px;background:#e8f0f7;"></svg>
+                                    <div id="map-tooltip" style="display:none;position:absolute;background:rgba(0,0,0,.82);color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;pointer-events:none;z-index:10;max-width:160px;line-height:1.5;"></div>
+                                </div>
+                                <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;flex-wrap:wrap;color:#64748b;">
+                                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#12DF34;margin-right:4px;vertical-align:middle;"></span>Meta Atingida (≥ 80%)</span>
+                                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#E4BF14;margin-right:4px;vertical-align:middle;"></span>Atenção (50–79,99%)</span>
+                                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#E31424;margin-right:4px;vertical-align:middle;"></span>Crítico (< 50%)</span>
+                                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#cbd5e1;margin-right:4px;vertical-align:middle;"></span>Sem dados</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- RIGHT 55%: Region Table -->
+                        <div>
+                            <div class="card" style="padding:0;">
+                                <div style="padding:16px 16px 8px;">
+                                    <h3 style="margin:0;font-size:.95rem;font-weight:600;" data-tx="sec_table">Resumo por Região</h3>
+                                </div>
+                                <div class="table-scroll">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th data-tx="col_region">Região</th>
+                                                <th data-tx="col_closed_n">Fechados</th>
+                                                <th data-tx="col_mtfc_h">MTFC</th>
+                                                <th data-tx="col_mtts_d">MTTS</th>
+                                                <th data-tx="col_sla_pct">SLA%</th>
+                                                <th data-tx="col_status">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="mrm-region-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trend Cards (full width) -->
+                    <h3 class="section-title" style="margin-top:24px;" data-tx="sec_monthly_trend">Trend — Mês atual vs anterior</h3>
+                    <section class="delta-grid">
+                        <article class="card delta-card">
+                            <div class="kpi-label">Δ SLA</div>
+                            <div style="display:flex;align-items:baseline;gap:12px;">
+                                <span class="delta-arrow" id="mrm-delta-sla-arrow">·</span>
+                                <span class="kpi-number mono" id="mrm-delta-sla-value">--</span>
+                            </div>
+                            <p class="text-muted" id="mrm-delta-sla-meta" style="font-size:.78rem;margin:0;">--</p>
+                        </article>
+                        <article class="card delta-card">
+                            <div class="kpi-label">Δ MTFC</div>
+                            <div style="display:flex;align-items:baseline;gap:12px;">
+                                <span class="delta-arrow" id="mrm-delta-mtfc-arrow">·</span>
+                                <span class="kpi-number mono" id="mrm-delta-mtfc-value">--</span>
+                            </div>
+                            <p class="text-muted" id="mrm-delta-mtfc-meta" style="font-size:.78rem;margin:0;">--</p>
+                        </article>
+                        <article class="card delta-card">
+                            <div class="kpi-label">Δ MTTS</div>
+                            <div style="display:flex;align-items:baseline;gap:12px;">
+                                <span class="delta-arrow" id="mrm-delta-mtts-arrow">·</span>
+                                <span class="kpi-number mono" id="mrm-delta-mtts-value">--</span>
+                            </div>
+                            <p class="text-muted" id="mrm-delta-mtts-meta" style="font-size:.78rem;margin:0;">--</p>
+                        </article>
+                    </section>
+                </div>
 
                 <!-- Chart 1: SLA% by region (full width) -->
                 <div class="charts-full">
@@ -321,6 +409,8 @@
             sec_table: 'Resumo por Região', sec_cards: 'Cards por Região',
             sec_trend: 'Tendência Global', col_region: 'Região', col_sla: 'SLA %',
             col_closed: 'Fechados', col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+            col_closed_n: 'Fechados', col_sla_pct: 'SLA%', col_status: 'Status',
+            sec_region_map: 'Visão Global por Região', sec_monthly_trend: 'Trend — Mês atual vs anterior',
             cell_created: 'Criados', cell_closed: 'Fechados', cell_backlog: 'Backlog',
             cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
             cell_delta_mtfc: 'Δ MTFC mês', cell_avg_aging: 'Aging médio backlog', cell_delta_mtts: 'Δ MTTS mês',
@@ -349,6 +439,8 @@
             sec_table: 'Region Summary', sec_cards: 'Region Cards', sec_trend: 'Global Trend',
             col_region: 'Region', col_sla: 'SLA %', col_closed: 'Closed',
             col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+            col_closed_n: 'Closed', col_sla_pct: 'SLA%', col_status: 'Status',
+            sec_region_map: 'Global Region View', sec_monthly_trend: 'Trend — current vs previous month',
             cell_created: 'Created', cell_closed: 'Closed', cell_backlog: 'Backlog',
             cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
             cell_delta_mtfc: 'Δ MTFC month', cell_avg_aging: 'Avg backlog aging', cell_delta_mtts: 'Δ MTTS month',
@@ -377,6 +469,8 @@
             sec_table: 'Resumen por Región', sec_cards: 'Tarjetas por Región', sec_trend: 'Tendencia Global',
             col_region: 'Región', col_sla: 'SLA %', col_closed: 'Cerrados',
             col_mtfc: 'MTFC', col_mtts: 'MTTS', col_delta_sla: 'Δ SLA',
+            col_closed_n: 'Cerrados', col_sla_pct: 'SLA%', col_status: 'Estado',
+            sec_region_map: 'Vista Global por Región', sec_monthly_trend: 'Tendencia — mes actual vs anterior',
             cell_created: 'Creados', cell_closed: 'Cerrados', cell_backlog: 'Backlog',
             cell_sla: 'SLA', cell_mtfc: 'MTFC', cell_mtts: 'MTTS',
             cell_delta_mtfc: 'Δ MTFC mes', cell_avg_aging: 'Antigüedad media', cell_delta_mtts: 'Δ MTTS mes',
@@ -948,6 +1042,9 @@
         if (pTitle) pTitle.textContent = `Monthly Report — ${monthKey}`;
         const pMeta = document.getElementById('print-meta');
         if (pMeta) pMeta.textContent = `${tx('print_generated')}: ${new Date().toLocaleDateString('pt-BR')}`;
+
+        // Region Map + Table + Trend (new section) — usa rawData internamente
+        initMonthlyRegionSection(monthKey);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -989,6 +1086,280 @@
         } catch (e) {
             showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
         }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // MONTHLY REGION MAP + TABLE + TREND
+    // ──────────────────────────────────────────────────────────
+
+    // ISO A3 → região Alliage (não listado = ROW)
+    const COUNTRY_REGION_MAP = {
+        'BRA': 'Brasil',
+        'USA': 'USA',
+        'ARG': 'Argentina',
+        'MEX': 'México',
+        'BOL': 'LATAM', 'CHL': 'LATAM', 'COL': 'LATAM', 'CRI': 'LATAM',
+        'CUB': 'LATAM', 'DOM': 'LATAM', 'ECU': 'LATAM', 'SLV': 'LATAM',
+        'GTM': 'LATAM', 'HND': 'LATAM', 'JAM': 'LATAM', 'NIC': 'LATAM',
+        'PAN': 'LATAM', 'PRY': 'LATAM', 'PER': 'LATAM', 'TTO': 'LATAM',
+        'URY': 'LATAM', 'VEN': 'LATAM', 'BLZ': 'LATAM', 'GUY': 'LATAM',
+        'HTI': 'LATAM', 'SUR': 'LATAM'
+    };
+
+    const SLA_PALETTE = {
+        META_ATINGIDA: '#12DF34',
+        ATENCAO:       '#E4BF14',
+        CRITICO:       '#E31424',
+        SEM_DADOS:     '#cbd5e1',
+        OCEANO:        '#e8f0f7'
+    };
+
+    function mrmSlaColor(slaPercent) {
+        if (slaPercent === null || slaPercent === undefined) return SLA_PALETTE.SEM_DADOS;
+        if (slaPercent >= 80) return SLA_PALETTE.META_ATINGIDA;
+        if (slaPercent >= 50) return SLA_PALETTE.ATENCAO;
+        return SLA_PALETTE.CRITICO;
+    }
+
+    // Equirectangular projection
+    function mrmProjectPoint(lon, lat, W, H) {
+        return [(lon + 180) * (W / 360), (90 - lat) * (H / 180)];
+    }
+    function mrmGeoToPath(coordinates, W, H) {
+        return coordinates.map(ring =>
+            ring.map((pt, i) => {
+                const [x, y] = mrmProjectPoint(pt[0], pt[1], W, H);
+                return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+            }).join(' ') + ' Z'
+        ).join(' ');
+    }
+
+    let _mrmGeoCache = null;
+    async function mrmFetchGeoJson() {
+        if (_mrmGeoCache) return _mrmGeoCache;
+        const res = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
+        if (!res.ok) throw new Error('GeoJSON fetch failed: ' + res.status);
+        _mrmGeoCache = await res.json();
+        return _mrmGeoCache;
+    }
+
+    function mrmAddMapInteraction(svg, regionSLAMap) {
+        const tooltip = document.getElementById('map-tooltip');
+        if (!tooltip) return;
+        const container = svg.closest('.map-container') || svg.parentElement;
+
+        svg.addEventListener('mousemove', e => {
+            const path = e.target && e.target.closest ? e.target.closest('path[data-region]') : null;
+            if (!path) { tooltip.style.display = 'none'; return; }
+            const region = path.dataset.region;
+            const sla = Object.prototype.hasOwnProperty.call(regionSLAMap, region) ? regionSLAMap[region] : null;
+            const status = sla === null ? 'Sem dados' : sla >= 80 ? 'Meta Atingida' : sla >= 50 ? 'Atenção' : 'Crítico';
+            tooltip.innerHTML =
+                '<strong>' + region + '</strong><br>' +
+                'SLA%: ' + (sla !== null ? sla.toFixed(1) + '%' : '—') + '<br>' +
+                '<span style="color:' + mrmSlaColor(sla) + '">' + status + '</span>';
+            tooltip.style.display = 'block';
+            if (container) {
+                const r = container.getBoundingClientRect();
+                tooltip.style.left = (e.clientX - r.left + 14) + 'px';
+                tooltip.style.top  = (e.clientY - r.top  + 14) + 'px';
+            }
+            svg.querySelectorAll('path[data-region="' + region + '"]').forEach(p => { p.style.opacity = '0.72'; });
+        });
+
+        svg.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+            svg.querySelectorAll('path[data-region]').forEach(p => { p.style.opacity = '1'; });
+        });
+    }
+
+    function mrmRenderMap(geoJson, regionSLAMap) {
+        const W = 960, H = 480;
+        const svg = document.getElementById('world-map-svg');
+        if (!svg) return;
+        svg.innerHTML = '';
+
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('width', W);
+        bg.setAttribute('height', H);
+        bg.setAttribute('fill', SLA_PALETTE.OCEANO);
+        svg.appendChild(bg);
+
+        geoJson.features.forEach(feature => {
+            const iso = (feature.id || '').toUpperCase();
+            if (!iso || iso === '-99' || iso === 'NULL') return;
+
+            const region = COUNTRY_REGION_MAP[iso] || 'ROW';
+            const sla = Object.prototype.hasOwnProperty.call(regionSLAMap, region) ? regionSLAMap[region] : null;
+            const color = mrmSlaColor(sla);
+
+            const geom = feature.geometry;
+            if (!geom) return;
+            const polys = geom.type === 'MultiPolygon' ? geom.coordinates : [geom.coordinates];
+            polys.forEach(poly => {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', mrmGeoToPath(poly, W, H));
+                path.setAttribute('fill', color);
+                path.setAttribute('stroke', '#ffffff');
+                path.setAttribute('stroke-width', '0.3');
+                path.setAttribute('data-region', region);
+                path.setAttribute('data-iso', iso);
+                path.style.cursor = 'pointer';
+                path.style.transition = 'opacity 0.15s';
+                svg.appendChild(path);
+            });
+        });
+
+        mrmAddMapInteraction(svg, regionSLAMap);
+    }
+
+    function mrmRenderRegionTable(regionMetrics) {
+        const tbody = document.getElementById('mrm-region-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        // Usar REGION_GROUPS da business-rules.js — mesma ordem dos gráficos
+        const visible = REGION_GROUPS.filter(r => regionMetrics[r] && regionMetrics[r].closed > 0);
+        if (!visible.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">' + (t('no_filter_data') || 'Sem dados') + '</td></tr>';
+            return;
+        }
+        visible.sort((a, b) => {
+            const sa = regionMetrics[a].eligible ? regionMetrics[a].slaCompliance : null;
+            const sb = regionMetrics[b].eligible ? regionMetrics[b].slaCompliance : null;
+            return (sb ?? -1) - (sa ?? -1);
+        });
+        visible.forEach(region => {
+            const m = regionMetrics[region]; // saída de computeMetrics(rt, region)
+
+            // SLA% — usa m.eligible (= tickets com mtfc+resolution finitos, igual ao Exec Summary)
+            const slaVal   = m.eligible ? m.slaCompliance : null;
+            const slaColor = mrmSlaColor(slaVal);
+            const slaStr   = slaVal !== null
+                ? '<span style="color:' + slaColor + ';font-weight:600">' + fmt(slaVal, 1) + '%</span>'
+                : '--';
+
+            // MTFC — mesmos thresholds dos gráficos existentes (≤8h verde, ≤16h amarelo, >16h vermelho)
+            const mtfcVal = m.closed ? m.avgMtfc : null;
+            const mtfcC   = mtfcVal === null ? '#64748b'
+                : colorHex(mtfcVal <= 8 ? 'green' : mtfcVal <= 16 ? 'yellow' : 'red');
+            const mtfcStr = mtfcVal !== null
+                ? '<span style="color:' + mtfcC + '">' + fmt(mtfcVal, 1) + ' h</span>'
+                : '--';
+
+            // MTTS — meta por região (business-rules.js MTTS_TARGET em dias)
+            const mttsVal    = m.closed ? m.avgMtts : null;
+            const mttsTarget = MTTS_TARGET[region] || 10;
+            const mttsC      = mttsVal === null ? '#64748b'
+                : colorHex(mttsVal <= mttsTarget ? 'green' : 'red');
+            const mttsStr = mttsVal !== null
+                ? '<span style="color:' + mttsC + '">' + fmt(mttsVal, 1) + ' d</span>'
+                : '--';
+
+            // Status badge
+            const badge = slaVal !== null
+                ? (slaVal >= 80
+                    ? '<span class="badge badge-green">'  + (tx('badge_on_target') || 'META ATINGIDA') + '</span>'
+                    : slaVal >= 50
+                        ? '<span class="badge badge-yellow">' + (tx('badge_attention') || 'ATENÇÃO') + '</span>'
+                        : '<span class="badge badge-red">'    + (tx('badge_critical')  || 'CRÍTICO')  + '</span>')
+                : '<span class="badge badge-muted">—</span>';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + (REGION_FLAGS[region] || '') + ' ' + regionLabel(region) + '</td>' +
+                '<td class="mono">' + fmt(m.closed, 0) + '</td>' +
+                '<td>' + mtfcStr + '</td>' +
+                '<td>' + mttsStr + '</td>' +
+                '<td>' + slaStr  + '</td>' +
+                '<td>' + badge   + '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function mrmSetDelta(prefix, curr, prev, inverted, suffixFn) {
+        const arrowEl = document.getElementById('mrm-delta-' + prefix + '-arrow');
+        const valueEl = document.getElementById('mrm-delta-' + prefix + '-value');
+        const metaEl  = document.getElementById('mrm-delta-' + prefix + '-meta');
+        if (!arrowEl || !valueEl || !metaEl) return;
+
+        if (curr === null || prev === null || !Number.isFinite(curr) || !Number.isFinite(prev) || prev === 0) {
+            arrowEl.textContent = '·';
+            arrowEl.style.color = 'var(--color-text-muted)';
+            valueEl.textContent = '--';
+            valueEl.className = 'kpi-number mono';
+            metaEl.textContent = '--';
+            return;
+        }
+
+        const delta = ((curr - prev) / Math.abs(prev)) * 100;
+        const neutral  = Math.abs(delta) < 0.5;
+        const improved = inverted ? delta < 0 : delta > 0;
+        const color    = neutral ? 'var(--color-text-muted)' : (improved ? '#12DF34' : '#E31424');
+
+        arrowEl.textContent = neutral ? '·' : (delta > 0 ? '▲' : '▼');
+        arrowEl.style.color = color;
+        valueEl.textContent = (neutral ? '±' : (delta > 0 ? '+' : '')) + fmt(delta, 2) + '%';
+        valueEl.className   = 'kpi-number mono' + (neutral ? '' : (improved ? ' is-green' : ' is-red'));
+        metaEl.textContent  = suffixFn ? suffixFn() : '';
+    }
+
+    function mrmRenderTrend(curr, prev) {
+        // curr e prev são saída de computeMetrics() — campos: eligible, slaCompliance, avgMtfc, avgMtts
+        const currSla  = curr.eligible ? curr.slaCompliance : null;
+        const prevSla  = prev.eligible ? prev.slaCompliance : null;
+        const currMtfc = curr.closed   ? curr.avgMtfc       : null;
+        const prevMtfc = prev.closed   ? prev.avgMtfc       : null;
+        const currMtts = curr.closed   ? curr.avgMtts       : null;
+        const prevMtts = prev.closed   ? prev.avgMtts       : null;
+
+        mrmSetDelta('sla',  currSla,  prevSla,  false,
+            () => (prevSla  !== null && currSla  !== null ? fmt(currSla,  2) + '% vs ' + fmt(prevSla,  2) + '%' : ''));
+        mrmSetDelta('mtfc', currMtfc, prevMtfc, true,
+            () => (prevMtfc !== null && currMtfc !== null ? fmt(currMtfc, 2) + 'h vs ' + fmt(prevMtfc, 2) + 'h' : ''));
+        mrmSetDelta('mtts', currMtts, prevMtts, true,
+            () => (prevMtts !== null && currMtts !== null ? fmt(currMtts, 2) + 'd vs ' + fmt(prevMtts, 2) + 'd' : ''));
+    }
+
+    // Chamado pelo renderPage() a cada mudança de mês — usa rawData (sem filtros de UI)
+    function initMonthlyRegionSection(monthKey) {
+        const section = document.getElementById('monthly-mrm-section');
+        if (!section || !monthKey) return;
+
+        // rawData ignora TODOS os filtros dimensionais da UI (região, prioridade, etc.)
+        // Garante que a tabela sempre mostra as 6 regiões independentemente do filtro selecionado
+        const monthData = regionTicketsInMonth(rawData, 'Global', monthKey);
+        const prevData  = regionTicketsInMonth(rawData, 'Global', prevMonthKey(monthKey));
+
+        // Métricas por região via computeMetrics() — idêntico ao Executive Summary
+        const regionMetrics = {};
+        REGION_GROUPS.forEach(r => {
+            regionMetrics[r] = computeMetrics(
+                monthData.filter(t => getTicketRegionGroup(t) === r),
+                r
+            );
+        });
+
+        // regionSLAMap para o mapa: null quando não há tickets elegíveis na região
+        const regionSLAMap = {};
+        REGION_GROUPS.forEach(r => {
+            regionSLAMap[r] = regionMetrics[r].eligible ? regionMetrics[r].slaCompliance : null;
+        });
+
+        // Renderizar tabela e trend (síncronos)
+        mrmRenderRegionTable(regionMetrics);
+        mrmRenderTrend(computeMetrics(monthData), computeMetrics(prevData));
+
+        section.style.display = '';
+
+        // Mapa é async — não bloqueia o resto da UI
+        mrmFetchGeoJson()
+            .then(geoJson => { mrmRenderMap(geoJson, regionSLAMap); })
+            .catch(() => {
+                const svg = document.getElementById('world-map-svg');
+                if (svg) svg.innerHTML =
+                    '<text x="50%" y="50%" text-anchor="middle" fill="#64748b" font-family="DM Sans,sans-serif" font-size="14">Mapa indisponível</text>';
+            });
     }
 
     document.addEventListener('filterschange', applyPage);

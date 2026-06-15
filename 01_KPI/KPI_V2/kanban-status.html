@@ -180,6 +180,55 @@
             0%, 100% { opacity: 0.5; }
             50%       { opacity: 0.85; }
         }
+
+        /* ── Country/Region pill buttons ────────────────── */
+        .country-filter-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+        .country-btn {
+            padding: 4px 11px; border-radius: 20px; cursor: pointer;
+            border: 1px solid var(--color-border); background: var(--color-surface);
+            color: var(--color-text-muted); font-size: 12px;
+            font-family: var(--font-display); transition: background 0.15s, color 0.15s, border-color 0.15s;
+            white-space: nowrap;
+        }
+        .country-btn:hover { border-color: var(--color-primary); color: var(--color-text); }
+        .country-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+        .filter-field-countries { width: 100%; min-width: 100%; }
+
+        /* ── Flow line (Melhoria 3a) ───────────────────── */
+        .kanban-flow-line {
+            margin: 0 0 8px;
+            opacity: 0.6;
+        }
+
+        /* ── Pulse glow nos headers com gargalo (3b) ───── */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); }
+            50%       { box-shadow: inset 0 0 12px 2px rgba(255,255,255,0.18); }
+        }
+        .kanban-col-header.is-bottleneck {
+            animation: pulse-glow 2.2s ease-in-out infinite;
+        }
+
+        /* ── Entrada das colunas (3c) ──────────────────── */
+        @keyframes col-enter {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .kanban-col {
+            animation: col-enter 0.4s ease both;
+        }
+        .kanban-col:nth-child(1) { animation-delay: 0.05s; }
+        .kanban-col:nth-child(2) { animation-delay: 0.12s; }
+        .kanban-col:nth-child(3) { animation-delay: 0.19s; }
+        .kanban-col:nth-child(4) { animation-delay: 0.26s; }
+        .kanban-col:nth-child(5) { animation-delay: 0.33s; }
+
+        /* ── Respeitar prefers-reduced-motion ──────────── */
+        @media (prefers-reduced-motion: reduce) {
+            .kanban-flow-line,
+            .kanban-col-header.is-bottleneck,
+            .kanban-col { animation: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -228,11 +277,9 @@
 
             <!-- ── Filters ──────────────────────────────── -->
             <section class="filter-bar" aria-label="Filtros">
-                <div class="filter-field">
-                    <label for="filter-region" data-i18n="filter_region">Região</label>
-                    <select id="filter-region">
-                        <option value="" data-i18n="filter_all">Todos</option>
-                    </select>
+                <div class="filter-field filter-field-countries">
+                    <label data-i18n="filter_region">Região</label>
+                    <div id="filter-region" class="country-filter-btns"></div>
                 </div>
                 <div class="filter-field">
                     <label for="filter-department" data-i18n="filter_department">Departamento</label>
@@ -281,7 +328,67 @@
                     <span id="last-update-label" style="font-size:0.77rem;color:var(--color-text-muted);align-self:flex-end;"></span>
                 </section>
 
+                <!-- ── Linha de fluxo animada (Melhoria 3a) ── -->
+                <div class="kanban-flow-line" aria-hidden="true">
+                    <svg id="flow-svg" width="100%" height="28" style="display:block;overflow:visible;" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="flow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%"   style="stop-color:#E31424;stop-opacity:0.7"/>
+                                <stop offset="25%"  style="stop-color:#5C2ABF;stop-opacity:0.8"/>
+                                <stop offset="50%"  style="stop-color:#E4BF14;stop-opacity:0.8"/>
+                                <stop offset="75%"  style="stop-color:#E07D14;stop-opacity:0.8"/>
+                                <stop offset="100%" style="stop-color:#C05A10;stop-opacity:0.7"/>
+                            </linearGradient>
+                        </defs>
+                        <line x1="0" y1="14" x2="100%" y2="14" stroke="url(#flow-grad)" stroke-width="2" opacity="0.35"/>
+                        <circle r="4" fill="#5C2ABF" opacity="0.85">
+                            <animateMotion dur="4s" repeatCount="indefinite" path="M0,14 L10000,14"/>
+                        </circle>
+                        <circle r="3" fill="#E4BF14" opacity="0.75">
+                            <animateMotion dur="6s" begin="1.2s" repeatCount="indefinite" path="M0,14 L10000,14"/>
+                        </circle>
+                        <circle r="3.5" fill="#12DF34" opacity="0.7">
+                            <animateMotion dur="5s" begin="2.5s" repeatCount="indefinite" path="M0,14 L10000,14"/>
+                        </circle>
+                        <circle r="2.5" fill="#E31424" opacity="0.8">
+                            <animateMotion dur="7s" begin="0.5s" repeatCount="indefinite" path="M0,14 L10000,14"/>
+                        </circle>
+                        <circle r="3" fill="#fff" opacity="0.4">
+                            <animateMotion dur="4.5s" begin="3s" repeatCount="indefinite" path="M0,14 L10000,14"/>
+                        </circle>
+                    </svg>
+                </div>
+
                 <div id="kanban-board" class="kanban-board"></div>
+
+                <!-- ── Reconciliação backlog vs kanban (Melhoria 2) ── -->
+                <div id="reconciliation-bar" style="
+                    background: var(--color-surface);
+                    border-radius: 10px;
+                    padding: 11px 16px;
+                    margin: 14px 0 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 18px;
+                    font-size: 0.77rem;
+                    color: var(--color-text-muted);
+                    border: 1px solid var(--color-border);
+                    flex-wrap: wrap;
+                ">
+                    <span>
+                        <strong id="recon-kanban-total" style="color:var(--color-text);font-family:var(--font-mono,monospace);">--</strong>
+                        tickets nos 5 status do Kanban
+                    </span>
+                    <span style="opacity:0.4;">·</span>
+                    <span id="recon-diff-block" style="display:none;">
+                        <strong id="recon-diff" style="color:#E4BF14;font-family:var(--font-mono,monospace);">--</strong>
+                        <span id="recon-diff-label"> tickets em status fora do padrão</span>
+                        <a href="#" id="recon-diff-link" style="color:#E4BF14;margin-left:6px;text-decoration:underline;font-size:0.72rem;" title="Tickets com status não mapeado nos 5 status oficiais">Ver detalhes</a>
+                    </span>
+                    <span id="recon-ok-block" style="display:none;color:#12DF34;">
+                        ✓ Total consistente com o backlog
+                    </span>
+                </div>
 
                 <section class="card" style="padding:20px 22px;margin-top:22px;">
                     <h3 style="margin:0 0 3px;font-size:0.98rem;" data-tx="top_bottlenecks_title">Principais Gargalos</h3>
@@ -423,54 +530,276 @@
         return Number(n).toLocaleString('pt-BR');
     }
 
+    function normalizeStatus(s) {
+        if (!s) return '';
+        if (s.includes('Visita Tecnica') || s.includes('Visita Técnica')) {
+            return 'Aguardando Terceiro / Visita Técnica';
+        }
+        return s.trim();
+    }
+
     // ═══════════════════════════════════════════════════════
-    // FETCH — RPC server-side (retorna 5-11 linhas pré-agregadas)
+    // FETCH FILTER OPTIONS — query direta (sem RPC)
+    // ═══════════════════════════════════════════════════════
+    async function fetchFilterOptions() {
+        // Regiões: lista fixa de domínio de negócio
+        const regioes = ['Brasil', 'USA', 'Argentina', 'México', 'LATAM', 'ROW'];
+        try {
+            const [deptRes, prioRes] = await Promise.all([
+                fetch(
+                    `${window.SUPABASE_URL}/rest/v1/vw_ticket_status_intervals` +
+                    `?select=department_name&is_deleted=eq.false&limit=2000`,
+                    { headers: supabaseHeaders() }
+                ),
+                fetch(
+                    `${window.SUPABASE_URL}/rest/v1/vw_ticket_status_intervals` +
+                    `?select=priority&is_deleted=eq.false&limit=2000`,
+                    { headers: supabaseHeaders() }
+                )
+            ]);
+            const deptRows = deptRes.ok ? await deptRes.json() : [];
+            const prioRows = prioRes.ok ? await prioRes.json() : [];
+            const departamentos = [...new Set(
+                deptRows.map(r => r.department_name).filter(Boolean).filter(d => d !== 'Oficina')
+            )].sort();
+            const prioridades = [...new Set(
+                prioRows.map(r => r.priority).filter(Boolean)
+            )].sort();
+            return { regioes, departamentos, prioridades };
+        } catch (_) {
+            return { regioes, departamentos: [], prioridades: [] };
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // HELPER — agrega rows de vw_bottleneck_by_status por status
+    // ═══════════════════════════════════════════════════════
+    function aggregateBottleneckRows(rows) {
+        const acc = {};
+        rows.forEach(r => {
+            const norm = normalizeStatus(r.status);
+            if (!STATUS_ORDER.includes(norm)) return;
+            const nInt = Number(r.total_intervalos) || 0;
+            const nAvg = Number(r.avg_horas)        || 0;
+            if (!acc[norm]) {
+                acc[norm] = {
+                    status_norm:       norm,
+                    _sumW:             nAvg * nInt,
+                    _totInt:           nInt,
+                    mediana_horas:     Number(r.mediana_horas) || 0,
+                    p90_horas:         Number(r.p90_horas)     || 0,
+                    tickets_distintos: Number(r.tickets_afetados) || 0,
+                };
+            } else {
+                const a = acc[norm];
+                a._sumW    += nAvg * nInt;
+                a._totInt  += nInt;
+                a.mediana_horas     = Math.max(a.mediana_horas, Number(r.mediana_horas) || 0);
+                a.p90_horas         = Math.max(a.p90_horas,     Number(r.p90_horas)     || 0);
+                a.tickets_distintos += Number(r.tickets_afetados) || 0;
+            }
+        });
+        return Object.values(acc).map(a => ({
+            status_norm:       a.status_norm,
+            avg_horas:         a._totInt > 0 ? a._sumW / a._totInt : 0,
+            mediana_horas:     a.mediana_horas,
+            p90_horas:         a.p90_horas,
+            total_intervalos:  a._totInt,
+            tickets_distintos: a.tickets_distintos,
+        }));
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // FETCH ELIGIBLE IDs — filtro de região via regiao_grupo
+    // String() garante match mesmo se ticket_id vier como bigint
+    // ═══════════════════════════════════════════════════════
+    async function fetchEligibleIds(regiao) {
+        if (!regiao) return null; // null = sem filtro, aceitar todos
+        const allIds = new Set();
+        let offset = 0;
+        const limit = 1000;
+        const base = `${window.SUPABASE_URL}/rest/v1/vw_tickets_bi_base` +
+            `?select=ticket_id` +
+            `&is_weekly_report_filter_included=eq.true` +
+            `&regiao_grupo=eq.${encodeURIComponent(regiao)}`;
+        while (true) {
+            const res = await fetch(`${base}&limit=${limit}&offset=${offset}`, { headers: supabaseHeaders() });
+            if (!res.ok) return null;
+            const rows = await res.json();
+            rows.forEach(r => { if (r.ticket_id != null) allIds.add(String(r.ticket_id)); });
+            if (rows.length < limit) break;
+            offset += limit;
+        }
+        return allIds;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // FETCH INTERVALS paginado — query por status individual
+    // (evita in.() com caracteres especiais; parallel por status)
+    // ═══════════════════════════════════════════════════════
+    async function fetchIntervalsForStatus(status) {
+        const all = [];
+        let offset = 0;
+        const limit = 1000;
+        const base = `${window.SUPABASE_URL}/rest/v1/vw_ticket_status_intervals` +
+            `?select=ticket_id,status,status_duration_hours` +
+            `&is_deleted=eq.false` +
+            `&status=eq.${encodeURIComponent(status)}` +
+            `&status_duration_hours=gte.0`;
+        while (true) {
+            const res = await fetch(`${base}&limit=${limit}&offset=${offset}`, { headers: supabaseHeaders() });
+            if (!res.ok) return [];
+            const rows = await res.json();
+            all.push(...rows);
+            if (rows.length < limit) break;
+            offset += limit;
+        }
+        return all;
+    }
+
+    async function fetchAllIntervals() {
+        // STATUS_ORDER + variante sem acento de Visita Técnica
+        const FETCH_STATUSES = [
+            ...STATUS_ORDER,
+            'Aguardando Terceiro / Visita Tecnica',
+        ];
+        const results = await Promise.all(FETCH_STATUSES.map(fetchIntervalsForStatus));
+        return results.flat();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // COMPUTE METRICS — client-side (avg, mediana P50, P90)
+    // String() garante comparação correta independente do tipo
+    // ═══════════════════════════════════════════════════════
+    function computeMetricsFromIntervals(rows, eligibleIds) {
+        console.log('[Kanban] eligibleIds size:', eligibleIds !== null ? eligibleIds.size : 'null (todos)');
+
+        const byStatus = {};
+        STATUS_ORDER.forEach(s => { byStatus[s] = { durations: [], ticketIds: new Set() }; });
+
+        let filteredCount = 0;
+        rows.forEach(r => {
+            if (eligibleIds !== null && !eligibleIds.has(String(r.ticket_id))) return;
+            filteredCount++;
+            const norm = normalizeStatus(r.status || '');
+            if (!byStatus[norm]) return;
+            const h = Number(r.status_duration_hours);
+            if (!isFinite(h) || h < 0) return;
+            byStatus[norm].durations.push(h);
+            byStatus[norm].ticketIds.add(String(r.ticket_id));
+        });
+
+        const totalDurations = Object.values(byStatus).reduce((s, b) => s + b.durations.length, 0);
+        console.log('[Kanban] filtered intervals:', filteredCount, '| durations:', totalDurations);
+
+        return STATUS_ORDER.map(status => {
+            const data   = byStatus[status];
+            const sorted = [...data.durations].sort((a, b) => a - b);
+            const n      = sorted.length;
+            if (n === 0) return {
+                status_norm: status, avg_horas: 0, mediana_horas: 0,
+                p90_horas: 0, total_intervalos: 0, tickets_distintos: 0,
+            };
+            const mean   = sorted.reduce((s, v) => s + v, 0) / n;
+            const median = sorted[Math.floor(n / 2)];
+            const p90    = sorted[Math.floor(n * 0.9)];
+            return {
+                status_norm:       status,
+                avg_horas:         mean,
+                mediana_horas:     median,
+                p90_horas:         p90,
+                total_intervalos:  n,
+                tickets_distintos: data.ticketIds.size,
+            };
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // REGION_MAP_INTERVALS — label UI → valor raw em vw_ticket_status_intervals.regiao
+    // A view usa zoho_tickets.regiao diretamente (sem normalizar), enquanto
+    // vw_tickets_bi_base.regiao_grupo já é normalizado ('USA', 'LATAM', etc.).
+    // ROW tem múltiplos raw values → Layer 2 é pulada; Layer 3 (ID join) cuida.
+    // ═══════════════════════════════════════════════════════
+    const REGION_MAP_INTERVALS = {
+        'Brasil':    'Brasil',
+        'USA':       'Estados Unidos',
+        'Argentina': 'Argentina',
+        'México':    'México',
+        'LATAM':     'América latina - Exceto Argentina e México',
+    };
+
+    // ═══════════════════════════════════════════════════════
+    // FETCH KANBAN METRICS — 3 camadas de fallback
     // ═══════════════════════════════════════════════════════
     async function fetchKanbanMetrics(regiao, dept, priority) {
-        const body = {};
-        if (regiao)   body.p_regiao   = regiao;
-        if (dept)     body.p_dept     = dept;
-        if (priority) body.p_priority = priority;
+        // Camada 1 — RPC primário (se existir)
+        // REGION_MAP_INTERVALS converte label UI → raw regiao do banco
+        // (RPC filtra por zoho_tickets.regiao, não pelo campo normalizado regiao_grupo)
+        try {
+            const body = {};
+            if (regiao)   body.p_regiao   = REGION_MAP_INTERVALS[regiao] ?? regiao;
+            if (dept)     body.p_dept     = dept;
+            if (priority) body.p_priority = priority;
+            const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/fn_kanban_status_metrics`, {
+                method: 'POST',
+                headers: supabaseHeaders(),
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) return data;
+            }
+        } catch (_) {}
 
-        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/fn_kanban_status_metrics`, {
-            method: 'POST',
-            headers: supabaseHeaders(),
-            body: JSON.stringify(body)
-        });
-        if (!res.ok) {
-            const txt = await res.text().catch(() => '');
-            throw new Error(`fn_kanban_status_metrics HTTP ${res.status}: ${txt}`);
-        }
-        return await res.json();
+        // Camada 2 — vw_bottleneck_by_status direto
+        // Usa REGION_MAP_INTERVALS para converter label UI → valor raw da coluna regiao.
+        // ROW (múltiplos raw values) não tem mapeamento direto → pula para Camada 3.
+        try {
+            const rawRegiao = regiao ? REGION_MAP_INTERVALS[regiao] : null;
+            const skipLayer2 = regiao && rawRegiao === undefined;
+            if (!skipLayer2) {
+                let url = `${window.SUPABASE_URL}/rest/v1/vw_bottleneck_by_status` +
+                    `?select=status,regiao,avg_horas,mediana_horas,p90_horas,total_intervalos,tickets_afetados` +
+                    `&limit=500`;
+                if (rawRegiao) url += `&regiao=eq.${encodeURIComponent(rawRegiao)}`;
+                const res = await fetch(url, { headers: supabaseHeaders() });
+                if (res.ok) {
+                    const rows = await res.json();
+                    const hasData = rows.some(r => STATUS_ORDER.includes(normalizeStatus(r.status)));
+                    if (hasData) return aggregateBottleneckRows(rows);
+                }
+            }
+        } catch (_) {}
+
+        // Camada 3 — ID join client-side via regiao_grupo (robusto para qualquer raw)
+        // String() em ambos os lados evita falha por bigint vs text
+        const [eligibleIds, allIntervals] = await Promise.all([
+            fetchEligibleIds(regiao),
+            fetchAllIntervals(),
+        ]);
+        return computeMetricsFromIntervals(allIntervals, eligibleIds);
     }
 
-    async function fetchFilterOptions() {
-        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/fn_kanban_filter_options`, {
-            method: 'POST',
-            headers: supabaseHeaders(),
-            body: '{}'
-        });
-        if (!res.ok) return { regioes: [], departamentos: [], prioridades: [] };
-        return await res.json();
-    }
-
-    async function fetchSnapshotAtual() {
-        const url = `${window.SUPABASE_URL}/rest/v1/vw_tickets_bi_base` +
+    // ═══════════════════════════════════════════════════════
+    // FETCH SNAPSHOT ATUAL — usa regiao_grupo (campo normalizado)
+    // CORREÇÃO: era &regiao=eq.X → agora &regiao_grupo=eq.X
+    // ═══════════════════════════════════════════════════════
+    async function fetchSnapshotAtual(regiao) {
+        let url = `${window.SUPABASE_URL}/rest/v1/vw_tickets_bi_base` +
             `?select=status` +
             `&is_weekly_report_filter_included=eq.true` +
             `&is_open=eq.true` +
             `&closed_time=is.null` +
             `&status=not.in.(Fechado,Resolvido,Closed)`;
+        if (regiao) url += `&regiao_grupo=eq.${encodeURIComponent(regiao)}`;
+
         const res = await fetch(url, { headers: supabaseHeaders() });
         if (!res.ok) throw new Error(`fetchSnapshotAtual HTTP ${res.status}`);
         const rows = await res.json();
         const contagem = {};
         rows.forEach(r => {
-            let s = r.status || '';
-            if (s.includes('Visita Tecnica') || s.includes('Visita Técnica')) {
-                s = 'Aguardando Terceiro / Visita Técnica';
-            }
-            contagem[s] = (contagem[s] || 0) + 1;
+            const s = normalizeStatus(r.status || '');
+            if (s) contagem[s] = (contagem[s] || 0) + 1;
         });
         return contagem;
     }
@@ -483,15 +812,13 @@
         const depts   = Array.isArray(opts.departamentos) ? opts.departamentos : [];
         const prios   = Array.isArray(opts.prioridades)   ? opts.prioridades   : [];
 
-        const rSel = document.getElementById('filter-region');
+        renderRegionPills(regioes);
+
         const dSel = document.getElementById('filter-department');
         const pSel = document.getElementById('filter-priority');
-        const curR = rSel.value;
         const curD = dSel.value;
         const curP = pSel.value;
 
-        rSel.innerHTML = `<option value="">${t('filter_all')}</option>` +
-            regioes.map(v => `<option value="${v}"${v === curR ? ' selected' : ''}>${v}</option>`).join('');
         dSel.innerHTML = `<option value="">${t('filter_all')}</option>` +
             depts.map(v => `<option value="${v}"${v === curD ? ' selected' : ''}>${v}</option>`).join('');
         pSel.innerHTML = `<option value="">${t('filter_all')}</option>` +
@@ -519,7 +846,7 @@
             const col = document.createElement('div');
             col.className = 'kanban-col';
             col.innerHTML = `
-                <div class="kanban-col-header" style="background:${cfg.color};color:${cfg.textColor};">
+                <div class="kanban-col-header${isBottleneck ? ' is-bottleneck' : ''}" style="background:${cfg.color};color:${cfg.textColor};">
                     ${status}
                 </div>
                 <div class="kanban-col-body">
@@ -548,6 +875,27 @@
             `;
             board.appendChild(col);
         });
+
+        // ── Reconciliação backlog vs kanban (Melhoria 2) ──
+        const kanbanTotal = STATUS_ORDER.reduce((acc, s) => acc + (snapshot && snapshot[s] ? snapshot[s] : 0), 0);
+        const totalBacklog = snapshot ? Object.values(snapshot).reduce((a, b) => a + b, 0) : 0;
+        const diff = totalBacklog - kanbanTotal;
+
+        const reconKanbanEl = document.getElementById('recon-kanban-total');
+        if (reconKanbanEl) reconKanbanEl.textContent = fmtNum(kanbanTotal);
+
+        const reconDiffBlock = document.getElementById('recon-diff-block');
+        const reconOkBlock   = document.getElementById('recon-ok-block');
+        if (diff > 0) {
+            if (reconDiffBlock) {
+                reconDiffBlock.style.display = '';
+                document.getElementById('recon-diff').textContent = fmtNum(diff);
+            }
+            if (reconOkBlock) reconOkBlock.style.display = 'none';
+        } else {
+            if (reconDiffBlock) reconDiffBlock.style.display = 'none';
+            if (reconOkBlock)   reconOkBlock.style.display   = '';
+        }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -614,6 +962,26 @@
     let activeFilters    = { regiao: '', department: '', priority: '' };
     let filterOptionsCache = null;
     let snapshotCache      = null;  // snapshot atual — fixo, não muda com filtros
+    let _selectedRegion    = '';    // valor selecionado nos pills de região
+
+    function renderRegionPills(regioes) {
+        const container = document.getElementById('filter-region');
+        if (!container) return;
+        container.innerHTML = '';
+        ['', ...regioes].forEach(v => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = v === '' ? t('filter_all') : v;
+            btn.className = 'country-btn' + (v === _selectedRegion ? ' active' : '');
+            btn.addEventListener('click', () => {
+                _selectedRegion  = v;
+                activeFilters.regiao = v;
+                renderRegionPills(regioes);
+                applyFilters();
+            });
+            container.appendChild(btn);
+        });
+    }
 
     async function loadData() {
         showLoading();
@@ -629,7 +997,8 @@
             populateFilters(filterOpts);
             // reset filtros ao recarregar
             activeFilters = { regiao: '', department: '', priority: '' };
-            document.getElementById('filter-region').value     = '';
+            _selectedRegion = '';
+            renderRegionPills(filterOpts.regioes || []);
             document.getElementById('filter-department').value = '';
             document.getElementById('filter-priority').value   = '';
 
@@ -651,13 +1020,11 @@
     async function applyFilters() {
         showLoading();
         try {
-            const metrics = await fetchKanbanMetrics(
-                activeFilters.regiao,
-                activeFilters.department,
-                activeFilters.priority
-            );
-            // snapshot não muda com filtros — representa estado atual real
-            renderKanban(metrics, snapshotCache);
+            const [metrics, snapshot] = await Promise.all([
+                fetchKanbanMetrics(activeFilters.regiao, activeFilters.department, activeFilters.priority),
+                fetchSnapshotAtual(activeFilters.regiao),
+            ]);
+            renderKanban(metrics, snapshot);
             renderTopBottlenecks(metrics);
             showPage();
         } catch (err) {
@@ -674,7 +1041,7 @@
 
         document.getElementById('btn-apply').addEventListener('click', () => {
             activeFilters = {
-                regiao:     document.getElementById('filter-region').value,
+                regiao:     _selectedRegion,
                 department: document.getElementById('filter-department').value,
                 priority:   document.getElementById('filter-priority').value,
             };
@@ -682,7 +1049,8 @@
         });
 
         document.getElementById('btn-clear').addEventListener('click', () => {
-            document.getElementById('filter-region').value     = '';
+            _selectedRegion = '';
+            renderRegionPills(filterOptionsCache ? (filterOptionsCache.regioes || []) : []);
             document.getElementById('filter-department').value = '';
             document.getElementById('filter-priority').value   = '';
             activeFilters = { regiao: '', department: '', priority: '' };
@@ -698,7 +1066,8 @@
 
         document.addEventListener('langchange', () => {
             applyExtraI18n();
-            ['filter-region', 'filter-department', 'filter-priority'].forEach(id => {
+            if (filterOptionsCache) renderRegionPills(filterOptionsCache.regioes || []);
+            ['filter-department', 'filter-priority'].forEach(id => {
                 const sel = document.getElementById(id);
                 if (sel && sel.options[0]) sel.options[0].textContent = t('filter_all');
             });
