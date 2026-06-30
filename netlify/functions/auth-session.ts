@@ -10,12 +10,20 @@ function env(name: string): string {
     process?: { env?: Record<string, string | undefined> };
   };
 
-  if (typeof globals.Netlify?.env?.get === "function") {
-    return globals.Netlify.env.get(name) ?? "";
+  try {
+    if (typeof globals.Netlify?.env?.get === "function") {
+      return globals.Netlify.env.get(name) ?? "";
+    }
+  } catch (_error) {
+    // Fall through to other runtime providers.
   }
 
-  if (typeof globals.Deno?.env?.get === "function") {
-    return globals.Deno.env.get(name) ?? "";
+  try {
+    if (typeof globals.Deno?.env?.get === "function") {
+      return globals.Deno.env.get(name) ?? "";
+    }
+  } catch (_error) {
+    // Fall through to process.env.
   }
 
   return globals.process?.env?.[name] ?? "";

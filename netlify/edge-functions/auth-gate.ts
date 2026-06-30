@@ -23,12 +23,20 @@ function env(name: string): string {
     process?: { env?: Record<string, string | undefined> };
   };
 
-  if (typeof globals.Netlify?.env?.get === "function") {
-    return globals.Netlify.env.get(name) ?? "";
+  try {
+    if (typeof globals.Netlify?.env?.get === "function") {
+      return globals.Netlify.env.get(name) ?? "";
+    }
+  } catch (_error) {
+    // Fall through to other runtime providers.
   }
 
-  if (typeof globals.Deno?.env?.get === "function") {
-    return globals.Deno.env.get(name) ?? "";
+  try {
+    if (typeof globals.Deno?.env?.get === "function") {
+      return globals.Deno.env.get(name) ?? "";
+    }
+  } catch (_error) {
+    // Fall through to process.env.
   }
 
   return globals.process?.env?.[name] ?? "";
@@ -113,15 +121,17 @@ function redirectToAuth(req: Request, reason: string, mode?: string): Response {
   authUrl.searchParams.set("reason", reason);
   if (mode) authUrl.searchParams.set("mode", mode);
 
-  const response = Response.redirect(authUrl, 302);
+  const headers = new Headers({
+    Location: authUrl.toString(),
+    "Cache-Control": "no-store",
+  });
 
   if (reason === "invalid_session" || reason === "missing_session") {
-    response.headers.append("Set-Cookie", clearCookie(req, ACCESS_COOKIE));
-    response.headers.append("Set-Cookie", clearCookie(req, REFRESH_COOKIE));
+    headers.append("Set-Cookie", clearCookie(req, ACCESS_COOKIE));
+    headers.append("Set-Cookie", clearCookie(req, REFRESH_COOKIE));
   }
 
-  response.headers.set("Cache-Control", "no-store");
-  return response;
+  return new Response(null, { status: 302, headers });
 }
 
 async function fetchUser(supabaseUrl: string, publishableKey: string, accessToken: string) {
@@ -259,7 +269,13 @@ export default async (req: Request, context: Context) => {
     if (validation.reason === "must_change_password") {
       const passwordUrl = new URL("/alterar-senha.html", url.origin);
       passwordUrl.searchParams.set("returnTo", url.pathname + url.search + url.hash);
-      return Response.redirect(passwordUrl, 302);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: passwordUrl.toString(),
+          "Cache-Control": "no-store",
+        },
+      });
     }
     return redirectToAuth(req, validation.reason);
   }
