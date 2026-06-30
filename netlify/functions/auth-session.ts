@@ -3,43 +3,6 @@ import type { Config, Context } from "@netlify/functions";
 const ACCESS_COOKIE = "pb_access_token";
 const REFRESH_COOKIE = "pb_refresh_token";
 
-function env(name: string): string {
-  const globals = globalThis as unknown as {
-    Netlify?: { env?: { get?: (key: string) => string | undefined } };
-    Deno?: { env?: { get?: (key: string) => string | undefined } };
-    process?: { env?: Record<string, string | undefined> };
-  };
-
-  try {
-    if (typeof globals.Netlify?.env?.get === "function") {
-      return globals.Netlify.env.get(name) ?? "";
-    }
-  } catch (_error) {
-    // Fall through to other runtime providers.
-  }
-
-  try {
-    if (typeof globals.Deno?.env?.get === "function") {
-      return globals.Deno.env.get(name) ?? "";
-    }
-  } catch (_error) {
-    // Fall through to process.env.
-  }
-
-  return globals.process?.env?.[name] ?? "";
-}
-
-function getSupabaseUrl(): string {
-  return env("PLAYBOOK_SUPABASE_URL") || env("SUPABASE_URL");
-}
-
-function getPublishableKey(): string {
-  return env("PLAYBOOK_SUPABASE_PUBLISHABLE_KEY") ||
-    env("SUPABASE_PUBLISHABLE_KEY") ||
-    env("PLAYBOOK_SUPABASE_ANON_KEY") ||
-    env("SUPABASE_ANON_KEY");
-}
-
 function isLocalRequest(req: Request): boolean {
   const url = new URL(req.url);
   return url.hostname === "localhost" || url.hostname === "127.0.0.1";
@@ -55,29 +18,14 @@ function setCookie(req: Request, name: string, value: string, maxAge: number): s
 }
 
 function json(payload: unknown, status = 200, headers?: HeadersInit): Response {
+  const responseHeaders = new Headers(headers ?? {});
+  responseHeaders.set("Content-Type", "application/json");
+  responseHeaders.set("Cache-Control", "no-store");
+
   return new Response(JSON.stringify(payload), {
     status,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-      ...(headers ?? {}),
-    },
+    headers: responseHeaders,
   });
-}
-
-async function verifyAccessToken(accessToken: string): Promise<boolean> {
-  const supabaseUrl = getSupabaseUrl();
-  const publishableKey = getPublishableKey();
-  if (!supabaseUrl || !publishableKey) return false;
-
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-    headers: {
-      apikey: publishableKey,
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  return response.ok;
 }
 
 export default async (req: Request, _context: Context) => {
@@ -96,11 +44,6 @@ export default async (req: Request, _context: Context) => {
 
   if (!accessToken || !refreshToken) {
     return json({ success: false, error: "Sessao incompleta." }, 400);
-  }
-
-  const isValid = await verifyAccessToken(accessToken);
-  if (!isValid) {
-    return json({ success: false, error: "Access token invalido." }, 401);
   }
 
   const headers = new Headers();
