@@ -13,8 +13,7 @@ type ValidationResult =
   | { ok: true; accessToken: string; refreshToken?: string; profile: PlaybookProfile; setCookies: string[] }
   | { ok: false; reason: string; clearCookies?: boolean };
 
-const ACCESS_COOKIE = "pb_access_token";
-const REFRESH_COOKIE = "pb_refresh_token";
+const SESSION_COOKIE = "pb_session";
 
 function env(name: string): string {
   const globals = globalThis as unknown as {
@@ -84,6 +83,38 @@ function clearCookie(req: Request, name: string): string {
   return setCookie(req, name, "", 0);
 }
 
+function base64UrlDecode(value: string): string {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return atob(padded);
+}
+
+function encodeSessionCookie(accessToken: string, refreshToken?: string): string {
+  return btoa(JSON.stringify({
+    access_token: accessToken,
+    refresh_token: refreshToken || "",
+  })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function getSessionTokens(cookies: Record<string, string>): { accessToken: string; refreshToken: string } {
+  const rawSession = cookies[SESSION_COOKIE] || "";
+  if (!rawSession) return { accessToken: "", refreshToken: "" };
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(rawSession)) as {
+      access_token?: string;
+      refresh_token?: string;
+    };
+
+    return {
+      accessToken: String(payload.access_token || ""),
+      refreshToken: String(payload.refresh_token || ""),
+    };
+  } catch (_error) {
+    return { accessToken: "", refreshToken: "" };
+  }
+}
+
 function isPublicPath(pathname: string): boolean {
   const path = pathname.toLowerCase();
 
@@ -127,8 +158,7 @@ function redirectToAuth(req: Request, reason: string, mode?: string): Response {
   });
 
   if (reason === "invalid_session" || reason === "missing_session") {
-    headers.append("Set-Cookie", clearCookie(req, ACCESS_COOKIE));
-    headers.append("Set-Cookie", clearCookie(req, REFRESH_COOKIE));
+    headers.append("Set-Cookie", clearCookie(req, SESSION_COOKIE));
   }
 
   return new Response(null, { status: 302, headers });
@@ -196,8 +226,12 @@ async function refreshSession(
     accessToken: String(payload.access_token),
     refreshToken: String(payload.refresh_token),
     setCookies: [
-      setCookie(req, ACCESS_COOKIE, String(payload.access_token), accessMaxAge),
-      setCookie(req, REFRESH_COOKIE, String(payload.refresh_token), 60 * 60 * 24 * 30),
+      setCookie(
+        req,
+        SESSION_COOKIE,
+        encodeSessionCookie(String(payload.access_token), String(payload.refresh_token)),
+        Math.max(accessMaxAge, 60 * 60 * 24 * 30),
+      ),
     ],
   };
 }
@@ -211,8 +245,9 @@ async function validateSession(req: Request): Promise<ValidationResult> {
   }
 
   const cookies = parseCookies(req.headers.get("Cookie"));
-  let accessToken = cookies[ACCESS_COOKIE];
-  let refreshToken = cookies[REFRESH_COOKIE];
+  const sessionTokens = getSessionTokens(cookies);
+  let accessToken = sessionTokens.accessToken;
+  let refreshToken = sessionTokens.refreshToken;
   let setCookies: string[] = [];
 
   let user = accessToken ? await fetchUser(supabaseUrl, publishableKey, accessToken) : null;

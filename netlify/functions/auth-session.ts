@@ -1,7 +1,6 @@
 import type { Config, Context } from "@netlify/functions";
 
-const ACCESS_COOKIE = "pb_access_token";
-const REFRESH_COOKIE = "pb_refresh_token";
+const SESSION_COOKIE = "pb_session";
 
 function isLocalRequest(req: Request): boolean {
   const url = new URL(req.url);
@@ -15,6 +14,17 @@ function cookieOptions(req: Request, maxAge: number): string {
 
 function setCookie(req: Request, name: string, value: string, maxAge: number): string {
   return `${name}=${encodeURIComponent(value)}; ${cookieOptions(req, maxAge)}`;
+}
+
+function base64UrlEncode(value: string): string {
+  return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function encodeSessionCookie(accessToken: string, refreshToken: string): string {
+  return base64UrlEncode(JSON.stringify({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  }));
 }
 
 function json(payload: unknown, status = 200, headers?: HeadersInit): Response {
@@ -46,9 +56,9 @@ export default async (req: Request, _context: Context) => {
     return json({ success: false, error: "Sessao incompleta." }, 400);
   }
 
-  const headers = new Headers();
-  headers.append("Set-Cookie", setCookie(req, ACCESS_COOKIE, accessToken, Number(body.expires_in) || 3600));
-  headers.append("Set-Cookie", setCookie(req, REFRESH_COOKIE, refreshToken, 60 * 60 * 24 * 30));
+  const headers = new Headers({
+    "Set-Cookie": setCookie(req, SESSION_COOKIE, encodeSessionCookie(accessToken, refreshToken), 60 * 60 * 24 * 30),
+  });
 
   return json({ success: true }, 200, headers);
 };
