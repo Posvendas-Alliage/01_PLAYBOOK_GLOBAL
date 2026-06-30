@@ -2193,6 +2193,128 @@ window.PLAYBOOK_I18N_LOCALES["pt-BR"] = {
     const pt = window.PLAYBOOK_I18N_LOCALES["pt-BR"];
     if (!pt) return;
 
+    pt.security = {
+        login: {
+            title: "Entrar - Playbook Global",
+            kicker: "Nova camada de segurança",
+            heroTitle: "Acesso aprovado para proteger o Playbook Global",
+            notice: "Esta é uma nova funcionalidade de segurança do Playbook Global. Para proteger as informações do projeto, agora é necessário entrar com uma conta aprovada. Contamos com a compreensão de todos durante esta atualização.",
+            cardTitle: "Entrar no Playbook",
+            cardLead: "Use seu e-mail corporativo e senha. Novos cadastros ficam pendentes até aprovação administrativa."
+        },
+        auth: {
+            loginTab: "Entrar",
+            signupTab: "Cadastrar",
+            loginAction: "Entrar",
+            signupAction: "Solicitar cadastro",
+            resetAction: "Enviar recuperação",
+            forgotPassword: "Esqueci minha senha",
+            backToLogin: "Voltar para login",
+            loading: "Processando...",
+            logout: "Sair",
+            signupSuccess: "Cadastro recebido. Depois da confirmação de e-mail, aguarde aprovação administrativa.",
+            resetSent: "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha."
+        },
+        fields: {
+            email: "E-mail",
+            password: "Senha",
+            newPassword: "Nova senha",
+            confirmPassword: "Confirmar senha"
+        },
+        validation: {
+            email: "Informe um e-mail válido.",
+            passwordRequired: "Informe a senha.",
+            passwordStrength: "Use ao menos 12 caracteres com maiúscula, minúscula, número e símbolo.",
+            passwordHint: "Use ao menos 12 caracteres com maiúscula, minúscula, número e símbolo.",
+            passwordMatch: "A confirmação de senha não confere."
+        },
+        status: {
+            Pendente: "Cadastro recebido. Aguarde aprovação administrativa para acessar o Playbook.",
+            Aprovado: "Conta aprovada.",
+            Recusado: "Cadastro recusado. Procure o administrador do Playbook.",
+            Suspenso: "Conta suspensa. Procure o administrador do Playbook."
+        },
+        statusLabel: {
+            Pendente: "Pendente",
+            Aprovado: "Aprovado",
+            Recusado: "Recusado",
+            Suspenso: "Suspenso"
+        },
+        errors: {
+            invalidCredentials: "E-mail ou senha inválidos. Verifique os dados e tente novamente.",
+            signupExists: "Este e-mail já possui cadastro ou está aguardando confirmação.",
+            signupFailed: "Não foi possível concluir o cadastro agora.",
+            resetFailed: "Não foi possível enviar a recuperação de senha agora.",
+            authUnavailableTitle: "Não foi possível validar o acesso.",
+            authUnavailable: "Atualize a página ou tente novamente em instantes."
+        },
+        user: {
+            account: "Conta",
+            admin: "Admin",
+            user: "Usuário",
+            approved: "Aprovado"
+        },
+        password: {
+            title: "Alterar senha - Playbook Global",
+            kicker: "Atualização obrigatória",
+            heroTitle: "Defina uma nova senha segura",
+            heroText: "Para concluir seu acesso ao Playbook Global, atualize a senha antes de continuar.",
+            cardTitle: "Alterar senha",
+            cardLead: "Escolha uma senha forte e exclusiva para esta conta.",
+            submit: "Salvar nova senha",
+            success: "Senha alterada com sucesso.",
+            error: "Não foi possível alterar a senha agora.",
+            profileWarning: "Senha alterada, mas não foi possível atualizar o perfil. Tente entrar novamente."
+        },
+        admin: {
+            title: "Administração do Playbook",
+            nav: "Administração",
+            headerTitle: "Administração do Playbook",
+            headerSubtitle: "Aprovação e governança de usuários",
+            breadcrumb: "Segurança > Usuários",
+            pageTitle: "Administração do Playbook",
+            pageLead: "Aprove, recuse, suspenda ou reative usuários com rastreabilidade administrativa.",
+            usersTitle: "Usuários cadastrados",
+            searchLabel: "Pesquisar e-mail",
+            searchPlaceholder: "nome@empresa.com",
+            statusFilter: "Filtrar por status",
+            allStatuses: "Todos",
+            refresh: "Atualizar",
+            loading: "Carregando usuários...",
+            empty: "Nenhum usuário encontrado para os filtros atuais.",
+            loaded: "Usuários carregados com sucesso.",
+            loadError: "Erro ao carregar usuários.",
+            actionSuccess: "Ação realizada com sucesso.",
+            actionError: "Erro ao executar ação.",
+            selfProtected: "Conta atual protegida",
+            actions: {
+                approve: "Aprovar",
+                reject: "Recusar",
+                suspend: "Suspender",
+                reactivate: "Reativar"
+            },
+            confirm: {
+                approve: "Confirma a aprovação deste usuário?",
+                reject: "Confirma a recusa deste usuário?",
+                suspend: "Confirma a suspensão deste usuário?",
+                reactivate: "Confirma a reativação deste usuário?"
+            },
+            table: {
+                email: "E-mail",
+                status: "Status",
+                role: "Perfil",
+                created: "Cadastro",
+                updated: "Última alteração",
+                actions: "Ações"
+            }
+        }
+    };
+})();
+
+(function () {
+    const pt = window.PLAYBOOK_I18N_LOCALES["pt-BR"];
+    if (!pt) return;
+
     pt.home = pt.home || {};
     pt.home.header = pt.home.header || {};
     pt.home.hero = pt.home.hero || {};
@@ -2527,5 +2649,129 @@ window.PLAYBOOK_I18N_LOCALES["pt-BR"] = {
     pt.kpi.legacy.notice.ctaDashboard = "Ir para KPI Dashboard";
     pt.kpi.legacy.notice.ctaReading = "Ir para Leitura KPI’s";
     pt.kpi.legacy.footer = "Playbook Global - KPI Dashboard (URL Legada)";
+
+    pt.security = pt.security || {};
+    pt.security.auth = {
+        metaTitle: "Playbook Global - Acesso seguro",
+        kicker: "Nova camada de seguranca",
+        heroTitle: "Playbook Global protegido",
+        heroText: "Entre com sua conta aprovada para acessar conteudos, indicadores e materiais do projeto.",
+        securityNotice: "Esta funcionalidade protege as informacoes internas do Playbook. Novos cadastros exigem confirmacao de e-mail e aprovacao administrativa.",
+        benefits: {
+            approved: "Acesso somente para contas aprovadas",
+            protected: "Conteudos e indicadores protegidos",
+            governed: "Governanca centralizada de usuarios"
+        },
+        accountLabel: "Conta corporativa",
+        adminAccountLabel: "Conta administrativa padrao",
+        secureFooter: "Autenticacao protegida e sessao criptografada",
+        title: "Acesse sua conta",
+        subtitle: "Use e-mail e senha. Novos cadastros exigem confirmacao de e-mail e aprovacao administrativa.",
+        tabs: {
+            login: "Entrar",
+            register: "Cadastrar",
+            reset: "Recuperar"
+        },
+        email: "E-mail",
+        password: "Senha",
+        newPassword: "Nova senha",
+        confirmPassword: "Confirmar senha",
+        emailHint: "Use seu e-mail corporativo aprovado.",
+        registerEmailHint: "Depois do cadastro, confirme o e-mail recebido e aguarde aprovacao administrativa.",
+        loginPasswordHint: "A senha diferencia letras maiusculas e minusculas.",
+        passwordHint: "Use 12 ou mais caracteres, com maiuscula, minuscula, numero e simbolo.",
+        passwordRules: {
+            length: "12 ou mais caracteres",
+            upper: "Uma letra maiuscula",
+            lower: "Uma letra minuscula",
+            number: "Um numero",
+            symbol: "Um simbolo"
+        },
+        resetHint: "Por seguranca, a resposta nao confirma se o e-mail esta cadastrado.",
+        actions: {
+            login: "Entrar",
+            forgot: "Esqueci minha senha",
+            register: "Solicitar cadastro",
+            reset: "Enviar recuperacao",
+            changePassword: "Alterar senha",
+            showPassword: "Mostrar",
+            hidePassword: "Ocultar",
+            backToLogin: "Voltar ao login"
+        }
+    };
+    pt.security.admin = {
+        metaTitle: "Administracao do Playbook",
+        headerTitle: "Administracao do Playbook",
+        headerSubtitle: "Aprovacao e governanca de acesso",
+        backToPlaybook: "Voltar ao Playbook",
+        kicker: "Controle de acesso",
+        title: "Administracao do Playbook",
+        description: "Liste usuarios, pesquise cadastros e altere status de aprovacao com auditoria no Supabase.",
+        searchLabel: "Pesquisar por e-mail",
+        searchPlaceholder: "nome@empresa.com",
+        statusLabel: "Status",
+        loading: "Carregando usuarios...",
+        empty: "Nenhum usuario encontrado.",
+        status: {
+            all: "Todos",
+            pending: "Pendente",
+            approved: "Aprovado",
+            rejected: "Recusado",
+            suspended: "Suspenso"
+        },
+        actions: {
+            filter: "Aplicar filtros",
+            makeAdmin: "Tornar admin",
+            removeAdmin: "Remover admin"
+        },
+        roles: {
+            admin: "Admin",
+            user: "Usuario"
+        },
+        confirmMakeAdmin: "Confirmar promocao deste usuario para administrador?",
+        confirmRemoveAdmin: "Confirmar remocao do perfil administrador deste usuario?",
+        roleChanged: "Perfil atualizado com sucesso.",
+        table: {
+            email: "E-mail",
+            createdAt: "Cadastro",
+            status: "Status",
+            role: "Perfil",
+            updatedAt: "Ultima alteracao",
+            actions: "Acoes"
+        }
+    };
+    pt.security.messages = {
+        invalidCredentials: "E-mail ou senha invalidos.",
+        pending: "Seu cadastro esta pendente e aguarda aprovacao administrativa.",
+        rejected: "Seu cadastro foi recusado. Procure a administracao do Playbook.",
+        suspended: "Seu acesso esta suspenso. Procure a administracao do Playbook.",
+        profileMissing: "Perfil do Playbook nao encontrado. Procure a administracao.",
+        signingIn: "Validando acesso...",
+        loginTakingLong: "A validacao esta demorando mais que o normal. Ainda estamos tentando conectar ao Supabase...",
+        authClientTimeout: "Nao foi possivel carregar a autenticacao em tempo habil.",
+        loginTimeout: "A validacao demorou demais. Recarregue a pagina e tente novamente.",
+        profileValidationTimeout: "Login realizado, mas a validacao do perfil demorou demais. Recarregue a pagina.",
+        authUnavailable: "Nao foi possivel carregar a autenticacao. Verifique a conexao e recarregue a pagina.",
+        loginSuccess: "Login realizado. Redirecionando...",
+        emailNotConfirmed: "Confirme o e-mail enviado pelo Supabase e aguarde a aprovacao administrativa antes de entrar.",
+        registerSuccess: "Cadastro enviado. Confirme o e-mail recebido e aguarde a aprovacao administrativa antes de acessar o Playbook.",
+        resetSuccess: "Se o e-mail estiver cadastrado, enviaremos instrucoes de recuperacao.",
+        passwordChanged: "Senha alterada com sucesso. Entre novamente com a nova senha.",
+        forcePasswordChange: "Troque a senha inicial antes de acessar o Playbook.",
+        passwordMismatch: "A confirmacao da senha nao confere.",
+        passwordWeak: "Use 12 ou mais caracteres, incluindo maiuscula, minuscula, numero e simbolo.",
+        registerError: "Nao foi possivel concluir o cadastro agora. Tente novamente mais tarde.",
+        resetError: "Nao foi possivel processar a solicitacao agora. Tente novamente mais tarde.",
+        passwordChangeError: "Nao foi possivel alterar a senha agora. Solicite um novo link ou tente novamente.",
+        emailInvalid: "Informe um e-mail valido.",
+        sessionMissing: "Faca login para acessar o Playbook.",
+        adminRequired: "Somente administradores aprovados podem acessar esta pagina.",
+        logout: "Sair",
+        admin: "Administracao",
+        loadingUsers: "Carregando usuarios...",
+        emptyUsers: "Nenhum usuario encontrado.",
+        confirmStatus: "Confirmar alteracao de status para {status}?",
+        statusChanged: "Status atualizado com sucesso."
+    };
 })();
 

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="security.password.metaTitle">Alterar senha - Playbook Global</title>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/security.css">
+</head>
+<body class="security-page" data-auth-page="password">
+    <main class="security-shell">
+        <section class="security-hero" aria-labelledby="passwordHeroTitle">
+            <p class="security-kicker" data-i18n="security.password.kicker">Seguranca da conta</p>
+            <h1 id="passwordHeroTitle" data-i18n="security.password.heroTitle">Defina uma nova senha</h1>
+            <p data-i18n="security.password.heroText">Use esta tela para concluir uma recuperacao de senha ou trocar a senha inicial exigida pelo administrador.</p>
+        </section>
+
+        <section class="security-card" aria-labelledby="passwordPanelTitle">
+            <h2 id="passwordPanelTitle" data-i18n="security.password.title">Alterar senha</h2>
+            <p class="security-card-lead" data-i18n="security.password.subtitle">Depois da alteracao, voce sera direcionado ao Playbook.</p>
+
+            <div id="passwordMessage" class="auth-message" role="status" aria-live="polite" hidden></div>
+
+            <form id="passwordForm" class="auth-form" novalidate>
+                <label for="newPassword">
+                    <span data-i18n="security.auth.newPassword">Nova senha</span>
+                    <span class="password-input-wrap">
+                        <input id="newPassword" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" aria-describedby="changePasswordRules" required>
+                        <button class="password-toggle" type="button" data-password-toggle="newPassword" aria-pressed="false" data-i18n="security.auth.actions.showPassword">Mostrar</button>
+                    </span>
+                </label>
+                <label for="newPasswordConfirm">
+                    <span data-i18n="security.auth.confirmPassword">Confirmar senha</span>
+                    <span class="password-input-wrap">
+                        <input id="newPasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+                        <button class="password-toggle" type="button" data-password-toggle="newPasswordConfirm" aria-pressed="false" data-i18n="security.auth.actions.showPassword">Mostrar</button>
+                    </span>
+                </label>
+                <ul id="changePasswordRules" class="password-rules-list" aria-label="Requisitos da senha">
+                    <li data-password-rule="length" data-i18n="security.auth.passwordRules.length">12 ou mais caracteres</li>
+                    <li data-password-rule="upper" data-i18n="security.auth.passwordRules.upper">Uma letra maiuscula</li>
+                    <li data-password-rule="lower" data-i18n="security.auth.passwordRules.lower">Uma letra minuscula</li>
+                    <li data-password-rule="number" data-i18n="security.auth.passwordRules.number">Um numero</li>
+                    <li data-password-rule="symbol" data-i18n="security.auth.passwordRules.symbol">Um simbolo</li>
+                </ul>
+                <button class="btn-primary" type="submit" data-i18n="security.auth.actions.changePassword">Alterar senha</button>
+                <a class="auth-link-button" href="login.html" data-i18n="security.auth.actions.backToLogin">Voltar ao login</a>
+            </form>
+        </section>
+    </main>
+
+    <script src="i18n/locales/pt-BR.js"></script>
+    <script src="i18n/locales/es.js"></script>
+    <script src="i18n/locales/en.js"></script>
+    <script src="i18n/i18n.js"></script>
+    <script src="i18n/init.js"></script>
+    <script src="config/supabase.js"></script>
+    <script src="js/playbook-auth.js"></script>
+    <script src="js/playbook-password.js"></script>
+</body>
+</html>

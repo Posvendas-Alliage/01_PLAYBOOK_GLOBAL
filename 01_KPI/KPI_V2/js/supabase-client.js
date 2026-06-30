@@ -1,4 +1,4 @@
-const SUPABASE_URL = window.SUPABASE_URL || '';
+﻿const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 const DASHBOARD_READ_URL = SUPABASE_URL
     ? `${SUPABASE_URL}/functions/v1/dashboard-read`
@@ -11,10 +11,25 @@ let _dashboardCacheTime = {};
 const CACHE_TTL = 5 * 60 * 1000;
 const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
 
-function supabaseHeaders() {
+async function supabaseAccessToken() {
+    try {
+        if (window.PlaybookAuth && typeof window.PlaybookAuth.getSession === 'function') {
+            const session = await window.PlaybookAuth.getSession();
+            if (session && session.access_token) return session.access_token;
+        }
+    } catch (error) {
+        console.warn('[Supabase] Nao foi possivel recuperar sessao autenticada.', error);
+    }
+
+    return SUPABASE_KEY;
+}
+
+async function supabaseHeaders() {
+    const accessToken = await supabaseAccessToken();
+
     return {
         'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Authorization': 'Bearer ' + accessToken,
         'Content-Type': 'application/json'
     };
 }
@@ -39,7 +54,7 @@ async function fetchDashboard(type, params = {}) {
 
     const res = await fetch(`${DASHBOARD_READ_URL}?${search.toString()}`, {
         method: 'GET',
-        headers: supabaseHeaders()
+        headers: await supabaseHeaders()
     });
     if (!res.ok) throw new Error(`Dashboard API error (${type}): ${res.status}`);
 
@@ -119,67 +134,18 @@ async function fetchSyncHealth() {
 }
 
 async function fetchAgents() {
-    if (window.AGENT_FIRST_NAMES) return;
-
-    const url = `${SUPABASE_URL}/rest/v1/zoho_agents?select=id,first_name,email`;
-    const res = await fetch(url, {
-        headers: supabaseHeaders()
-    });
-    if (!res.ok) throw new Error(`Supabase agents error: ${res.status}`);
-    const agents = await res.json();
-
-    window.AGENT_FIRST_NAMES = {};
-    window.EXCLUDED_AGENT_IDS = [];
-
-    agents.forEach(a => {
-        window.AGENT_FIRST_NAMES[a.id] = a.first_name || '';
-        if ((a.email || '').includes('@unicorn')) {
-            window.EXCLUDED_AGENT_IDS.push(a.id);
-        }
-    });
-
-    console.log('[Exclusions] Agentes excluídos:', window.EXCLUDED_AGENT_IDS);
+    window.AGENT_FIRST_NAMES = window.AGENT_FIRST_NAMES || {};
+    window.EXCLUDED_AGENT_IDS = window.EXCLUDED_AGENT_IDS || [];
 }
 
 async function fetchAllTickets() {
     if (_cache && (Date.now() - _cacheTime < CACHE_TTL)) return _cache;
 
-    await fetchAgents();
-    const excluded = window.EXCLUDED_AGENT_IDS || [];
-
-    const LIMIT = 1000;
-    let offset = 0;
-    let allData = [];
-    let hasMore = true;
-
-    const fields = [
-        'id', 'ticket_number', 'region', 'priority', 'status',
-        'mtfc_horas', 'resolution_horas', 'created_time', 'closed_time',
-        'tipo_atendimento', 'marca_produto', 'produtos', 'assignee_id',
-        'pais', 'department_id', 'categoria_custom', 'solicitante',
-        'numero_serie', 'regiao'
-    ].join(',');
-
-    while (hasMore) {
-        const url = `${SUPABASE_URL}/rest/v1/zoho_tickets?select=${fields}&is_deleted=eq.false&department_id=neq.1128522000008788112&order=created_time.desc&limit=${LIMIT}&offset=${offset}`;
-        const res = await fetch(url, {
-            headers: supabaseHeaders()
-        });
-        if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
-        const batch = await res.json();
-        const filteredBatch = excluded.length
-            ? batch.filter(t => !excluded.includes(t.assignee_id))
-            : batch;
-        allData = allData.concat(filteredBatch);
-        hasMore = batch.length === LIMIT;
-        offset += LIMIT;
-    }
-
-    _cache = allData;
+    const { tickets } = await fetchDashboardBiTickets(10000);
+    _cache = tickets;
     _cacheTime = Date.now();
-    return allData;
+    return tickets;
 }
-
 function clearCache() {
     _cache = null;
     _cacheTime = null;

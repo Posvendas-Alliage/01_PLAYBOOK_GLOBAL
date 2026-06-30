@@ -17,6 +17,11 @@
         .no-region-headline { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
         @media (max-width: 880px) { .no-region-card { grid-template-columns: 1fr; } }
     </style>
+    <style id="playbook-auth-pending-style">html.playbook-auth-pending body{visibility:hidden}</style>
+    <script>document.documentElement.classList.add("playbook-auth-pending");</script>
+    <script src="../../config/supabase.js"></script>
+    <script src="../../js/playbook-auth.js"></script>
+    <script src="../../js/playbook-auth-guard.js"></script>
 </head>
 <body>
     <!-- Loading overlay -->
@@ -199,6 +204,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="../../config/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../js/auth.js"></script>
     <script src="js/i18n.js"></script>
     <script src="js/filters.js"></script>
     <script src="js/supabase-client.js"></script>

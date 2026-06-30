@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="security.auth.metaTitle">Playbook Global - Acesso seguro</title>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/security.css">
+</head>
+<body class="security-page" data-auth-page="login">
+    <main class="security-shell">
+        <section class="security-hero" aria-labelledby="securityHeroTitle">
+            <div class="security-brand" aria-hidden="true">
+                <span class="security-brand-mark">PG</span>
+                <span class="security-brand-name">Alliage Global</span>
+            </div>
+            <p class="security-kicker" data-i18n="security.auth.kicker">Nova camada de seguranca</p>
+            <h1 id="securityHeroTitle" data-i18n="security.auth.heroTitle">Playbook Global protegido</h1>
+            <p data-i18n="security.auth.heroText">Entre com sua conta aprovada para acessar conteudos, indicadores e materiais do projeto.</p>
+
+            <ul class="security-benefits" aria-label="Beneficios do acesso seguro">
+                <li><span aria-hidden="true"></span><span data-i18n="security.auth.benefits.approved">Acesso somente para contas aprovadas</span></li>
+                <li><span aria-hidden="true"></span><span data-i18n="security.auth.benefits.protected">Conteudos e indicadores protegidos</span></li>
+                <li><span aria-hidden="true"></span><span data-i18n="security.auth.benefits.governed">Governanca centralizada de usuarios</span></li>
+            </ul>
+
+            <aside class="security-notice">
+                <span class="security-notice-icon" aria-hidden="true">i</span>
+                <p data-i18n="security.auth.securityNotice">Esta funcionalidade protege as informacoes internas do Playbook. Novos cadastros exigem confirmacao de e-mail e aprovacao administrativa.</p>
+            </aside>
+        </section>
+
+        <section class="security-card" aria-labelledby="authPanelTitle">
+            <header class="security-card-header">
+                <p class="security-card-eyebrow" data-i18n="security.auth.accountLabel">Conta corporativa</p>
+                <h2 id="authPanelTitle" data-i18n="security.auth.title">Acesse sua conta</h2>
+                <p class="security-card-lead" data-i18n="security.auth.subtitle">Use e-mail e senha. Novos cadastros exigem confirmacao de e-mail e aprovacao administrativa.</p>
+            </header>
+
+            <div id="authMessage" class="auth-message" role="status" aria-live="polite" hidden></div>
+
+            <div class="auth-tabs" role="tablist" aria-label="Fluxos de acesso">
+                <button id="loginTab" class="is-active" type="button" role="tab" aria-controls="loginForm" aria-selected="true" data-auth-mode="login" data-i18n="security.auth.tabs.login">Entrar</button>
+                <button id="registerTab" type="button" role="tab" aria-controls="registerForm" aria-selected="false" data-auth-mode="register" data-i18n="security.auth.tabs.register">Cadastrar</button>
+                <button id="resetTab" type="button" role="tab" aria-controls="resetForm" aria-selected="false" data-auth-mode="reset" data-i18n="security.auth.tabs.reset">Recuperar</button>
+            </div>
+
+            <form id="loginForm" class="auth-form" role="tabpanel" aria-labelledby="loginTab" data-auth-form="login" novalidate>
+                <label for="loginEmail">
+                    <span data-i18n="security.auth.email">E-mail</span>
+                    <input id="loginEmail" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="loginEmailHint" placeholder="nome@empresa.com" required>
+                    <small id="loginEmailHint" class="field-instruction" data-i18n="security.auth.emailHint">Use apenas o e-mail autorizado pela administracao.</small>
+                </label>
+                <label for="loginPassword">
+                    <span data-i18n="security.auth.password">Senha</span>
+                    <span class="password-input-wrap">
+                        <input id="loginPassword" name="password" type="password" autocomplete="current-password" aria-describedby="loginPasswordHint" required>
+                        <button class="password-toggle" type="button" data-password-toggle="loginPassword" aria-pressed="false" data-i18n="security.auth.actions.showPassword">Mostrar</button>
+                    </span>
+                    <small id="loginPasswordHint" class="field-instruction" data-i18n="security.auth.loginPasswordHint">A senha diferencia maiusculas de minusculas. Nunca compartilhe sua senha.</small>
+                </label>
+                <button class="btn-primary" type="submit" data-i18n="security.auth.actions.login">Entrar</button>
+                <div class="auth-form-footer">
+                    <button class="auth-link-button" type="button" data-mode-trigger="reset" data-i18n="security.auth.actions.forgot">Esqueci minha senha</button>
+                </div>
+            </form>
+
+            <form id="registerForm" class="auth-form" role="tabpanel" aria-labelledby="registerTab" aria-hidden="true" data-auth-form="register" hidden novalidate>
+                <label for="registerEmail">
+                    <span data-i18n="security.auth.email">E-mail</span>
+                    <input id="registerEmail" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="registerEmailHint" placeholder="nome@empresa.com" required>
+                    <small id="registerEmailHint" class="field-instruction" data-i18n="security.auth.registerEmailHint">Depois do cadastro, confirme o e-mail recebido e aguarde aprovacao administrativa.</small>
+                </label>
+                <label for="registerPassword">
+                    <span data-i18n="security.auth.password">Senha</span>
+                    <span class="password-input-wrap">
+                        <input id="registerPassword" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" aria-describedby="signupPasswordRules" required>
+                        <button class="password-toggle" type="button" data-password-toggle="registerPassword" aria-pressed="false" data-i18n="security.auth.actions.showPassword">Mostrar</button>
+                    </span>
+                </label>
+                <label for="registerPasswordConfirm">
+                    <span data-i18n="security.auth.confirmPassword">Confirmar senha</span>
+                    <span class="password-input-wrap">
+                        <input id="registerPasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+                        <button class="password-toggle" type="button" data-password-toggle="registerPasswordConfirm" aria-pressed="false" data-i18n="security.auth.actions.showPassword">Mostrar</button>
+                    </span>
+                </label>
+                <ul id="signupPasswordRules" class="password-rules-list" aria-label="Requisitos da senha">
+                    <li data-password-rule="length" data-i18n="security.auth.passwordRules.length">12 ou mais caracteres</li>
+                    <li data-password-rule="upper" data-i18n="security.auth.passwordRules.upper">Uma letra maiuscula</li>
+                    <li data-password-rule="lower" data-i18n="security.auth.passwordRules.lower">Uma letra minuscula</li>
+                    <li data-password-rule="number" data-i18n="security.auth.passwordRules.number">Um numero</li>
+                    <li data-password-rule="symbol" data-i18n="security.auth.passwordRules.symbol">Um simbolo</li>
+                </ul>
+                <button class="btn-primary" type="submit" data-i18n="security.auth.actions.register">Solicitar cadastro</button>
+            </form>
+
+            <form id="resetForm" class="auth-form" role="tabpanel" aria-labelledby="resetTab" aria-hidden="true" data-auth-form="reset" hidden novalidate>
+                <label for="resetEmail">
+                    <span data-i18n="security.auth.email">E-mail</span>
+                    <input id="resetEmail" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="resetEmailHint" placeholder="nome@empresa.com" required>
+                </label>
+                <p id="resetEmailHint" class="auth-hint" data-i18n="security.auth.resetHint">Se o e-mail estiver cadastrado, enviaremos um link de recuperacao. Por seguranca, nao confirmamos a existencia da conta.</p>
+                <button class="btn-primary" type="submit" data-i18n="security.auth.actions.reset">Enviar recuperacao</button>
+            </form>
+
+            <footer class="security-card-footer">
+                <span class="security-lock" aria-hidden="true"></span>
+                <span data-i18n="security.auth.secureFooter">Autenticacao protegida e sessao criptografada</span>
+            </footer>
+        </section>
+    </main>
+
+    <script src="i18n/locales/pt-BR.js"></script>
+    <script src="i18n/locales/es.js"></script>
+    <script src="i18n/locales/en.js"></script>
+    <script src="i18n/i18n.js"></script>
+    <script src="i18n/init.js"></script>
+    <script src="config/supabase.js"></script>
+    <script src="js/playbook-auth.js"></script>
+    <script src="js/playbook-login.js"></script>
+</body>
+</html>

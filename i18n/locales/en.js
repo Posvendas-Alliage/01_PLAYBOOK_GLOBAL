@@ -1404,6 +1404,106 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
 
 (function () {
     const en = window.PLAYBOOK_I18N_LOCALES["en"];
+    if (!en || !en.security) return;
+
+    en.security.login.title = "Sign in - Global Playbook";
+    en.security.login.kicker = "New security layer";
+    en.security.login.heroTitle = "Approved access to protect the Global Playbook";
+    en.security.login.notice = "This is a new Global Playbook security feature. To protect project information, it is now necessary to sign in with an approved account. Thank you for your understanding during this update.";
+    en.security.login.cardTitle = "Sign in to the Playbook";
+    en.security.login.cardLead = "Use your corporate email and password. New registrations remain pending until administrative approval.";
+    en.security.auth.loginTab = "Sign in";
+    en.security.auth.signupTab = "Register";
+    en.security.auth.loginAction = "Sign in";
+    en.security.auth.signupAction = "Request access";
+    en.security.auth.resetAction = "Send recovery email";
+    en.security.auth.forgotPassword = "Forgot password";
+    en.security.auth.backToLogin = "Back to sign in";
+    en.security.auth.loading = "Processing...";
+    en.security.auth.logout = "Sign out";
+    en.security.auth.signupSuccess = "Registration received. After email confirmation, wait for administrative approval.";
+    en.security.auth.resetSent = "If the email is registered, you will receive a password reset link.";
+    en.security.fields.email = "Email";
+    en.security.fields.password = "Password";
+    en.security.fields.newPassword = "New password";
+    en.security.fields.confirmPassword = "Confirm password";
+    en.security.validation.email = "Enter a valid email address.";
+    en.security.validation.passwordRequired = "Enter your password.";
+    en.security.validation.passwordStrength = "Use at least 12 characters with uppercase, lowercase, number, and symbol.";
+    en.security.validation.passwordHint = "Use at least 12 characters with uppercase, lowercase, number, and symbol.";
+    en.security.validation.passwordMatch = "Password confirmation does not match.";
+    en.security.status.Pendente = "Registration received. Wait for administrative approval to access the Playbook.";
+    en.security.status.Aprovado = "Account approved.";
+    en.security.status.Recusado = "Registration refused. Contact the Playbook administrator.";
+    en.security.status.Suspenso = "Account suspended. Contact the Playbook administrator.";
+    en.security.statusLabel.Pendente = "Pending";
+    en.security.statusLabel.Aprovado = "Approved";
+    en.security.statusLabel.Recusado = "Refused";
+    en.security.statusLabel.Suspenso = "Suspended";
+    en.security.errors.invalidCredentials = "Invalid email or password. Check your details and try again.";
+    en.security.errors.signupExists = "This email is already registered or awaiting confirmation.";
+    en.security.errors.signupFailed = "Could not complete registration right now.";
+    en.security.errors.resetFailed = "Could not send password recovery right now.";
+    en.security.errors.authUnavailableTitle = "Could not validate access.";
+    en.security.errors.authUnavailable = "Refresh the page or try again shortly.";
+    en.security.user.account = "Account";
+    en.security.user.admin = "Admin";
+    en.security.user.user = "User";
+    en.security.user.approved = "Approved";
+    en.security.password.title = "Change password - Global Playbook";
+    en.security.password.kicker = "Required update";
+    en.security.password.heroTitle = "Set a new secure password";
+    en.security.password.heroText = "To complete your access to the Global Playbook, update your password before continuing.";
+    en.security.password.cardTitle = "Change password";
+    en.security.password.cardLead = "Choose a strong and unique password for this account.";
+    en.security.password.submit = "Save new password";
+    en.security.password.success = "Password changed successfully.";
+    en.security.password.error = "Could not change password right now.";
+    en.security.password.profileWarning = "Password changed, but the profile could not be updated. Try signing in again.";
+    en.security.admin.title = "Playbook Administration";
+    en.security.admin.nav = "Administration";
+    en.security.admin.headerTitle = "Playbook Administration";
+    en.security.admin.headerSubtitle = "User approval and governance";
+    en.security.admin.breadcrumb = "Security > Users";
+    en.security.admin.pageTitle = "Playbook Administration";
+    en.security.admin.pageLead = "Approve, refuse, suspend, or reactivate users with administrative traceability.";
+    en.security.admin.usersTitle = "Registered users";
+    en.security.admin.searchLabel = "Search email";
+    en.security.admin.searchPlaceholder = "name@company.com";
+    en.security.admin.statusFilter = "Filter by status";
+    en.security.admin.allStatuses = "All";
+    en.security.admin.refresh = "Refresh";
+    en.security.admin.loading = "Loading users...";
+    en.security.admin.empty = "No users found for the current filters.";
+    en.security.admin.loaded = "Users loaded successfully.";
+    en.security.admin.loadError = "Error loading users.";
+    en.security.admin.actionSuccess = "Action completed successfully.";
+    en.security.admin.actionError = "Error executing action.";
+    en.security.admin.selfProtected = "Current account protected";
+    en.security.admin.actions = en.security.admin.actions && typeof en.security.admin.actions === "object"
+        ? en.security.admin.actions : {};
+    en.security.admin.confirm = en.security.admin.confirm && typeof en.security.admin.confirm === "object"
+        ? en.security.admin.confirm : {};
+    en.security.admin.table = en.security.admin.table && typeof en.security.admin.table === "object"
+        ? en.security.admin.table : {};
+    en.security.admin.actions.approve = "Approve";
+    en.security.admin.actions.reject = "Refuse";
+    en.security.admin.actions.suspend = "Suspend";
+    en.security.admin.actions.reactivate = "Reactivate";
+    en.security.admin.confirm.approve = "Confirm approval for this user?";
+    en.security.admin.confirm.reject = "Confirm refusal for this user?";
+    en.security.admin.confirm.suspend = "Confirm suspension for this user?";
+    en.security.admin.confirm.reactivate = "Confirm reactivation for this user?";
+    en.security.admin.table.email = "Email";
+    en.security.admin.table.status = "Status";
+    en.security.admin.table.role = "Role";
+    en.security.admin.table.created = "Registered";
+    en.security.admin.table.updated = "Last change";
+    en.security.admin.table.actions = "Actions";
+})();
+
+(function () {
+    const en = window.PLAYBOOK_I18N_LOCALES["en"];
     if (!en) return;
 
     en.home = en.home || {};
@@ -1955,5 +2055,129 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
     en.kanban.main.mistakes.maskQueue = "Do not use the wrong status to hide queue volume.";
     en.kanban.main.mistakes.skipResolved = "Do not close tickets directly without passing through Resolved.";
     en.kanban.main.mistakes.realStatus = "The status must reflect the real ticket situation.";
+
+    en.security = en.security || {};
+    en.security.auth = {
+        metaTitle: "Global Playbook - Secure access",
+        kicker: "New security layer",
+        heroTitle: "Protected Global Playbook",
+        heroText: "Sign in with an approved account to access project content, indicators, and materials.",
+        securityNotice: "This feature protects internal Playbook information. New registrations require email confirmation and administrative approval.",
+        benefits: {
+            approved: "Access restricted to approved accounts",
+            protected: "Protected content and indicators",
+            governed: "Centralized user governance"
+        },
+        accountLabel: "Corporate account",
+        adminAccountLabel: "Default administrator account",
+        secureFooter: "Protected authentication and encrypted session",
+        title: "Access your account",
+        subtitle: "Use email and password. New registrations require email confirmation and administrative approval.",
+        tabs: {
+            login: "Sign in",
+            register: "Register",
+            reset: "Recover"
+        },
+        email: "Email",
+        password: "Password",
+        newPassword: "New password",
+        confirmPassword: "Confirm password",
+        emailHint: "Use your approved corporate email.",
+        registerEmailHint: "After registering, confirm the email you receive and wait for administrative approval.",
+        loginPasswordHint: "Passwords are case-sensitive.",
+        passwordHint: "Use 12 or more characters with uppercase, lowercase, number, and symbol.",
+        passwordRules: {
+            length: "12 or more characters",
+            upper: "One uppercase letter",
+            lower: "One lowercase letter",
+            number: "One number",
+            symbol: "One symbol"
+        },
+        resetHint: "For security, the response does not confirm whether the email is registered.",
+        actions: {
+            login: "Sign in",
+            forgot: "Forgot my password",
+            register: "Request registration",
+            reset: "Send recovery",
+            changePassword: "Change password",
+            showPassword: "Show",
+            hidePassword: "Hide",
+            backToLogin: "Back to sign in"
+        }
+    };
+    en.security.admin = {
+        metaTitle: "Playbook Administration",
+        headerTitle: "Playbook Administration",
+        headerSubtitle: "Access approval and governance",
+        backToPlaybook: "Back to Playbook",
+        kicker: "Access control",
+        title: "Playbook Administration",
+        description: "List users, search registrations, and change approval status with Supabase audit history.",
+        searchLabel: "Search by email",
+        searchPlaceholder: "name@company.com",
+        statusLabel: "Status",
+        loading: "Loading users...",
+        empty: "No users found.",
+        status: {
+            all: "All",
+            pending: "Pending",
+            approved: "Approved",
+            rejected: "Rejected",
+            suspended: "Suspended"
+        },
+        actions: {
+            filter: "Apply filters",
+            makeAdmin: "Make admin",
+            removeAdmin: "Remove admin"
+        },
+        roles: {
+            admin: "Admin",
+            user: "User"
+        },
+        confirmMakeAdmin: "Confirm promoting this user to administrator?",
+        confirmRemoveAdmin: "Confirm removing this user's administrator profile?",
+        roleChanged: "Profile updated successfully.",
+        table: {
+            email: "Email",
+            createdAt: "Registered",
+            status: "Status",
+            role: "Role",
+            updatedAt: "Last change",
+            actions: "Actions"
+        }
+    };
+    en.security.messages = {
+        invalidCredentials: "Invalid email or password.",
+        pending: "Your registration is pending administrative approval.",
+        rejected: "Your registration was rejected. Contact the Playbook administrator.",
+        suspended: "Your access is suspended. Contact the Playbook administrator.",
+        profileMissing: "Playbook profile not found. Contact the administrator.",
+        signingIn: "Validating access...",
+        loginTakingLong: "Validation is taking longer than usual. We are still trying to connect to Supabase...",
+        authClientTimeout: "Authentication could not be loaded in time.",
+        loginTimeout: "Validation took too long. Reload the page and try again.",
+        profileValidationTimeout: "Sign-in succeeded, but profile validation took too long. Reload the page.",
+        authUnavailable: "Authentication could not be loaded. Check your connection and reload the page.",
+        loginSuccess: "Signed in. Redirecting...",
+        emailNotConfirmed: "Confirm the email sent by Supabase and wait for administrative approval before signing in.",
+        registerSuccess: "Registration submitted. Confirm the email you received and wait for administrative approval before accessing the Playbook.",
+        resetSuccess: "If the email is registered, recovery instructions will be sent.",
+        passwordChanged: "Password changed successfully. Sign in again with the new password.",
+        forcePasswordChange: "Change the initial password before accessing the Playbook.",
+        passwordMismatch: "Password confirmation does not match.",
+        passwordWeak: "Use 12 or more characters, including uppercase, lowercase, number, and symbol.",
+        registerError: "Registration could not be completed now. Try again later.",
+        resetError: "The request could not be processed now. Try again later.",
+        passwordChangeError: "The password could not be changed now. Request a new link or try again.",
+        emailInvalid: "Enter a valid email address.",
+        sessionMissing: "Sign in to access the Playbook.",
+        adminRequired: "Only approved administrators can access this page.",
+        logout: "Sign out",
+        admin: "Administration",
+        loadingUsers: "Loading users...",
+        emptyUsers: "No users found.",
+        confirmStatus: "Confirm status change to {status}?",
+        statusChanged: "Status updated successfully."
+    };
 })();
 

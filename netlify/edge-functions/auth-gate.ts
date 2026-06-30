@@ -1,0 +1,262 @@
+import type { Context } from "@netlify/edge-functions";
+
+type PlaybookProfile = {
+  user_id: string;
+  email: string;
+  role: "user" | "admin";
+  status: "Pendente" | "Aprovado" | "Recusado" | "Suspenso" | "pending" | "approved" | "rejected" | "suspended";
+  force_password_change: boolean;
+  must_change_password?: boolean;
+};
+
+type ValidationResult =
+  | { ok: true; accessToken: string; refreshToken?: string; profile: PlaybookProfile; setCookies: string[] }
+  | { ok: false; reason: string; clearCookies?: boolean };
+
+const ACCESS_COOKIE = "pb_access_token";
+const REFRESH_COOKIE = "pb_refresh_token";
+
+function env(name: string): string {
+  return Netlify.env.get(name) ?? "";
+}
+
+function getSupabaseUrl(): string {
+  return env("PLAYBOOK_SUPABASE_URL") || env("SUPABASE_URL");
+}
+
+function getPublishableKey(): string {
+  return env("PLAYBOOK_SUPABASE_PUBLISHABLE_KEY") ||
+    env("SUPABASE_PUBLISHABLE_KEY") ||
+    env("PLAYBOOK_SUPABASE_ANON_KEY") ||
+    env("SUPABASE_ANON_KEY");
+}
+
+function parseCookies(header: string | null): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!header) return cookies;
+
+  header.split(";").forEach((part) => {
+    const [name, ...rest] = part.trim().split("=");
+    if (!name) return;
+    cookies[name] = decodeURIComponent(rest.join("=") || "");
+  });
+
+  return cookies;
+}
+
+function isLocalRequest(req: Request): boolean {
+  const url = new URL(req.url);
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+}
+
+function cookieOptions(req: Request, maxAge: number): string {
+  const secure = isLocalRequest(req) ? "" : "; Secure";
+  return `Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+}
+
+function setCookie(req: Request, name: string, value: string, maxAge: number): string {
+  return `${name}=${encodeURIComponent(value)}; ${cookieOptions(req, maxAge)}`;
+}
+
+function clearCookie(req: Request, name: string): string {
+  return setCookie(req, name, "", 0);
+}
+
+function isPublicPath(pathname: string): boolean {
+  const path = pathname.toLowerCase();
+
+  if (path === "/auth.html") return true;
+  if (path === "/login.html" || path === "/alterar-senha.html") return true;
+  if (path === "/api/auth/session" || path === "/api/auth/logout") return true;
+  if (path === "/.netlify/functions/auth-session" || path === "/.netlify/functions/auth-logout") return true;
+  if (path === "/config/supabase.js") return true;
+  if (path === "/js/auth.js") return true;
+  if (path === "/js/playbook-auth.js") return true;
+  if (path === "/js/playbook-login.js") return true;
+  if (path === "/js/playbook-password.js") return true;
+  if (path === "/js/playbook-auth-guard.js") return true;
+  if (path === "/css/auth.css" || path === "/css/global.css") return true;
+  if (path === "/css/security.css") return true;
+  if (path.startsWith("/i18n/")) return true;
+  if (path === "/robots.txt" || path === "/favicon.ico" || path === "/site.webmanifest") return true;
+
+  return false;
+}
+
+function isAdminPath(pathname: string): boolean {
+  const path = pathname.toLowerCase();
+  return path === "/administracao-playbook.html" || path === "/admin.html";
+}
+
+function isApprovedStatus(status: string): boolean {
+  return status === "Aprovado" || status === "approved";
+}
+
+function redirectToAuth(req: Request, reason: string, mode?: string): Response {
+  const requestUrl = new URL(req.url);
+  const authUrl = new URL("/login.html", requestUrl.origin);
+  authUrl.searchParams.set("returnTo", requestUrl.pathname + requestUrl.search + requestUrl.hash);
+  authUrl.searchParams.set("reason", reason);
+  if (mode) authUrl.searchParams.set("mode", mode);
+
+  const response = Response.redirect(authUrl, 302);
+
+  if (reason === "invalid_session" || reason === "missing_session") {
+    response.headers.append("Set-Cookie", clearCookie(req, ACCESS_COOKIE));
+    response.headers.append("Set-Cookie", clearCookie(req, REFRESH_COOKIE));
+  }
+
+  response.headers.set("Cache-Control", "no-store");
+  return response;
+}
+
+async function fetchUser(supabaseUrl: string, publishableKey: string, accessToken: string) {
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) return null;
+  return await response.json();
+}
+
+async function fetchProfile(
+  supabaseUrl: string,
+  publishableKey: string,
+  accessToken: string,
+  userId: string,
+): Promise<PlaybookProfile | null> {
+  const url = new URL(supabaseUrl + "/rest/v1/playbook_profiles");
+  url.searchParams.set("select", "user_id,email,role,status,force_password_change");
+  url.searchParams.set("user_id", "eq." + userId);
+  url.searchParams.set("limit", "1");
+
+  const response = await fetch(url, {
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const rows = await response.json();
+  return Array.isArray(rows) && rows[0] ? rows[0] as PlaybookProfile : null;
+}
+
+async function refreshSession(
+  req: Request,
+  supabaseUrl: string,
+  publishableKey: string,
+  refreshToken: string,
+) {
+  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: {
+      apikey: publishableKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  if (!response.ok) return null;
+
+  const payload = await response.json();
+  if (!payload.access_token || !payload.refresh_token) return null;
+
+  const accessMaxAge = Number(payload.expires_in) || 3600;
+  return {
+    accessToken: String(payload.access_token),
+    refreshToken: String(payload.refresh_token),
+    setCookies: [
+      setCookie(req, ACCESS_COOKIE, String(payload.access_token), accessMaxAge),
+      setCookie(req, REFRESH_COOKIE, String(payload.refresh_token), 60 * 60 * 24 * 30),
+    ],
+  };
+}
+
+async function validateSession(req: Request): Promise<ValidationResult> {
+  const supabaseUrl = getSupabaseUrl();
+  const publishableKey = getPublishableKey();
+
+  if (!supabaseUrl || !publishableKey) {
+    return { ok: false, reason: "server_not_configured" };
+  }
+
+  const cookies = parseCookies(req.headers.get("Cookie"));
+  let accessToken = cookies[ACCESS_COOKIE];
+  let refreshToken = cookies[REFRESH_COOKIE];
+  let setCookies: string[] = [];
+
+  let user = accessToken ? await fetchUser(supabaseUrl, publishableKey, accessToken) : null;
+
+  if (!user && refreshToken) {
+    const refreshed = await refreshSession(req, supabaseUrl, publishableKey, refreshToken);
+    if (refreshed) {
+      accessToken = refreshed.accessToken;
+      refreshToken = refreshed.refreshToken;
+      setCookies = refreshed.setCookies;
+      user = await fetchUser(supabaseUrl, publishableKey, accessToken);
+    }
+  }
+
+  if (!user || !accessToken) {
+    return { ok: false, reason: "missing_session", clearCookies: true };
+  }
+
+  const profile = await fetchProfile(supabaseUrl, publishableKey, accessToken, user.id);
+
+  if (!profile) {
+    return { ok: false, reason: "profile_missing" };
+  }
+
+  if (!isApprovedStatus(profile.status)) {
+    const reasonByStatus: Record<string, string> = {
+      Pendente: "pendente",
+      pending: "pending",
+      Recusado: "recusado",
+      rejected: "rejected",
+      Suspenso: "suspenso",
+      suspended: "suspended",
+    };
+    return { ok: false, reason: reasonByStatus[profile.status] ?? "not_approved" };
+  }
+
+  if (profile.force_password_change || profile.must_change_password) {
+    return { ok: false, reason: "must_change_password" };
+  }
+
+  return { ok: true, accessToken, refreshToken, profile, setCookies };
+}
+
+export default async (req: Request, context: Context) => {
+  const url = new URL(req.url);
+
+  if (req.method === "OPTIONS" || isPublicPath(url.pathname)) {
+    return context.next();
+  }
+
+  const validation = await validateSession(req);
+
+  if (!validation.ok) {
+    if (validation.reason === "must_change_password") {
+      const passwordUrl = new URL("/alterar-senha.html", url.origin);
+      passwordUrl.searchParams.set("returnTo", url.pathname + url.search + url.hash);
+      return Response.redirect(passwordUrl, 302);
+    }
+    return redirectToAuth(req, validation.reason);
+  }
+
+  if (isAdminPath(url.pathname) && validation.profile.role !== "admin") {
+    return redirectToAuth(req, "admin_required");
+  }
+
+  const response = await context.next();
+  response.headers.set("Cache-Control", "private, no-store");
+  validation.setCookies.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
+
+  return response;
+};

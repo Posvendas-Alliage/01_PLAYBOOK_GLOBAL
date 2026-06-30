@@ -1,0 +1,889 @@
+html.playbook-auth-pending body {
+    visibility: hidden;
+}
+
+.playbook-auth-fatal {
+    margin: 1rem auto;
+    max-width: 760px;
+    border: 1px solid #f1b8b8;
+    border-radius: var(--radius-md, 14px);
+    background: #fff5f5;
+    color: #7d1f1f;
+    padding: 1rem 1.15rem;
+    box-shadow: var(--shadow-sm, 0 10px 24px rgba(11, 33, 61, 0.13));
+}
+
+.playbook-auth-fatal p {
+    margin: 0.25rem 0 0;
+    color: inherit;
+}
+
+.playbook-user-menu {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-left: auto;
+}
+
+.playbook-user-summary {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+    color: #f4f9ff;
+}
+
+.playbook-user-email {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.playbook-user-role {
+    width: fit-content;
+    border: 1px solid rgba(204, 226, 250, 0.4);
+    border-radius: 999px;
+    padding: 0.08rem 0.45rem;
+    background: rgba(221, 236, 255, 0.14);
+    color: rgba(234, 245, 255, 0.92);
+    font-size: 0.68rem;
+    line-height: 1.35;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.playbook-admin-link,
+.playbook-logout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    border-radius: 999px;
+    border: 1px solid rgba(208, 228, 250, 0.46);
+    padding: 0.42rem 0.7rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f6fbff;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.playbook-admin-link:hover,
+.playbook-logout:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(229, 241, 255, 0.7);
+}
+
+.security-page {
+    position: relative;
+    overflow-x: hidden;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 6% 7%, rgba(62, 137, 221, 0.2), transparent 30%),
+        radial-gradient(circle at 91% 15%, rgba(38, 123, 195, 0.16), transparent 32%),
+        linear-gradient(135deg, #eaf3ff 0%, #f9fbfe 48%, #e5effb 100%);
+    color: var(--color-text-main, #1f3f63);
+}
+
+.security-page::before,
+.security-page::after {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 999px;
+    filter: blur(1px);
+}
+
+.security-page::before {
+    width: 420px;
+    height: 420px;
+    left: -190px;
+    bottom: -210px;
+    border: 1px solid rgba(43, 112, 190, 0.14);
+    box-shadow:
+        0 0 0 70px rgba(255, 255, 255, 0.16),
+        0 0 0 140px rgba(70, 139, 215, 0.04);
+}
+
+.security-page::after {
+    width: 280px;
+    height: 280px;
+    right: -130px;
+    top: -120px;
+    background: linear-gradient(145deg, rgba(56, 137, 222, 0.1), rgba(47, 138, 88, 0.08));
+}
+
+.security-shell {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(460px, 580px);
+    gap: clamp(3rem, 7vw, 7rem);
+    align-items: center;
+    width: min(1320px, calc(100% - 3rem));
+    margin: 0 auto;
+    padding: clamp(2.25rem, 5vw, 5rem) 0;
+}
+
+.security-hero {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 650px;
+}
+
+.security-brand {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    gap: 0.7rem;
+    margin-bottom: clamp(1rem, 3vh, 2.5rem);
+    color: #123b68;
+}
+
+.security-brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: linear-gradient(145deg, #0d4d91, #2c7ed1);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(26, 83, 145, 0.22);
+    font-family: "Aptos Display", "Trebuchet MS", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+}
+
+.security-brand-name {
+    font-family: "Aptos Display", "Trebuchet MS", sans-serif;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+}
+
+.security-kicker {
+    display: inline-flex;
+    width: fit-content;
+    border: 1px solid rgba(33, 103, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.56);
+    color: var(--color-brand-800, #1a4d89);
+    padding: 0.26rem 0.72rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.security-hero h1 {
+    max-width: 680px;
+    margin: 0;
+    color: var(--color-brand-950, #0a1f3a);
+    font-family: "Aptos Display", "Trebuchet MS", sans-serif;
+    font-size: clamp(3rem, 5vw, 5rem);
+    line-height: 0.94;
+    letter-spacing: -0.055em;
+}
+
+.security-hero p {
+    max-width: 58ch;
+    margin: 0;
+    color: #315a86;
+    font-size: clamp(1rem, 1.35vw, 1.13rem);
+    line-height: 1.65;
+}
+
+.security-benefits {
+    display: grid;
+    gap: 0.7rem;
+    margin: 0.25rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.security-benefits li {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: #1b4776;
+    font-size: 0.92rem;
+    font-weight: 720;
+}
+
+.security-benefits li > span:first-child {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 5px solid #eaf4ff;
+    border-radius: 50%;
+    background: #2b79c9;
+    box-shadow: 0 0 0 1px rgba(40, 111, 186, 0.22);
+}
+
+.security-notice {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.8rem;
+    align-items: start;
+    max-width: 610px;
+    margin-top: 0.4rem;
+    border-top: 1px solid rgba(50, 101, 156, 0.14);
+    padding-top: 1.2rem;
+}
+
+.security-notice p {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: #547495;
+}
+
+.security-notice-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(31, 104, 183, 0.11);
+    color: #1f68b7;
+    font-family: Georgia, serif;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+.security-card {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    border: 1px solid rgba(145, 178, 216, 0.68);
+    border-radius: 30px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.95)),
+        #fff;
+    box-shadow:
+        0 30px 80px rgba(20, 57, 96, 0.19),
+        0 4px 16px rgba(20, 57, 96, 0.06);
+    padding: clamp(1.65rem, 3vw, 2.45rem);
+}
+
+.security-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 6px;
+    background: linear-gradient(90deg, var(--color-brand-700, #2167b8), #66a7f2, var(--zoho-green, #2f8a58));
+}
+
+.security-card h2 {
+    margin: 0 0 0.4rem;
+    color: #0b2b4e;
+    font-family: "Aptos Display", "Trebuchet MS", sans-serif;
+    font-size: clamp(1.75rem, 2.7vw, 2.35rem);
+    letter-spacing: -0.035em;
+}
+
+.security-card-header {
+    margin-bottom: 1.15rem;
+}
+
+.security-card-eyebrow {
+    margin: 0 0 0.35rem;
+    color: #2d6eae;
+    font-size: 0.73rem;
+    font-weight: 850;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.security-card-lead {
+    margin: 0;
+    color: #47698f;
+    font-size: 0.94rem;
+    line-height: 1.55;
+}
+
+.admin-access-note {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(105, 154, 207, 0.28);
+    border-radius: 16px;
+    background: linear-gradient(135deg, #eff7ff, #f8fbff);
+    padding: 0.72rem 0.82rem;
+}
+
+.admin-access-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: #164f8c;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.admin-access-note > span:last-child {
+    display: grid;
+    min-width: 0;
+    gap: 0.08rem;
+}
+
+.admin-access-note small {
+    color: #577796;
+    font-size: 0.7rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+}
+
+.admin-access-note strong {
+    overflow: hidden;
+    color: #173f69;
+    font-size: 0.86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid #d1deed;
+    border-radius: 16px;
+    background: #f1f6fc;
+    padding: 0.35rem;
+}
+
+.auth-tabs button {
+    min-height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #294f7c;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 820;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.auth-tabs button.is-active {
+    background: linear-gradient(135deg, #2377c8, #174f8d);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(31, 101, 176, 0.22);
+}
+
+.auth-tabs button:not(.is-active):hover {
+    background: rgba(255, 255, 255, 0.8);
+    color: #174f8d;
+}
+
+.auth-form {
+    display: grid;
+    gap: 1rem;
+    animation: authFormEnter 0.28s ease both;
+}
+
+.auth-form[hidden] {
+    display: none !important;
+}
+
+@keyframes authFormEnter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-form label {
+    display: grid;
+    gap: 0.42rem;
+    color: #183d66;
+    font-size: 0.84rem;
+    font-weight: 790;
+}
+
+.field-instruction {
+    color: #647f9d;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.password-input-wrap {
+    position: relative;
+    display: block;
+}
+
+.password-input-wrap input {
+    padding-right: 5.2rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.55rem;
+    min-height: 34px;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 9px;
+    background: #edf4fb;
+    color: #215b96;
+    padding: 0.35rem 0.65rem;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+    background: #dfeefd;
+    color: #113f72;
+    outline: 2px solid rgba(47, 127, 217, 0.22);
+}
+
+.auth-form input,
+.admin-toolbar input,
+.admin-toolbar select {
+    width: 100%;
+    min-height: 52px;
+    border: 1px solid #bdcfe3;
+    border-radius: 13px;
+    background: #fff;
+    color: #14395f;
+    font: inherit;
+    padding: 0.78rem 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.auth-form input:focus,
+.admin-toolbar input:focus,
+.admin-toolbar select:focus {
+    outline: none;
+    border-color: #4f94dc;
+    box-shadow: 0 0 0 4px rgba(47, 127, 217, 0.13);
+    background: #fff;
+}
+
+.auth-form .btn-primary,
+.auth-form .btn-secondary {
+    width: 100%;
+    min-height: 50px;
+    border-radius: 13px;
+    box-shadow: 0 10px 22px rgba(21, 79, 141, 0.18);
+}
+
+.auth-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    min-height: 24px;
+}
+
+.auth-link-button {
+    width: fit-content;
+    border: 0;
+    background: transparent;
+    color: #205f9f;
+    padding: 0.15rem 0;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 780;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.auth-link-button:hover {
+    color: #0d4077;
+    text-decoration: underline;
+}
+
+.auth-panel-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    margin-top: 0.2rem;
+    font-size: 0.9rem;
+}
+
+.auth-panel-links a {
+    color: var(--color-brand-800, #1a4d89);
+    font-weight: 800;
+}
+
+.auth-message {
+    border-radius: 14px;
+    border: 1px solid #c8d7e8;
+    background: #f4f8fe;
+    color: #244d78;
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 1rem;
+    font-weight: 650;
+}
+
+.auth-message[hidden] {
+    display: none;
+}
+
+.auth-message.is-success,
+.admin-state.is-success {
+    border-color: #b8dcc7;
+    background: #edf9f1;
+    color: #1f6a43;
+}
+
+.auth-message.is-warning,
+.admin-state.is-warning {
+    border-color: #f0d58f;
+    background: #fff9e8;
+    color: #735615;
+}
+
+.auth-message.is-error,
+.admin-state.is-error {
+    border-color: #f1b8b8;
+    background: #fff2f2;
+    color: #7d1f1f;
+}
+
+.password-rules {
+    margin: 0;
+    color: #48698f;
+    font-size: 0.88rem;
+}
+
+.auth-hint {
+    margin: -0.15rem 0 0;
+    color: #647f9d;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.password-rules-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.42rem 0.8rem;
+    margin: -0.15rem 0 0;
+    padding: 0;
+    color: #637e9c;
+    font-size: 0.76rem;
+    line-height: 1.35;
+    list-style: none;
+}
+
+.password-rules-list li {
+    position: relative;
+    padding-left: 1.15rem;
+}
+
+.password-rules-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.28rem;
+    width: 8px;
+    height: 8px;
+    border: 2px solid #9db1c8;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.password-rules-list li.is-met {
+    color: #236a47;
+}
+
+.password-rules-list li.is-met::before {
+    border-color: #2f8a58;
+    background: #2f8a58;
+    box-shadow: inset 0 0 0 2px #edf9f2;
+}
+
+.security-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    margin-top: 1.35rem;
+    border-top: 1px solid #e0e9f3;
+    padding-top: 1rem;
+    color: #738ba5;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.security-lock {
+    position: relative;
+    width: 13px;
+    height: 11px;
+    border-radius: 3px;
+    background: #6d8baa;
+}
+
+.security-lock::before {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: -7px;
+    width: 7px;
+    height: 8px;
+    border: 2px solid #6d8baa;
+    border-bottom: 0;
+    border-radius: 7px 7px 0 0;
+}
+
+.security-admin-page {
+    min-height: 100vh;
+    background: var(--color-bg-page, #e9f1fa);
+}
+
+.admin-shell {
+    width: min(1240px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 1.5rem 0 3rem;
+}
+
+.admin-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.admin-hero p {
+    margin: 0;
+    color: #35597f;
+}
+
+.admin-card {
+    border: 1px solid var(--color-border-soft, #d7e2f0);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: var(--shadow-sm, 0 10px 24px rgba(11, 33, 61, 0.13));
+    padding: 1rem;
+}
+
+.admin-toolbar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(170px, 230px) auto;
+    gap: 0.8rem;
+    align-items: end;
+    margin-bottom: 1rem;
+}
+
+.admin-toolbar label {
+    display: grid;
+    gap: 0.32rem;
+    font-weight: 800;
+    color: #1b4169;
+}
+
+.admin-state,
+.admin-empty,
+.admin-loading {
+    border-radius: 14px;
+    border: 1px solid #c8d7e8;
+    background: #f5f9ff;
+    color: #294f7c;
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.admin-state[hidden],
+.admin-empty[hidden],
+.admin-loading[hidden],
+.admin-table-wrap[hidden] {
+    display: none;
+}
+
+.admin-table-wrap {
+    overflow-x: auto;
+}
+
+.admin-table {
+    min-width: 860px;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.22rem 0.6rem;
+    background: #edf4ff;
+    color: #244d78;
+    font-size: 0.78rem;
+    font-weight: 850;
+}
+
+.status-pill.is-aprovado {
+    background: #e7f7ee;
+    color: #1d6e46;
+}
+
+.status-pill.is-pendente {
+    background: #fff8e5;
+    color: #735615;
+}
+
+.status-pill.is-recusado,
+.status-pill.is-suspenso {
+    background: #fff0f0;
+    color: #7d1f1f;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.admin-action {
+    border: 1px solid #c7d8eb;
+    border-radius: 999px;
+    background: #f4f9ff;
+    color: #16467f;
+    padding: 0.35rem 0.62rem;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.admin-action-approve,
+.admin-action-reactivate {
+    border-color: #b8dcc7;
+    background: #edf9f1;
+    color: #1d6e46;
+}
+
+.admin-action-reject,
+.admin-action-suspend {
+    border-color: #f1b8b8;
+    background: #fff2f2;
+    color: #7d1f1f;
+}
+
+.admin-muted {
+    color: #74869c;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 980px) {
+    .security-shell {
+        grid-template-columns: 1fr;
+        width: min(680px, calc(100% - 2rem));
+        gap: 2.25rem;
+        padding: 2.25rem 0 3rem;
+    }
+
+    .security-hero {
+        text-align: center;
+        justify-items: center;
+        max-width: 680px;
+    }
+
+    .security-brand {
+        margin-bottom: 0.4rem;
+    }
+
+    .security-benefits {
+        width: fit-content;
+        text-align: left;
+    }
+
+    .security-notice {
+        text-align: left;
+    }
+
+    .admin-hero,
+    .admin-toolbar {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .playbook-user-menu {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 0.6rem;
+    }
+}
+
+@media (max-width: 620px) {
+    .security-shell {
+        width: min(100% - 1.1rem, 680px);
+        gap: 1.5rem;
+        padding: 1.25rem 0 2rem;
+    }
+
+    .security-brand {
+        display: none;
+    }
+
+    .security-hero {
+        gap: 0.85rem;
+        text-align: left;
+        justify-items: start;
+    }
+
+    .security-hero h1 {
+        font-size: clamp(2.55rem, 13vw, 3.45rem);
+    }
+
+    .security-benefits,
+    .security-notice {
+        display: none;
+    }
+
+    .security-card {
+        border-radius: 23px;
+        padding: 1.25rem;
+    }
+
+    .security-card h2 {
+        font-size: 1.75rem;
+    }
+
+    .admin-access-note strong {
+        font-size: 0.78rem;
+    }
+
+    .auth-tabs {
+        gap: 0.25rem;
+        padding: 0.28rem;
+    }
+
+    .auth-tabs button {
+        min-height: 42px;
+        font-size: 0.76rem;
+    }
+
+    .password-rules-list {
+        grid-template-columns: 1fr;
+    }
+}

@@ -230,6 +230,11 @@
             .kanban-col { animation: none !important; }
         }
     </style>
+    <style id="playbook-auth-pending-style">html.playbook-auth-pending body{visibility:hidden}</style>
+    <script>document.documentElement.classList.add("playbook-auth-pending");</script>
+    <script src="../../config/supabase.js"></script>
+    <script src="../../js/playbook-auth.js"></script>
+    <script src="../../js/playbook-auth-guard.js"></script>
 </head>
 <body>
     <div class="dashboard-shell">
@@ -403,6 +408,8 @@
     </div>
 
     <script src="../../config/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../js/auth.js"></script>
     <script src="js/i18n.js"></script>
     <script src="js/supabase-client.js"></script>
     <script>
@@ -549,12 +556,12 @@
                 fetch(
                     `${window.SUPABASE_URL}/rest/v1/vw_ticket_status_intervals` +
                     `?select=department_name&is_deleted=eq.false&limit=2000`,
-                    { headers: supabaseHeaders() }
+                    { headers: await supabaseHeaders() }
                 ),
                 fetch(
                     `${window.SUPABASE_URL}/rest/v1/vw_ticket_status_intervals` +
                     `?select=priority&is_deleted=eq.false&limit=2000`,
-                    { headers: supabaseHeaders() }
+                    { headers: await supabaseHeaders() }
                 )
             ]);
             const deptRows = deptRes.ok ? await deptRes.json() : [];
@@ -623,7 +630,7 @@
             `&is_weekly_report_filter_included=eq.true` +
             `&regiao_grupo=eq.${encodeURIComponent(regiao)}`;
         while (true) {
-            const res = await fetch(`${base}&limit=${limit}&offset=${offset}`, { headers: supabaseHeaders() });
+            const res = await fetch(`${base}&limit=${limit}&offset=${offset}`, { headers: await supabaseHeaders() });
             if (!res.ok) return null;
             const rows = await res.json();
             rows.forEach(r => { if (r.ticket_id != null) allIds.add(String(r.ticket_id)); });
@@ -647,7 +654,7 @@
             `&status=eq.${encodeURIComponent(status)}` +
             `&status_duration_hours=gte.0`;
         while (true) {
-            const res = await fetch(`${base}&limit=${limit}&offset=${offset}`, { headers: supabaseHeaders() });
+            const res = await fetch(`${base}&limit=${limit}&offset=${offset}`, { headers: await supabaseHeaders() });
             if (!res.ok) return [];
             const rows = await res.json();
             all.push(...rows);
@@ -742,7 +749,7 @@
             if (priority) body.p_priority = priority;
             const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/fn_kanban_status_metrics`, {
                 method: 'POST',
-                headers: supabaseHeaders(),
+                headers: await supabaseHeaders(),
                 body: JSON.stringify(body)
             });
             if (res.ok) {
@@ -762,7 +769,7 @@
                     `?select=status,regiao,avg_horas,mediana_horas,p90_horas,total_intervalos,tickets_afetados` +
                     `&limit=500`;
                 if (rawRegiao) url += `&regiao=eq.${encodeURIComponent(rawRegiao)}`;
-                const res = await fetch(url, { headers: supabaseHeaders() });
+                const res = await fetch(url, { headers: await supabaseHeaders() });
                 if (res.ok) {
                     const rows = await res.json();
                     const hasData = rows.some(r => STATUS_ORDER.includes(normalizeStatus(r.status)));
@@ -793,7 +800,7 @@
             `&status=not.in.(Fechado,Resolvido,Closed)`;
         if (regiao) url += `&regiao_grupo=eq.${encodeURIComponent(regiao)}`;
 
-        const res = await fetch(url, { headers: supabaseHeaders() });
+        const res = await fetch(url, { headers: await supabaseHeaders() });
         if (!res.ok) throw new Error(`fetchSnapshotAtual HTTP ${res.status}`);
         const rows = await res.json();
         const contagem = {};

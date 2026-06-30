@@ -1405,6 +1405,106 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
 
 (function () {
     const es = window.PLAYBOOK_I18N_LOCALES["es"];
+    if (!es || !es.security) return;
+
+    es.security.login.title = "Entrar - Playbook Global";
+    es.security.login.kicker = "Nueva capa de seguridad";
+    es.security.login.heroTitle = "Acceso aprobado para proteger el Playbook Global";
+    es.security.login.notice = "Esta es una nueva funcionalidad de seguridad del Playbook Global. Para proteger la información del proyecto, ahora es necesario entrar con una cuenta aprobada. Contamos con la comprensión de todos durante esta actualización.";
+    es.security.login.cardTitle = "Entrar al Playbook";
+    es.security.login.cardLead = "Usa tu correo corporativo y contraseña. Los nuevos registros quedan pendientes hasta la aprobación administrativa.";
+    es.security.auth.loginTab = "Entrar";
+    es.security.auth.signupTab = "Registrarse";
+    es.security.auth.loginAction = "Entrar";
+    es.security.auth.signupAction = "Solicitar registro";
+    es.security.auth.resetAction = "Enviar recuperación";
+    es.security.auth.forgotPassword = "Olvidé mi contraseña";
+    es.security.auth.backToLogin = "Volver al login";
+    es.security.auth.loading = "Procesando...";
+    es.security.auth.logout = "Salir";
+    es.security.auth.signupSuccess = "Registro recibido. Después de confirmar el correo, espera la aprobación administrativa.";
+    es.security.auth.resetSent = "Si el correo está registrado, recibirás un enlace para redefinir la contraseña.";
+    es.security.fields.email = "Correo";
+    es.security.fields.password = "Contraseña";
+    es.security.fields.newPassword = "Nueva contraseña";
+    es.security.fields.confirmPassword = "Confirmar contraseña";
+    es.security.validation.email = "Informa un correo válido.";
+    es.security.validation.passwordRequired = "Informa la contraseña.";
+    es.security.validation.passwordStrength = "Usa al menos 12 caracteres con mayúscula, minúscula, número y símbolo.";
+    es.security.validation.passwordHint = "Usa al menos 12 caracteres con mayúscula, minúscula, número y símbolo.";
+    es.security.validation.passwordMatch = "La confirmación de contraseña no coincide.";
+    es.security.status.Pendente = "Registro recibido. Espera la aprobación administrativa para acceder al Playbook.";
+    es.security.status.Aprovado = "Cuenta aprobada.";
+    es.security.status.Recusado = "Registro rechazado. Contacta al administrador del Playbook.";
+    es.security.status.Suspenso = "Cuenta suspendida. Contacta al administrador del Playbook.";
+    es.security.statusLabel.Pendente = "Pendiente";
+    es.security.statusLabel.Aprovado = "Aprobado";
+    es.security.statusLabel.Recusado = "Rechazado";
+    es.security.statusLabel.Suspenso = "Suspendido";
+    es.security.errors.invalidCredentials = "Correo o contraseña inválidos. Verifica los datos e intenta nuevamente.";
+    es.security.errors.signupExists = "Este correo ya tiene registro o está aguardando confirmación.";
+    es.security.errors.signupFailed = "No fue posible concluir el registro ahora.";
+    es.security.errors.resetFailed = "No fue posible enviar la recuperación de contraseña ahora.";
+    es.security.errors.authUnavailableTitle = "No fue posible validar el acceso.";
+    es.security.errors.authUnavailable = "Actualiza la página o intenta nuevamente en unos instantes.";
+    es.security.user.account = "Cuenta";
+    es.security.user.admin = "Admin";
+    es.security.user.user = "Usuario";
+    es.security.user.approved = "Aprobado";
+    es.security.password.title = "Cambiar contraseña - Playbook Global";
+    es.security.password.kicker = "Actualización obligatoria";
+    es.security.password.heroTitle = "Define una nueva contraseña segura";
+    es.security.password.heroText = "Para concluir tu acceso al Playbook Global, actualiza la contraseña antes de continuar.";
+    es.security.password.cardTitle = "Cambiar contraseña";
+    es.security.password.cardLead = "Elige una contraseña fuerte y exclusiva para esta cuenta.";
+    es.security.password.submit = "Guardar nueva contraseña";
+    es.security.password.success = "Contraseña cambiada con éxito.";
+    es.security.password.error = "No fue posible cambiar la contraseña ahora.";
+    es.security.password.profileWarning = "La contraseña fue cambiada, pero no fue posible actualizar el perfil. Intenta entrar nuevamente.";
+    es.security.admin.title = "Administración del Playbook";
+    es.security.admin.nav = "Administración";
+    es.security.admin.headerTitle = "Administración del Playbook";
+    es.security.admin.headerSubtitle = "Aprobación y gobernanza de usuarios";
+    es.security.admin.breadcrumb = "Seguridad > Usuarios";
+    es.security.admin.pageTitle = "Administración del Playbook";
+    es.security.admin.pageLead = "Aprueba, rechaza, suspende o reactiva usuarios con trazabilidad administrativa.";
+    es.security.admin.usersTitle = "Usuarios registrados";
+    es.security.admin.searchLabel = "Buscar correo";
+    es.security.admin.searchPlaceholder = "nombre@empresa.com";
+    es.security.admin.statusFilter = "Filtrar por estado";
+    es.security.admin.allStatuses = "Todos";
+    es.security.admin.refresh = "Actualizar";
+    es.security.admin.loading = "Cargando usuarios...";
+    es.security.admin.empty = "Ningún usuario encontrado para los filtros actuales.";
+    es.security.admin.loaded = "Usuarios cargados con éxito.";
+    es.security.admin.loadError = "Error al cargar usuarios.";
+    es.security.admin.actionSuccess = "Acción realizada con éxito.";
+    es.security.admin.actionError = "Error al ejecutar acción.";
+    es.security.admin.selfProtected = "Cuenta actual protegida";
+    es.security.admin.actions = es.security.admin.actions && typeof es.security.admin.actions === "object"
+        ? es.security.admin.actions : {};
+    es.security.admin.confirm = es.security.admin.confirm && typeof es.security.admin.confirm === "object"
+        ? es.security.admin.confirm : {};
+    es.security.admin.table = es.security.admin.table && typeof es.security.admin.table === "object"
+        ? es.security.admin.table : {};
+    es.security.admin.actions.approve = "Aprobar";
+    es.security.admin.actions.reject = "Rechazar";
+    es.security.admin.actions.suspend = "Suspender";
+    es.security.admin.actions.reactivate = "Reactivar";
+    es.security.admin.confirm.approve = "¿Confirmas la aprobación de este usuario?";
+    es.security.admin.confirm.reject = "¿Confirmas el rechazo de este usuario?";
+    es.security.admin.confirm.suspend = "¿Confirmas la suspensión de este usuario?";
+    es.security.admin.confirm.reactivate = "¿Confirmas la reactivación de este usuario?";
+    es.security.admin.table.email = "Correo";
+    es.security.admin.table.status = "Estado";
+    es.security.admin.table.role = "Perfil";
+    es.security.admin.table.created = "Registro";
+    es.security.admin.table.updated = "Última alteración";
+    es.security.admin.table.actions = "Acciones";
+})();
+
+(function () {
+    const es = window.PLAYBOOK_I18N_LOCALES["es"];
     if (!es) return;
 
     es.home = es.home || {};
@@ -1955,5 +2055,129 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
     es.kanban.main.mistakes.maskQueue = "No usar estado incorrecto para ocultar la cola.";
     es.kanban.main.mistakes.skipResolved = "No cerrar tickets directamente sin pasar por Resuelto.";
     es.kanban.main.mistakes.realStatus = "El estado debe reflejar la situacion real del ticket.";
+
+    es.security = es.security || {};
+    es.security.auth = {
+        metaTitle: "Playbook Global - Acceso seguro",
+        kicker: "Nueva capa de seguridad",
+        heroTitle: "Playbook Global protegido",
+        heroText: "Ingresa con una cuenta aprobada para acceder a contenidos, indicadores y materiales del proyecto.",
+        securityNotice: "Esta funcionalidad protege la informacion interna del Playbook. Los nuevos registros requieren confirmacion de e-mail y aprobacion administrativa.",
+        benefits: {
+            approved: "Acceso solo para cuentas aprobadas",
+            protected: "Contenidos e indicadores protegidos",
+            governed: "Gobernanza centralizada de usuarios"
+        },
+        accountLabel: "Cuenta corporativa",
+        adminAccountLabel: "Cuenta administrativa predeterminada",
+        secureFooter: "Autenticacion protegida y sesion cifrada",
+        title: "Accede a tu cuenta",
+        subtitle: "Usa e-mail y contrasena. Los nuevos registros requieren confirmacion de e-mail y aprobacion administrativa.",
+        tabs: {
+            login: "Ingresar",
+            register: "Registrar",
+            reset: "Recuperar"
+        },
+        email: "E-mail",
+        password: "Contrasena",
+        newPassword: "Nueva contrasena",
+        confirmPassword: "Confirmar contrasena",
+        emailHint: "Usa tu e-mail corporativo aprobado.",
+        registerEmailHint: "Despues del registro, confirma el e-mail recibido y espera la aprobacion administrativa.",
+        loginPasswordHint: "La contrasena distingue mayusculas y minusculas.",
+        passwordHint: "Usa 12 o mas caracteres, con mayuscula, minuscula, numero y simbolo.",
+        passwordRules: {
+            length: "12 o mas caracteres",
+            upper: "Una letra mayuscula",
+            lower: "Una letra minuscula",
+            number: "Un numero",
+            symbol: "Un simbolo"
+        },
+        resetHint: "Por seguridad, la respuesta no confirma si el e-mail esta registrado.",
+        actions: {
+            login: "Ingresar",
+            forgot: "Olvide mi contrasena",
+            register: "Solicitar registro",
+            reset: "Enviar recuperacion",
+            changePassword: "Cambiar contrasena",
+            showPassword: "Mostrar",
+            hidePassword: "Ocultar",
+            backToLogin: "Volver al ingreso"
+        }
+    };
+    es.security.admin = {
+        metaTitle: "Administracion del Playbook",
+        headerTitle: "Administracion del Playbook",
+        headerSubtitle: "Aprobacion y gobernanza de acceso",
+        backToPlaybook: "Volver al Playbook",
+        kicker: "Control de acceso",
+        title: "Administracion del Playbook",
+        description: "Lista usuarios, busca registros y cambia estados de aprobacion con auditoria en Supabase.",
+        searchLabel: "Buscar por e-mail",
+        searchPlaceholder: "nombre@empresa.com",
+        statusLabel: "Estado",
+        loading: "Cargando usuarios...",
+        empty: "No se encontraron usuarios.",
+        status: {
+            all: "Todos",
+            pending: "Pendiente",
+            approved: "Aprobado",
+            rejected: "Rechazado",
+            suspended: "Suspendido"
+        },
+        actions: {
+            filter: "Aplicar filtros",
+            makeAdmin: "Hacer admin",
+            removeAdmin: "Quitar admin"
+        },
+        roles: {
+            admin: "Admin",
+            user: "Usuario"
+        },
+        confirmMakeAdmin: "Confirmar la promocion de este usuario a administrador?",
+        confirmRemoveAdmin: "Confirmar la remocion del perfil administrador de este usuario?",
+        roleChanged: "Perfil actualizado con exito.",
+        table: {
+            email: "E-mail",
+            createdAt: "Registro",
+            status: "Estado",
+            role: "Perfil",
+            updatedAt: "Ultima alteracion",
+            actions: "Acciones"
+        }
+    };
+    es.security.messages = {
+        invalidCredentials: "E-mail o contrasena invalidos.",
+        pending: "Tu registro esta pendiente de aprobacion administrativa.",
+        rejected: "Tu registro fue rechazado. Contacta a la administracion del Playbook.",
+        suspended: "Tu acceso esta suspendido. Contacta a la administracion del Playbook.",
+        profileMissing: "Perfil del Playbook no encontrado. Contacta a la administracion.",
+        signingIn: "Validando acceso...",
+        loginTakingLong: "La validacion esta tardando mas de lo normal. Aun estamos intentando conectar con Supabase...",
+        authClientTimeout: "No fue posible cargar la autenticacion a tiempo.",
+        loginTimeout: "La validacion tardo demasiado. Recarga la pagina e intenta nuevamente.",
+        profileValidationTimeout: "Inicio de sesion realizado, pero la validacion del perfil tardo demasiado. Recarga la pagina.",
+        authUnavailable: "No fue posible cargar la autenticacion. Verifica la conexion y recarga la pagina.",
+        loginSuccess: "Inicio de sesion realizado. Redirigiendo...",
+        emailNotConfirmed: "Confirma el e-mail enviado por Supabase y espera la aprobacion administrativa antes de entrar.",
+        registerSuccess: "Registro enviado. Confirma el e-mail recibido y espera la aprobacion administrativa antes de acceder al Playbook.",
+        resetSuccess: "Si el e-mail esta registrado, enviaremos instrucciones de recuperacion.",
+        passwordChanged: "Contrasena cambiada con exito. Ingresa nuevamente con la nueva contrasena.",
+        forcePasswordChange: "Cambia la contrasena inicial antes de acceder al Playbook.",
+        passwordMismatch: "La confirmacion de contrasena no coincide.",
+        passwordWeak: "Usa 12 o mas caracteres, incluyendo mayuscula, minuscula, numero y simbolo.",
+        registerError: "No fue posible completar el registro ahora. Intenta mas tarde.",
+        resetError: "No fue posible procesar la solicitud ahora. Intenta mas tarde.",
+        passwordChangeError: "No fue posible cambiar la contrasena ahora. Solicita un nuevo enlace o intenta otra vez.",
+        emailInvalid: "Ingresa un e-mail valido.",
+        sessionMissing: "Inicia sesion para acceder al Playbook.",
+        adminRequired: "Solo administradores aprobados pueden acceder a esta pagina.",
+        logout: "Salir",
+        admin: "Administracion",
+        loadingUsers: "Cargando usuarios...",
+        emptyUsers: "No se encontraron usuarios.",
+        confirmStatus: "Confirmar cambio de estado a {status}?",
+        statusChanged: "Estado actualizado con exito."
+    };
 })();
 

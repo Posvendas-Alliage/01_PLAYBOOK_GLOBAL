@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="security.admin.metaTitle">Administracao do Playbook</title>
+    <style id="playbook-auth-pending-style">html.playbook-auth-pending body{visibility:hidden}</style>
+    <script>
+        document.documentElement.classList.add("playbook-auth-pending");
+        window.PLAYBOOK_AUTH_OPTIONS = { requireAdmin: true };
+    </script>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/security.css">
+    <script src="config/supabase.js"></script>
+    <script src="js/playbook-auth.js"></script>
+    <script src="js/playbook-auth-guard.js"></script>
+</head>
+<body class="auth-admin-page" data-requires-admin="true">
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1 data-i18n="security.admin.headerTitle">Administracao do Playbook</h1>
+                    <p data-i18n="security.admin.headerSubtitle">Aprovacao e governanca de acesso</p>
+                </div>
+                <nav class="nav" aria-label="Navegacao administrativa">
+                    <ul>
+                        <li><a href="index.html" data-i18n="security.admin.backToPlaybook">Voltar ao Playbook</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="auth-admin-main">
+        <div class="container">
+            <section class="auth-admin-hero">
+                <p class="auth-kicker" data-i18n="security.admin.kicker">Controle de acesso</p>
+                <h1 data-i18n="security.admin.title">Administracao do Playbook</h1>
+                <p data-i18n="security.admin.description">Liste usuarios, pesquise cadastros e altere status de aprovacao com auditoria no Supabase.</p>
+            </section>
+
+            <div id="adminMessage" class="auth-message" role="status" aria-live="polite" hidden></div>
+
+            <section class="card">
+                <form id="adminFilters" class="auth-toolbar">
+                    <div class="auth-field">
+                        <label for="adminSearch" data-i18n="security.admin.searchLabel">Pesquisar por e-mail</label>
+                        <input id="adminSearch" type="search" autocomplete="off" data-i18n-placeholder="security.admin.searchPlaceholder" placeholder="nome@empresa.com">
+                    </div>
+                    <div class="auth-field">
+                        <label for="adminStatusFilter" data-i18n="security.admin.statusLabel">Status</label>
+                        <select id="adminStatusFilter">
+                            <option value="" data-i18n="security.admin.status.all">Todos</option>
+                            <option value="pending" data-i18n="security.admin.status.pending">Pendente</option>
+                            <option value="approved" data-i18n="security.admin.status.approved">Aprovado</option>
+                            <option value="rejected" data-i18n="security.admin.status.rejected">Recusado</option>
+                            <option value="suspended" data-i18n="security.admin.status.suspended">Suspenso</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" type="submit" data-i18n="security.admin.actions.filter">Aplicar filtros</button>
+                </form>
+
+                <div id="adminLoading" class="auth-message is-visible" data-i18n="security.admin.loading">Carregando usuarios...</div>
+                <div id="adminEmpty" class="auth-message" data-i18n="security.admin.empty" hidden>Nenhum usuario encontrado.</div>
+
+                <div class="auth-table-wrap">
+                    <table class="auth-user-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="security.admin.table.email">E-mail</th>
+                                <th data-i18n="security.admin.table.createdAt">Cadastro</th>
+                                <th data-i18n="security.admin.table.status">Status</th>
+                                <th data-i18n="security.admin.table.role">Perfil</th>
+                                <th data-i18n="security.admin.table.updatedAt">Ultima alteracao</th>
+                                <th data-i18n="security.admin.table.actions">Acoes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="i18n/locales/pt-BR.js"></script>
+    <script src="i18n/locales/es.js"></script>
+    <script src="i18n/locales/en.js"></script>
+    <script src="i18n/i18n.js"></script>
+    <script src="i18n/init.js"></script>
+    <script src="js/playbook-admin.js"></script>
+</body>
+</html>

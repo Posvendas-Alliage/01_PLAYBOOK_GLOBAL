@@ -1,5 +1,8 @@
 const routes = {
   playbookHome: "./index.html",
+  login: "./login.html",
+  passwordChange: "./alterar-senha.html",
+  playbookAdmin: "./administracao-playbook.html",
   globalServiceHome: "./index.html#epic-global-service",
   zohoDeskEpicAnchor: "./index.html#epic-zoho-desk",
   zohoDeskHome: "./09_Zoho_Desk/index.html",

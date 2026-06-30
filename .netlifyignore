@@ -1,0 +1,22 @@
+# Internal repository/runtime files
+.git/
+.netlify/
+.agents/
+.codex/
+.claude/
+
+# Local environment and logs
+.env
+.env.*
+*.log
+
+# Local/generated work artifacts
+outputs/
+reports/
+
+# Source/admin material that should not be public static content
+supabase/
+tools/
+docs/
+PROMPT_*.md
+automation-*.md

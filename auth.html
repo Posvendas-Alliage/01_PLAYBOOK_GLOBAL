@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="security.auth.metaTitle">Playbook Global - Acesso seguro</title>
+    <script>
+        (function () {
+            var target = new URL("login.html", window.location.href);
+            target.search = window.location.search;
+            target.hash = window.location.hash;
+            window.location.replace(target.href);
+        })();
+    </script>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page" data-auth-page="true">
+    <main class="auth-shell">
+        <section class="auth-hero" aria-labelledby="authHeroTitle">
+            <p class="auth-kicker" data-i18n="security.auth.kicker">Nova camada de segurança</p>
+            <h1 id="authHeroTitle" data-i18n="security.auth.heroTitle">Playbook Global protegido</h1>
+            <p data-i18n="security.auth.heroText">Entre com sua conta aprovada para acessar conteúdos, indicadores e materiais do projeto.</p>
+            <div class="auth-feature-note">
+                <p data-i18n="security.auth.securityNotice">Esta é uma nova funcionalidade de segurança do Playbook Global. Para proteger as informações do projeto, agora é necessário entrar com uma conta aprovada. Contamos com a compreensão de todos durante esta atualização.</p>
+            </div>
+        </section>
+
+        <section class="auth-panel-wrap" aria-labelledby="authPanelTitle">
+            <div class="auth-panel">
+                <h2 id="authPanelTitle" data-i18n="security.auth.title">Acesse sua conta</h2>
+                <p class="auth-subtitle" data-i18n="security.auth.subtitle">Use e-mail e senha. Novos cadastros passam por aprovação administrativa.</p>
+
+                <div id="authMessage" class="auth-message" role="status" aria-live="polite"></div>
+
+                <div class="auth-tabs" role="tablist" aria-label="Fluxos de acesso">
+                    <button class="auth-tab is-active" type="button" data-auth-mode="login" data-i18n="security.auth.tabs.login">Entrar</button>
+                    <button class="auth-tab" type="button" data-auth-mode="register" data-i18n="security.auth.tabs.register">Cadastrar</button>
+                    <button class="auth-tab" type="button" data-auth-mode="reset" data-i18n="security.auth.tabs.reset">Recuperar</button>
+                </div>
+
+                <form id="loginForm" class="auth-form" data-auth-form="login" novalidate>
+                    <div class="auth-field">
+                        <label for="loginEmail" data-i18n="security.auth.email">E-mail</label>
+                        <input id="loginEmail" name="email" type="email" autocomplete="email" required>
+                    </div>
+                    <div class="auth-field">
+                        <label for="loginPassword" data-i18n="security.auth.password">Senha</label>
+                        <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+                    </div>
+                    <button class="btn-primary" type="submit" data-i18n="security.auth.actions.login">Entrar</button>
+                    <div class="auth-secondary-actions">
+                        <button class="auth-link-button" type="button" data-auth-mode="reset" data-i18n="security.auth.actions.forgot">Esqueci minha senha</button>
+                    </div>
+                </form>
+
+                <form id="registerForm" class="auth-form" data-auth-form="register" hidden novalidate>
+                    <div class="auth-field">
+                        <label for="registerEmail" data-i18n="security.auth.email">E-mail</label>
+                        <input id="registerEmail" name="email" type="email" autocomplete="email" required>
+                    </div>
+                    <div class="auth-field">
+                        <label for="registerPassword" data-i18n="security.auth.password">Senha</label>
+                        <input id="registerPassword" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+                        <p class="auth-hint" data-i18n="security.auth.passwordHint">Use 12 ou mais caracteres, com maiúscula, minúscula, número e símbolo.</p>
+                    </div>
+                    <div class="auth-field">
+                        <label for="registerPasswordConfirm" data-i18n="security.auth.confirmPassword">Confirmar senha</label>
+                        <input id="registerPasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+                    </div>
+                    <button class="btn-primary" type="submit" data-i18n="security.auth.actions.register">Solicitar cadastro</button>
+                </form>
+
+                <form id="resetForm" class="auth-form" data-auth-form="reset" hidden novalidate>
+                    <div class="auth-field">
+                        <label for="resetEmail" data-i18n="security.auth.email">E-mail</label>
+                        <input id="resetEmail" name="email" type="email" autocomplete="email" required>
+                    </div>
+                    <p class="auth-hint" data-i18n="security.auth.resetHint">Enviaremos um link de recuperação para o e-mail informado.</p>
+                    <button class="btn-primary" type="submit" data-i18n="security.auth.actions.reset">Enviar recuperação</button>
+                </form>
+
+                <form id="changePasswordForm" class="auth-form" data-auth-form="change-password" hidden novalidate>
+                    <div class="auth-field">
+                        <label for="changePassword" data-i18n="security.auth.newPassword">Nova senha</label>
+                        <input id="changePassword" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+                        <p class="auth-hint" data-i18n="security.auth.passwordHint">Use 12 ou mais caracteres, com maiúscula, minúscula, número e símbolo.</p>
+                    </div>
+                    <div class="auth-field">
+                        <label for="changePasswordConfirm" data-i18n="security.auth.confirmPassword">Confirmar senha</label>
+                        <input id="changePasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+                    </div>
+                    <button class="btn-primary" type="submit" data-i18n="security.auth.actions.changePassword">Alterar senha</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script src="i18n/locales/pt-BR.js"></script>
+    <script src="i18n/locales/es.js"></script>
+    <script src="i18n/locales/en.js"></script>
+    <script src="i18n/i18n.js"></script>
+    <script src="i18n/init.js"></script>
+    <script src="config/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

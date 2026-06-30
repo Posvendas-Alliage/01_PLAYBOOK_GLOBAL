@@ -74,6 +74,7 @@ function setSanitizedHref(element, href, fallback) {
 
 document.addEventListener("DOMContentLoaded", function () {
     initializeLanguageSelector();
+    initializePlaybookAuth();
     applyModuleStandardization();
     enableSmoothAnchorScroll();
     annotateSectionLeads();
@@ -89,6 +90,34 @@ function getI18n() {
             return fallback;
         }
     };
+}
+
+function initializePlaybookAuth() {
+    if (window.PlaybookAuth || window.__PlaybookAuthBootstrapStarted) return;
+    window.__PlaybookAuthBootstrapStarted = true;
+
+    const basePath = resolveGlobalAssetBasePath();
+    if (!basePath) return;
+
+    loadScriptOnce(
+        "playbookSupabaseConfigScript",
+        basePath + "config/supabase.js",
+        function () {
+            loadScriptOnce(
+                "playbookSupabaseJsScript",
+                "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+                function () {
+                    loadScriptOnce("playbookAuthScript", basePath + "js/auth.js");
+                },
+                function () {
+                    loadScriptOnce("playbookAuthScript", basePath + "js/auth.js");
+                }
+            );
+        },
+        function () {
+            loadScriptOnce("playbookAuthScript", basePath + "js/auth.js");
+        }
+    );
 }
 
 function initializePlaybookAssistant() {
