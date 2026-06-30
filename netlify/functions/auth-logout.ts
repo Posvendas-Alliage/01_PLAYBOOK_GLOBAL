@@ -1,6 +1,7 @@
 import type { Config, Context } from "@netlify/functions";
 
 const SESSION_COOKIE = "pb_session";
+const CLIENT_ACCESS_COOKIE = "pb_client_access";
 
 function isLocalRequest(req: Request): boolean {
   const url = new URL(req.url);
@@ -28,6 +29,7 @@ export default async (req: Request, _context: Context) => {
     "Cache-Control": "no-store",
   });
   headers.append("Set-Cookie", clearCookie(req, SESSION_COOKIE));
+  headers.append("Set-Cookie", clearCookie(req, CLIENT_ACCESS_COOKIE));
 
   return new Response(JSON.stringify({ success: true }), { status: 200, headers });
 };

@@ -14,6 +14,7 @@ type ValidationResult =
   | { ok: false; reason: string; clearCookies?: boolean };
 
 const SESSION_COOKIE = "pb_session";
+const CLIENT_ACCESS_COOKIE = "pb_client_access";
 
 function env(name: string): string {
   const globals = globalThis as unknown as {
@@ -96,9 +97,13 @@ function encodeSessionCookie(accessToken: string, refreshToken?: string): string
   })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+function getClientAccessToken(cookies: Record<string, string>): string {
+  return cookies[CLIENT_ACCESS_COOKIE] || "";
+}
+
 function getSessionTokens(cookies: Record<string, string>): { accessToken: string; refreshToken: string } {
   const rawSession = cookies[SESSION_COOKIE] || "";
-  if (!rawSession) return { accessToken: "", refreshToken: "" };
+  if (!rawSession) return { accessToken: getClientAccessToken(cookies), refreshToken: "" };
 
   try {
     const payload = JSON.parse(base64UrlDecode(rawSession)) as {
@@ -111,7 +116,7 @@ function getSessionTokens(cookies: Record<string, string>): { accessToken: strin
       refreshToken: String(payload.refresh_token || ""),
     };
   } catch (_error) {
-    return { accessToken: "", refreshToken: "" };
+    return { accessToken: getClientAccessToken(cookies), refreshToken: "" };
   }
 }
 
@@ -159,6 +164,7 @@ function redirectToAuth(req: Request, reason: string, mode?: string): Response {
 
   if (reason === "invalid_session" || reason === "missing_session") {
     headers.append("Set-Cookie", clearCookie(req, SESSION_COOKIE));
+    headers.append("Set-Cookie", clearCookie(req, CLIENT_ACCESS_COOKIE));
   }
 
   return new Response(null, { status: 302, headers });
@@ -246,11 +252,18 @@ async function validateSession(req: Request): Promise<ValidationResult> {
 
   const cookies = parseCookies(req.headers.get("Cookie"));
   const sessionTokens = getSessionTokens(cookies);
+  const clientAccessToken = getClientAccessToken(cookies);
   let accessToken = sessionTokens.accessToken;
   let refreshToken = sessionTokens.refreshToken;
   let setCookies: string[] = [];
 
   let user = accessToken ? await fetchUser(supabaseUrl, publishableKey, accessToken) : null;
+
+  if (!user && clientAccessToken && clientAccessToken !== accessToken) {
+    accessToken = clientAccessToken;
+    refreshToken = "";
+    user = await fetchUser(supabaseUrl, publishableKey, accessToken);
+  }
 
   if (!user && refreshToken) {
     const refreshed = await refreshSession(req, supabaseUrl, publishableKey, refreshToken);

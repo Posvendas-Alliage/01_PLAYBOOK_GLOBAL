@@ -4,6 +4,7 @@
         "https://unpkg.com/@supabase/supabase-js@2.75.1/dist/umd/supabase.min.js"
     ];
     const SUPABASE_LIBRARY_LOAD_TIMEOUT_MS = 12000;
+    const CLIENT_ACCESS_COOKIE = "pb_client_access";
     const PROFILE_TABLE = "playbook_profiles";
     const SUPPORTED_STATUSES = {
         pending: true,
@@ -180,11 +181,29 @@
         return host === "localhost" || host === "127.0.0.1" || host === "";
     }
 
+    function clientCookieOptions(maxAge) {
+        const secure = isLocalBrowser() ? "" : "; Secure";
+        return "Path=/; SameSite=Lax; Max-Age=" + maxAge + secure;
+    }
+
+    function syncClientAccessCookie(session) {
+        if (!isLikelyNetlifyRuntime()) return;
+
+        if (session && session.access_token) {
+            const maxAge = Math.max(60, Math.min(Number(session.expires_in) || 3600, 3600));
+            document.cookie = CLIENT_ACCESS_COOKIE + "=" + encodeURIComponent(session.access_token) + "; " + clientCookieOptions(maxAge);
+            return;
+        }
+
+        document.cookie = CLIENT_ACCESS_COOKIE + "=; " + clientCookieOptions(0);
+    }
+
     async function syncServerSession(session) {
         if (!isLikelyNetlifyRuntime()) return true;
 
         try {
             if (session && session.access_token && session.refresh_token) {
+                syncClientAccessCookie(session);
                 const now = Date.now();
                 if (serverSessionSyncPromise && now - lastServerSessionSync < 2500) {
                     return serverSessionSyncPromise;
@@ -202,17 +221,19 @@
                         })
                     })
                     .then(function (response) { return response.ok || isLocalBrowser(); })
-                    .catch(function () { return isLocalBrowser(); });
+                    .catch(function () { return true; });
 
                 return serverSessionSyncPromise;
             }
 
             serverSessionSyncPromise = null;
+            syncClientAccessCookie(null);
             const response = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
             return response.ok || isLocalBrowser();
         } catch (_error) {
             // Netlify Functions are not available in every local/static preview.
-            return isLocalBrowser();
+            syncClientAccessCookie(session || null);
+            return !!(session && session.access_token) || isLocalBrowser();
         }
     }
 
