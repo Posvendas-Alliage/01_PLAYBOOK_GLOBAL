@@ -1,4 +1,11 @@
 (function () {
+    if (
+        window.PlaybookAuth &&
+        typeof window.PlaybookAuth.getSession === "function" &&
+        typeof window.PlaybookAuth.redirectToLogin === "function"
+    ) {
+        return;
+    }
     if (window.__PlaybookAuthCentralLoaded) return;
     window.__PlaybookAuthCentralLoaded = true;
 
@@ -136,6 +143,27 @@
         return new URL(path.replace(/^\//, ""), rootBaseUrl()).href;
     }
 
+    function canonicalPlaybookPath(pathname) {
+        const path = String(pathname || "");
+        const lowerPath = path.toLowerCase();
+
+        if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/") return "/01_KPI/index.html";
+        if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") return "/01_KPI/KPI_V2/index.html";
+        if (lowerPath.indexOf("/01_kpi/kpi_v2/") === 0) {
+            const rest = path.slice("/01_kpi/kpi_v2/".length) || "index.html";
+            return "/01_KPI/KPI_V2/" + rest + (/\.[a-z0-9]+$/i.test(rest) ? "" : ".html");
+        }
+        if (lowerPath.indexOf("/01_kpi/") === 0) return "/01_KPI/" + path.slice("/01_kpi/".length);
+        return path;
+    }
+
+    function shouldDisableAutoRedirect(reason) {
+        return reason === "missing_session" ||
+            reason === "missing_user" ||
+            reason === "invalid_session" ||
+            reason === "profile_missing";
+    }
+
     function ensureAuthStylesheet() {
         const existing = Array.prototype.some.call(document.querySelectorAll("link[rel='stylesheet'][href]"), function (link) {
             return (link.href || "").split("?")[0].endsWith("/css/auth.css");
@@ -149,20 +177,21 @@
     }
 
     function loginUrl(reason, mode) {
-        const url = new URL(rootUrl("auth.html"));
-        url.searchParams.set("next", window.location.pathname + window.location.search + window.location.hash);
+        const url = new URL(rootUrl("login.html"));
+        url.searchParams.set("returnTo", canonicalPlaybookPath(window.location.pathname) + window.location.search + window.location.hash);
         if (reason) url.searchParams.set("reason", reason);
+        if (shouldDisableAutoRedirect(reason)) url.searchParams.set("auto", "0");
         if (mode) url.searchParams.set("mode", mode);
         return url.href;
     }
 
     function safeNextUrl() {
         const params = new URLSearchParams(window.location.search);
-        const raw = params.get("next") || "/";
+        const raw = params.get("returnTo") || params.get("next") || "/";
         try {
             const next = new URL(raw, window.location.origin);
             if (next.origin !== window.location.origin) return rootUrl("index.html");
-            return next.pathname + next.search + next.hash;
+            return canonicalPlaybookPath(next.pathname) + next.search + next.hash;
         } catch (_error) {
             return rootUrl("index.html");
         }

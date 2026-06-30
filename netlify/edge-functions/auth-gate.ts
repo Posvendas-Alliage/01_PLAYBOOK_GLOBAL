@@ -150,6 +150,36 @@ function isApprovedStatus(status: string): boolean {
   return status === "Aprovado" || status === "approved";
 }
 
+function canonicalPlaybookPath(pathname: string): string {
+  const path = String(pathname || "");
+  const lowerPath = path.toLowerCase();
+
+  if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/") {
+    return "/01_KPI/index.html";
+  }
+
+  if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") {
+    return "/01_KPI/KPI_V2/index.html";
+  }
+
+  if (lowerPath.startsWith("/01_kpi/kpi_v2/")) {
+    const rest = path.slice("/01_kpi/kpi_v2/".length);
+    const normalizedRest = rest || "index.html";
+    const hasExtension = /\.[a-z0-9]+$/i.test(normalizedRest);
+    return "/01_KPI/KPI_V2/" + normalizedRest + (hasExtension ? "" : ".html");
+  }
+
+  if (lowerPath.startsWith("/01_kpi/")) {
+    return "/01_KPI/" + path.slice("/01_kpi/".length);
+  }
+
+  return path;
+}
+
+function canonicalReturnTo(url: URL): string {
+  return canonicalPlaybookPath(url.pathname) + url.search + url.hash;
+}
+
 function shouldDisableLoginAutoRedirect(reason: string): boolean {
   return reason === "invalid_session" ||
     reason === "missing_session" ||
@@ -160,7 +190,7 @@ function shouldDisableLoginAutoRedirect(reason: string): boolean {
 function redirectToAuth(req: Request, reason: string, mode?: string): Response {
   const requestUrl = new URL(req.url);
   const authUrl = new URL("/login.html", requestUrl.origin);
-  authUrl.searchParams.set("returnTo", requestUrl.pathname + requestUrl.search + requestUrl.hash);
+  authUrl.searchParams.set("returnTo", canonicalReturnTo(requestUrl));
   authUrl.searchParams.set("reason", reason);
   if (shouldDisableLoginAutoRedirect(reason)) authUrl.searchParams.set("auto", "0");
   if (mode) authUrl.searchParams.set("mode", mode);
@@ -338,6 +368,18 @@ export default async (req: Request, context: Context) => {
 
   if (isAdminPath(url.pathname) && validation.profile.role !== "admin") {
     return redirectToAuth(req, "admin_required");
+  }
+
+  const canonicalPath = canonicalPlaybookPath(url.pathname);
+  if (canonicalPath !== url.pathname) {
+    const canonicalUrl = new URL(req.url);
+    canonicalUrl.pathname = canonicalPath;
+    const headers = new Headers({
+      Location: canonicalUrl.toString(),
+      "Cache-Control": "no-store",
+    });
+    validation.setCookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
+    return new Response(null, { status: 302, headers });
   }
 
   const response = await context.next();

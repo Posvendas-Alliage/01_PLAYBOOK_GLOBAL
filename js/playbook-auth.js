@@ -1,4 +1,6 @@
 (function () {
+    window.__PlaybookAuthCentralLoaded = true;
+
     const SUPABASE_JS_URLS = [
         "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.75.1/dist/umd/supabase.min.js",
         "https://unpkg.com/@supabase/supabase-js@2.75.1/dist/umd/supabase.min.js"
@@ -311,6 +313,32 @@
         return window.location.pathname + window.location.search + window.location.hash;
     }
 
+    function canonicalPlaybookPath(pathname) {
+        const path = String(pathname || "");
+        const lowerPath = path.toLowerCase();
+
+        if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/") {
+            return "/01_KPI/index.html";
+        }
+
+        if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") {
+            return "/01_KPI/KPI_V2/index.html";
+        }
+
+        if (lowerPath.indexOf("/01_kpi/kpi_v2/") === 0) {
+            const rest = path.slice("/01_kpi/kpi_v2/".length);
+            const hasExtension = /\.[a-z0-9]+$/i.test(rest);
+            const normalizedRest = rest || "index.html";
+            return "/01_KPI/KPI_V2/" + normalizedRest + (hasExtension || !normalizedRest ? "" : ".html");
+        }
+
+        if (lowerPath.indexOf("/01_kpi/") === 0) {
+            return "/01_KPI/" + path.slice("/01_kpi/".length);
+        }
+
+        return path;
+    }
+
     function sanitizeReturnTo(rawValue) {
         if (!rawValue) return toRootUrl("index.html");
 
@@ -318,6 +346,7 @@
             const url = new URL(rawValue, window.location.origin);
             if (url.origin !== window.location.origin) return toRootUrl("index.html");
             if (/\/(?:login|auth|alterar-senha)\.html$/i.test(url.pathname)) return toRootUrl("index.html");
+            url.pathname = canonicalPlaybookPath(url.pathname);
             return url.href;
         } catch (_error) {
             return toRootUrl("index.html");
