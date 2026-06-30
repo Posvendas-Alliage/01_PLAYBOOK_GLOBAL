@@ -4,7 +4,21 @@ const ACCESS_COOKIE = "pb_access_token";
 const REFRESH_COOKIE = "pb_refresh_token";
 
 function env(name: string): string {
-  return Netlify.env.get(name) ?? "";
+  const globals = globalThis as unknown as {
+    Netlify?: { env?: { get?: (key: string) => string | undefined } };
+    Deno?: { env?: { get?: (key: string) => string | undefined } };
+    process?: { env?: Record<string, string | undefined> };
+  };
+
+  if (typeof globals.Netlify?.env?.get === "function") {
+    return globals.Netlify.env.get(name) ?? "";
+  }
+
+  if (typeof globals.Deno?.env?.get === "function") {
+    return globals.Deno.env.get(name) ?? "";
+  }
+
+  return globals.process?.env?.[name] ?? "";
 }
 
 function getSupabaseUrl(): string {
