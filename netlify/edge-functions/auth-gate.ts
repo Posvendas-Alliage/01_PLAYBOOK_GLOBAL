@@ -150,11 +150,19 @@ function isApprovedStatus(status: string): boolean {
   return status === "Aprovado" || status === "approved";
 }
 
+function shouldDisableLoginAutoRedirect(reason: string): boolean {
+  return reason === "invalid_session" ||
+    reason === "missing_session" ||
+    reason === "missing_user" ||
+    reason === "server_not_configured";
+}
+
 function redirectToAuth(req: Request, reason: string, mode?: string): Response {
   const requestUrl = new URL(req.url);
   const authUrl = new URL("/login.html", requestUrl.origin);
   authUrl.searchParams.set("returnTo", requestUrl.pathname + requestUrl.search + requestUrl.hash);
   authUrl.searchParams.set("reason", reason);
+  if (shouldDisableLoginAutoRedirect(reason)) authUrl.searchParams.set("auto", "0");
   if (mode) authUrl.searchParams.set("mode", mode);
 
   const headers = new Headers({

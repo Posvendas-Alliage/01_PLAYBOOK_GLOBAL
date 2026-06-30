@@ -8,6 +8,15 @@
     const forms = Array.prototype.slice.call(document.querySelectorAll("[data-auth-form]"));
     const passwordToggles = Array.prototype.slice.call(document.querySelectorAll("[data-password-toggle]"));
     let loginAttemptId = 0;
+    const REDIRECT_GUARD_KEY = "playbookLoginRedirectGuard";
+    const REDIRECT_GUARD_WINDOW_MS = 30000;
+    const AUTO_REDIRECT_BLOCK_REASONS = {
+        missing_session: true,
+        missing_user: true,
+        invalid_session: true,
+        profile_missing: true,
+        server_not_configured: true
+    };
 
     function withTimeout(promise, timeoutMs, message) {
         return new Promise(function (resolve, reject) {
@@ -185,6 +194,41 @@
         showMessage(tr(entry[0], entry[1]), entry[2]);
     }
 
+    function rememberRedirectAttempt(target) {
+        try {
+            window.sessionStorage.setItem(REDIRECT_GUARD_KEY, JSON.stringify({
+                at: Date.now(),
+                target: target || ""
+            }));
+        } catch (_error) {
+            // Storage can be disabled by the browser; the URL guards still prevent loops.
+        }
+    }
+
+    function hasRecentRedirectAttempt() {
+        try {
+            const raw = window.sessionStorage.getItem(REDIRECT_GUARD_KEY);
+            if (!raw) return false;
+            const payload = JSON.parse(raw);
+            return Date.now() - Number(payload && payload.at || 0) < REDIRECT_GUARD_WINDOW_MS;
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function shouldAutoRedirectOnLoad() {
+        const params = new URLSearchParams(window.location.search);
+        const auto = String(params.get("auto") || "").toLowerCase();
+        const reason = String(params.get("reason") || "").toLowerCase();
+
+        if (auto === "0" || auto === "false") return false;
+        if (params.has("returnTo") && reason) return false;
+        if (AUTO_REDIRECT_BLOCK_REASONS[reason]) return false;
+        if (hasRecentRedirectAttempt() && reason) return false;
+
+        return true;
+    }
+
     function showProfileBlock(profile) {
         const status = auth.statusKey(profile);
         const entry = messageForReason(status) || messageForReason(profile && profile.status);
@@ -224,8 +268,10 @@
             return false;
         }
         showMessage(tr("security.messages.loginSuccess", "Login realizado. Redirecionando..."), "success");
+        const target = auth.getReturnToFromUrl(auth.toRootUrl("index.html"));
+        rememberRedirectAttempt(target);
         window.setTimeout(function () {
-            window.location.replace(auth.getReturnToFromUrl(auth.toRootUrl("index.html")));
+            window.location.replace(target);
         }, 250);
         return true;
     }
@@ -396,7 +442,9 @@
     activateMode(params.get("mode") || "login");
     showReasonFromUrl();
 
-    redirectIfAllowed().catch(function () {
-        // Login page remains available when the current/previous session cannot be reused.
-    });
+    if (shouldAutoRedirectOnLoad()) {
+        redirectIfAllowed().catch(function () {
+            // Login page remains available when the current/previous session cannot be reused.
+        });
+    }
 })();
