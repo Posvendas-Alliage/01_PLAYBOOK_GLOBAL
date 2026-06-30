@@ -147,10 +147,11 @@
         const path = String(pathname || "");
         const lowerPath = path.toLowerCase();
 
-        if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/") return "/01_KPI/index.html";
-        if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") return "/01_KPI/KPI_V2/index.html";
+        if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/" || lowerPath === "/01_kpi/index.html") return "/01_KPI/";
+        if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") return "/01_KPI/KPI_V2/";
         if (lowerPath.indexOf("/01_kpi/kpi_v2/") === 0) {
-            const rest = path.slice("/01_kpi/kpi_v2/".length) || "index.html";
+            const rest = path.slice("/01_kpi/kpi_v2/".length) || "";
+            if (!rest || rest.toLowerCase() === "index.html") return "/01_KPI/KPI_V2/";
             return "/01_KPI/KPI_V2/" + rest + (/\.[a-z0-9]+$/i.test(rest) ? "" : ".html");
         }
         if (lowerPath.indexOf("/01_kpi/") === 0) return "/01_KPI/" + path.slice("/01_kpi/".length);

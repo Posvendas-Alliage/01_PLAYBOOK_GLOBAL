@@ -154,17 +154,18 @@ function canonicalPlaybookPath(pathname: string): string {
   const path = String(pathname || "");
   const lowerPath = path.toLowerCase();
 
-  if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/") {
-    return "/01_KPI/index.html";
+  if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/" || lowerPath === "/01_kpi/index.html") {
+    return "/01_KPI/";
   }
 
   if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") {
-    return "/01_KPI/KPI_V2/index.html";
+    return "/01_KPI/KPI_V2/";
   }
 
   if (lowerPath.startsWith("/01_kpi/kpi_v2/")) {
     const rest = path.slice("/01_kpi/kpi_v2/".length);
-    const normalizedRest = rest || "index.html";
+    const normalizedRest = rest || "";
+    if (!normalizedRest || normalizedRest.toLowerCase() === "index.html") return "/01_KPI/KPI_V2/";
     const hasExtension = /\.[a-z0-9]+$/i.test(normalizedRest);
     return "/01_KPI/KPI_V2/" + normalizedRest + (hasExtension ? "" : ".html");
   }

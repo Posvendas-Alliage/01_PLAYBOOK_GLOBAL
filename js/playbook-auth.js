@@ -313,22 +313,31 @@
         return window.location.pathname + window.location.search + window.location.hash;
     }
 
+    function isSessionRecoveryReason(reason) {
+        return reason === "missing_session" ||
+            reason === "missing_user" ||
+            reason === "invalid_session" ||
+            reason === "profile_missing" ||
+            reason === "missing_profile";
+    }
+
     function canonicalPlaybookPath(pathname) {
         const path = String(pathname || "");
         const lowerPath = path.toLowerCase();
 
-        if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/") {
-            return "/01_KPI/index.html";
+        if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/" || lowerPath === "/01_kpi/index.html") {
+            return "/01_KPI/";
         }
 
         if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") {
-            return "/01_KPI/KPI_V2/index.html";
+            return "/01_KPI/KPI_V2/";
         }
 
         if (lowerPath.indexOf("/01_kpi/kpi_v2/") === 0) {
             const rest = path.slice("/01_kpi/kpi_v2/".length);
             const hasExtension = /\.[a-z0-9]+$/i.test(rest);
-            const normalizedRest = rest || "index.html";
+            const normalizedRest = rest || "";
+            if (!normalizedRest || normalizedRest.toLowerCase() === "index.html") return "/01_KPI/KPI_V2/";
             return "/01_KPI/KPI_V2/" + normalizedRest + (hasExtension || !normalizedRest ? "" : ".html");
         }
 
@@ -337,6 +346,16 @@
         }
 
         return path;
+    }
+
+    function canonicalReturnTo(rawValue) {
+        try {
+            const url = new URL(rawValue || currentReturnTo(), window.location.origin);
+            url.pathname = canonicalPlaybookPath(url.pathname);
+            return url.pathname + url.search + url.hash;
+        } catch (_error) {
+            return currentReturnTo();
+        }
     }
 
     function sanitizeReturnTo(rawValue) {
@@ -360,8 +379,9 @@
 
     function redirectToLogin(reason) {
         const loginUrl = new URL(toRootUrl("login.html"));
-        loginUrl.searchParams.set("returnTo", currentReturnTo());
+        loginUrl.searchParams.set("returnTo", canonicalReturnTo(currentReturnTo()));
         if (reason) loginUrl.searchParams.set("reason", reason);
+        if (isSessionRecoveryReason(reason)) loginUrl.searchParams.set("auto", "0");
         window.location.replace(loginUrl.href);
     }
 
