@@ -156,7 +156,11 @@
                     <select id="filter-department" data-filter="department"></select>
                 </div>
                 <div class="filter-field">
-                    <label for="filter-product" data-i18n="filter_product">Produto</label>
+                    <label for="filter-product-line" data-i18n="filter_product_line">Linha</label>
+                    <select id="filter-product-line" data-filter="productLine"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-product" data-tx="filter_product_group">Produto / Grupo</label>
                     <select id="filter-product" data-filter="product"></select>
                 </div>
                 <div class="filter-field">
@@ -408,6 +412,10 @@
             search_ticket_placeholder: 'Buscar ticket #...',
             brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
             btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
+            filter_product_group: 'Produto / Grupo',
+            filter_product_line: 'Linha',
+            product_line_dental: 'Dental',
+            product_line_imaging: 'Imagem',
             filter_month_year: 'Mês/Ano', filter_country: 'País / Região', country_all: 'Todos',
             col_ticket_n: 'Ticket #', col_country: 'País/Região', col_priority: 'Prioridade',
             col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Data Fechamento',
@@ -438,6 +446,10 @@
             search_ticket_placeholder: 'Search ticket #...',
             brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
             btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
+            filter_product_group: 'Product / Group',
+            filter_product_line: 'Line',
+            product_line_dental: 'Dental',
+            product_line_imaging: 'Imaging',
             filter_month_year: 'Month/Year', filter_country: 'Country / Region', country_all: 'All',
             col_ticket_n: 'Ticket #', col_country: 'Country/Region', col_priority: 'Priority',
             col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Close Date',
@@ -468,6 +480,10 @@
             search_ticket_placeholder: 'Buscar ticket #...',
             brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
             btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
+            filter_product_group: 'Producto / Grupo',
+            filter_product_line: 'Línea',
+            product_line_dental: 'Dental',
+            product_line_imaging: 'Imagen',
             filter_month_year: 'Mes/Año', filter_country: 'País / Región', country_all: 'Todos',
             col_ticket_n: 'Ticket #', col_country: 'País/Región', col_priority: 'Prioridad',
             col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Fecha Cierre',
@@ -518,6 +534,10 @@
     // ──────────────────────────────────────────────────────────
     const PRIORITY_ORDER = ['Urgente','Alta','Média','Baixa','Muito Baixa'];
     const REGION_FLAGS = { Global: '🌐', Brasil: '🇧🇷', Argentina: '🇦🇷', 'México': '🇲🇽', LATAM: '🌎', USA: '🇺🇸', ROW: '🌍' };
+    const PRODUCT_LINE_OPTIONS = [
+        { value: 'dental', labelKey: 'product_line_dental', icon: '🦷' },
+        { value: 'imaging', labelKey: 'product_line_imaging', icon: '🖼️' }
+    ];
     const COUNTRY_BUTTONS = [
         { key: 'all', emoji: '🌐' },
         { key: 'Brasil', emoji: '🇧🇷' },
@@ -668,6 +688,51 @@
         if (current && [...select.options].some(o => o.value === current)) select.value = current;
     }
 
+    function buildMappedSelectOptions(select, options, defaultLabel) {
+        const current = select.value;
+        select.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = 'all'; optAll.textContent = defaultLabel;
+        select.appendChild(optAll);
+        options.forEach(({ value, label }) => {
+            const opt = document.createElement('option');
+            opt.value = value; opt.textContent = label;
+            select.appendChild(opt);
+        });
+        if (current && [...select.options].some(o => o.value === current)) select.value = current;
+    }
+
+    function buildProductFilterOptions(select, products, defaultLabel) {
+        const current = select.value;
+        select.innerHTML = '';
+
+        const optAll = document.createElement('option');
+        optAll.value = 'all'; optAll.textContent = defaultLabel;
+        select.appendChild(optAll);
+
+        PRODUCT_LINE_OPTIONS.forEach(({ value, labelKey, icon }) => {
+            const opt = document.createElement('option');
+            opt.value = `line:${value}`;
+            opt.textContent = `${icon} ${tx('filter_product_line')} ${tx(labelKey)}`;
+            select.appendChild(opt);
+        });
+
+        const separator = document.createElement('option');
+        separator.disabled = true;
+        separator.textContent = '──────────';
+        select.appendChild(separator);
+
+        products.forEach(product => {
+            if (!product || product === '-Nenhum-') return;
+            const opt = document.createElement('option');
+            opt.value = product;
+            opt.textContent = product;
+            select.appendChild(opt);
+        });
+
+        if (current && [...select.options].some(o => o.value === current)) select.value = current;
+    }
+
     function populateFilterOptions(data) {
         renderCountryFilter();
 
@@ -678,7 +743,10 @@
             [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
         buildSelectOptions(document.getElementById('filter-department'),
             [...new Set(data.map(d => (d.department_name || d.department || '')).filter(Boolean))].sort(), t('filter_all'));
-        buildSelectOptions(document.getElementById('filter-product'),
+        buildMappedSelectOptions(document.getElementById('filter-product-line'),
+            PRODUCT_LINE_OPTIONS.map(({ value, labelKey, icon }) => ({ value, label: `${icon} ${tx(labelKey)}` })),
+            t('filter_all'));
+        buildProductFilterOptions(document.getElementById('filter-product'),
             [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
 
         const months = Object.keys(groupByMonth(data)).sort().reverse();
@@ -693,7 +761,7 @@
         else if (months.length) monthSelect.value = months[0];
 
         const state = FilterState.get();
-        ['priority','type','department','product','dateFrom','dateTo'].forEach(key => {
+        ['priority','type','department','productLine','product','dateFrom','dateTo'].forEach(key => {
             const input = document.querySelector(`[data-filter="${key}"]`);
             if (!input) return;
             if (input.type === 'date') input.value = state[key] || '';

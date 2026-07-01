@@ -3,6 +3,7 @@ const DEFAULT_FILTERS = {
     priority: 'all',
     department: 'all',
     type: 'all',
+    productLine: 'all',
     product: 'all',
     dateFrom: '',
     dateTo: '',

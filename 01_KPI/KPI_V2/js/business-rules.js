@@ -265,6 +265,49 @@ function getTicketProduct(ticket) {
     return ticket.marca_produto || ticket.produtos || ticket.product || '';
 }
 
+function normalizeProductText(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function getTicketProductLine(ticket) {
+    const product = normalizeProductText(getTicketProduct(ticket));
+    if (!product) return '';
+
+    if (
+        product.includes('digitalizador') ||
+        product.includes('eagle') ||
+        product.includes('raio-x') ||
+        product.includes('raio x') ||
+        product.includes('scanner') ||
+        product.includes('sensor intraoral') ||
+        product.includes('tomografo') ||
+        product.includes('panoramico')
+    ) {
+        return 'imaging';
+    }
+
+    if (
+        product.includes('autoclave') ||
+        product.includes('bomba vacuo') ||
+        product.includes('compressor') ||
+        product.includes('consultorio') ||
+        product.includes('fotopolimerizador') ||
+        product.includes('micro motor') ||
+        product.includes('pecas de mao') ||
+        product.includes('perfilaxia') ||
+        product.includes('profilaxia')
+    ) {
+        return 'dental';
+    }
+
+    return '';
+}
+
 function getTicketOperationalGroup(ticket, agent) {
     const categoria = (ticket.categoria_custom || ticket.categoria || '').toLowerCase().trim();
     const tipoAtend = (ticket.tipo_atendimento || '').toLowerCase().trim();
@@ -309,9 +352,16 @@ function applyFilters(tickets, filters) {
         if (filters.type && filters.type !== 'all') {
             if (getTicketType(t) !== filters.type) return false;
         }
+        if (filters.productLine && filters.productLine !== 'all') {
+            if (getTicketProductLine(t) !== filters.productLine) return false;
+        }
         if (filters.product && filters.product !== 'all') {
-            const values = [getTicketProduct(t), getTicketStatus(t)].filter(Boolean);
-            if (!values.includes(filters.product)) return false;
+            if (String(filters.product).startsWith('line:')) {
+                if (getTicketProductLine(t) !== String(filters.product).replace('line:', '')) return false;
+            } else {
+                const values = [getTicketProduct(t), getTicketStatus(t)].filter(Boolean);
+                if (!values.includes(filters.product)) return false;
+            }
         }
         if (filters.dateFrom) {
             if (!t.closed_time || new Date(t.closed_time) < new Date(filters.dateFrom)) return false;
