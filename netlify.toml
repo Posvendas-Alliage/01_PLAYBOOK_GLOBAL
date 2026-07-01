@@ -5,6 +5,18 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+[[redirects]]
+  from = "/01_KPI/"
+  to = "/01_KPI/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/01_KPI/KPI_V2/"
+  to = "/01_KPI/KPI_V2/index.html"
+  status = 200
+  force = true
+
 [[edge_functions]]
   path = "/*"
   function = "auth-gate"

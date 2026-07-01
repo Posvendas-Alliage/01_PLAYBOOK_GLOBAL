@@ -123,6 +123,7 @@ function getSessionTokens(cookies: Record<string, string>): { accessToken: strin
 function isPublicPath(pathname: string): boolean {
   const path = pathname.toLowerCase();
 
+  if (path === "/01_kpi/kpi_v2" || path.startsWith("/01_kpi/kpi_v2/")) return true;
   if (path === "/auth.html") return true;
   if (path === "/login.html" || path === "/alterar-senha.html") return true;
   if (path === "/api/auth/session" || path === "/api/auth/logout") return true;
@@ -166,6 +167,40 @@ function canonicalPlaybookPath(pathname: string): string {
     const rest = path.slice("/01_kpi/kpi_v2/".length);
     const normalizedRest = rest || "";
     if (!normalizedRest || normalizedRest.toLowerCase() === "index.html") return "/01_KPI/KPI_V2/";
+    const hasExtension = /\.[a-z0-9]+$/i.test(normalizedRest);
+    return "/01_KPI/KPI_V2/" + normalizedRest + (hasExtension ? "" : ".html");
+  }
+
+  if (lowerPath.startsWith("/01_kpi/")) {
+    return "/01_KPI/" + path.slice("/01_kpi/".length);
+  }
+
+  return path;
+}
+
+function canonicalRedirectPath(pathname: string): string {
+  const path = String(pathname || "");
+  const lowerPath = path.toLowerCase();
+
+  if (lowerPath === "/01_kpi" || lowerPath === "/01_kpi/") {
+    return "/01_KPI/";
+  }
+
+  if (lowerPath === "/01_kpi/index.html") {
+    return "/01_KPI/index.html";
+  }
+
+  if (lowerPath === "/01_kpi/kpi_v2" || lowerPath === "/01_kpi/kpi_v2/") {
+    return "/01_KPI/KPI_V2/";
+  }
+
+  if (lowerPath === "/01_kpi/kpi_v2/index.html") {
+    return "/01_KPI/KPI_V2/index.html";
+  }
+
+  if (lowerPath.startsWith("/01_kpi/kpi_v2/")) {
+    const rest = path.slice("/01_kpi/kpi_v2/".length);
+    const normalizedRest = rest || "";
     const hasExtension = /\.[a-z0-9]+$/i.test(normalizedRest);
     return "/01_KPI/KPI_V2/" + normalizedRest + (hasExtension ? "" : ".html");
   }
@@ -371,7 +406,7 @@ export default async (req: Request, context: Context) => {
     return redirectToAuth(req, "admin_required");
   }
 
-  const canonicalPath = canonicalPlaybookPath(url.pathname);
+  const canonicalPath = canonicalRedirectPath(url.pathname);
   if (canonicalPath !== url.pathname) {
     const canonicalUrl = new URL(req.url);
     canonicalUrl.pathname = canonicalPath;
