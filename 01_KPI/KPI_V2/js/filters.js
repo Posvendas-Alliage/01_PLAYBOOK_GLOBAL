@@ -1,6 +1,7 @@
 const DEFAULT_FILTERS = {
     region: 'all',
     priority: 'all',
+    department: 'all',
     type: 'all',
     product: 'all',
     dateFrom: '',

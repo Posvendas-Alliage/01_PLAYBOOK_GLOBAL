@@ -152,6 +152,10 @@
                     <select id="filter-type" data-filter="type"></select>
                 </div>
                 <div class="filter-field">
+                    <label for="filter-department" data-i18n="filter_department">Departamento</label>
+                    <select id="filter-department" data-filter="department"></select>
+                </div>
+                <div class="filter-field">
                     <label for="filter-product" data-i18n="filter_product">Produto</label>
                     <select id="filter-product" data-filter="product"></select>
                 </div>
@@ -672,6 +676,8 @@
         buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
         buildSelectOptions(document.getElementById('filter-type'),
             [...new Set(data.map(d => d.tipo_atendimento).filter(Boolean))].sort(), t('filter_all'));
+        buildSelectOptions(document.getElementById('filter-department'),
+            [...new Set(data.map(d => (d.department_name || d.department || '')).filter(Boolean))].sort(), t('filter_all'));
         buildSelectOptions(document.getElementById('filter-product'),
             [...new Set(data.map(d => d.marca_produto).filter(Boolean))].sort(), t('filter_all'));
 
@@ -687,7 +693,7 @@
         else if (months.length) monthSelect.value = months[0];
 
         const state = FilterState.get();
-        ['priority','type','product','dateFrom','dateTo'].forEach(key => {
+        ['priority','type','department','product','dateFrom','dateTo'].forEach(key => {
             const input = document.querySelector(`[data-filter="${key}"]`);
             if (!input) return;
             if (input.type === 'date') input.value = state[key] || '';

@@ -250,7 +250,11 @@ function getTicketPriority(ticket) {
 }
 
 function getTicketDepartment(ticket) {
-    return ticket.department_name || ticket.tipo_atendimento || '';
+    return ticket.department_name || ticket.department || '';
+}
+
+function getTicketType(ticket) {
+    return ticket.tipo_atendimento || ticket.type || '';
 }
 
 function getTicketStatus(ticket) {
@@ -297,13 +301,13 @@ function applyFilters(tickets, filters) {
             }
         }
         if (filters.department && filters.department !== 'all') {
-            if ((t.department_name || '') !== filters.department) return false;
+            if (getTicketDepartment(t) !== filters.department) return false;
         }
         if (filters.priority && filters.priority !== 'all') {
             if (getTicketPriority(t) !== filters.priority) return false;
         }
         if (filters.type && filters.type !== 'all') {
-            if (getTicketDepartment(t) !== filters.type) return false;
+            if (getTicketType(t) !== filters.type) return false;
         }
         if (filters.product && filters.product !== 'all') {
             const values = [getTicketProduct(t), getTicketStatus(t)].filter(Boolean);
