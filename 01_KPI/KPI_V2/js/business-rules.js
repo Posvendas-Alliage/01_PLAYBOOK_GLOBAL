@@ -194,22 +194,11 @@ function computeMetrics(tickets, regionGroup) {
         .filter(Number.isFinite);
     const avg = values => values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
 
-    // SLA%: fechados com mtfc_horas E resolution_horas preenchidos — ambas as metas devem ser atendidas
-    const withBoth = closedTickets.filter(t =>
-        Number.isFinite(metricNumber(t.mtfc_horas_bi, t.mtfc_horas)) &&
-        Number.isFinite(metricNumber(t.resolution_horas))
-    );
-    const withinSla = withBoth.filter(t => {
-        const mtfc = metricNumber(t.mtfc_horas_bi, t.mtfc_horas);
-        const resolutionHoras = metricNumber(t.resolution_horas);
-        const priority = getTicketPriority(t);
-        const region = getTicketRegionGroup(t);
-        const mtfcTarget = MTFC_TARGET[priority] || MTFC_TARGET_DEFAULT;
-        const mttsTarget = MTTS_TARGET_BY_REGION[region] ?? MTTS_DEFAULT_TARGET;
-        return mtfc <= mtfcTarget && resolutionHoras <= mttsTarget;
-    });
+    // SLA% canonico do BI: elegibilidade + status SLA ja normalizados na base.
+    const eligibleTickets = closedTickets.filter(isEligible);
+    const withinSla = eligibleTickets.filter(t => ticketSlaStatus(t) === 'within');
 
-    const slaCompliance = withBoth.length ? (withinSla.length / withBoth.length) * 100 : 0;
+    const slaCompliance = eligibleTickets.length ? (withinSla.length / eligibleTickets.length) * 100 : 0;
     const targetRegion = regionGroup || getTicketRegionGroup(tickets.find(t => getTicketRegionGroup(t)) || {});
     // mttsColor opera em dias; MTTS_TARGET está em dias, MTTS_DEFAULT_TARGET está em horas
     const mttsColorTarget = MTTS_TARGET[targetRegion] || (MTTS_DEFAULT_TARGET / 24);
@@ -218,9 +207,9 @@ function computeMetrics(tickets, regionGroup) {
     return {
         total: tickets.length,
         closed: closedTickets.length,
-        eligible: withBoth.length,
+        eligible: eligibleTickets.length,
         withinSla: withinSla.length,
-        outsideSla: withBoth.length - withinSla.length,
+        outsideSla: eligibleTickets.length - withinSla.length,
         slaCompliance,
         slaColor: slaColor(slaCompliance),
         avgMtfc: avg(mtfcValues),
