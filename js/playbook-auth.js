@@ -243,6 +243,38 @@
         return syncServerSession(session || null);
     }
 
+    async function validateServerSession() {
+        if (!isLikelyNetlifyRuntime() || isLocalBrowser()) {
+            return { ok: true };
+        }
+
+        try {
+            const response = await fetch("/api/auth/session", {
+                method: "GET",
+                credentials: "same-origin",
+                headers: { "Accept": "application/json" }
+            });
+            const payload = await response.json().catch(function () { return {}; });
+
+            if (!response.ok || !payload || !payload.authenticated) {
+                return {
+                    ok: false,
+                    reason: payload && payload.reason ? payload.reason : "missing_session"
+                };
+            }
+
+            return {
+                ok: true,
+                user: payload.user || null,
+                profile: payload.profile || null
+            };
+        } catch (_error) {
+            return isLocalBrowser()
+                ? { ok: true }
+                : { ok: false, reason: "server_not_configured" };
+        }
+    }
+
     async function getSession() {
         const client = await getClient();
         const result = await client.auth.getSession();
@@ -553,6 +585,7 @@
         completeInitialPasswordChange: completeInitialPasswordChange,
         signOutAndGoToLogin: signOutAndGoToLogin,
         syncAccessCookie: syncAccessCookie,
+        validateServerSession: validateServerSession,
         t: t
     };
 })();

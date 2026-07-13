@@ -267,6 +267,19 @@
             showMessage(tr("security.messages.sessionSyncFailed", "Login validado, mas nao foi possivel registrar a sessao no servidor. Verifique as variaveis do Netlify e tente novamente."), "error");
             return false;
         }
+        if (typeof auth.validateServerSession === "function") {
+            const serverValidation = await auth.validateServerSession();
+            if (!serverValidation || !serverValidation.ok) {
+                const entry = messageForReason(serverValidation && serverValidation.reason);
+                if (entry) {
+                    showMessage(tr(entry[0], entry[1]), entry[2]);
+                } else {
+                    showMessage(tr("security.messages.sessionSyncFailed", "Login validado, mas nao foi possivel registrar a sessao no servidor. Verifique as variaveis do Netlify e tente novamente."), "error");
+                }
+                return false;
+            }
+        }
+
         showMessage(tr("security.messages.loginSuccess", "Login realizado. Redirecionando..."), "success");
         const target = auth.getReturnToFromUrl(auth.toRootUrl("index.html"));
         rememberRedirectAttempt(target);
