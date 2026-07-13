@@ -122,7 +122,6 @@
                 <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
                 <a href="page5-monthly.html" class="is-active" data-i18n="nav_monthly">Monthly</a>
                 <a href="kanban-status.html" data-i18n="nav_kanban">Kanban de Status</a>
-                <a href="page6-whole-history.html" data-i18n="nav_whole_history">Whole History</a>
             </div>
         </nav>
         <div id="banner-validity" class="banner-validity">
@@ -139,13 +138,10 @@
 
         <main class="app-main">
             <section class="filter-bar" aria-label="Filtros">
+                <!-- Country / Region filter (replaces region select) -->
                 <div class="filter-field filter-field-countries">
-                    <label data-i18n="filter_region">Regi&atilde;o</label>
+                    <label data-tx="filter_country">País / Região</label>
                     <div id="country-filter" class="country-filter-btns"></div>
-                </div>
-                <div class="filter-field filter-field-countries">
-                    <label data-tx="filter_country_only">Pa&iacute;s</label>
-                    <select id="filter-country"></select>
                 </div>
                 <div class="filter-field">
                     <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
@@ -420,7 +416,7 @@
             filter_product_line: 'Linha',
             product_line_dental: 'Dental',
             product_line_imaging: 'Imagem',
-            filter_month_year: 'Mês/Ano', filter_country: 'País / Região', filter_country_only: 'Pa\u00eds', country_all: 'Todos',
+            filter_month_year: 'Mês/Ano', filter_country: 'País / Região', country_all: 'Todos',
             col_ticket_n: 'Ticket #', col_country: 'País/Região', col_priority: 'Prioridade',
             col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Data Fechamento',
             sla_within: '✓ Dentro', sla_outside: '✗ Fora', sla_na: '— N/A',
@@ -454,7 +450,7 @@
             filter_product_line: 'Line',
             product_line_dental: 'Dental',
             product_line_imaging: 'Imaging',
-            filter_month_year: 'Month/Year', filter_country: 'Country / Region', filter_country_only: 'Country', country_all: 'All',
+            filter_month_year: 'Month/Year', filter_country: 'Country / Region', country_all: 'All',
             col_ticket_n: 'Ticket #', col_country: 'Country/Region', col_priority: 'Priority',
             col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Close Date',
             sla_within: '✓ Within', sla_outside: '✗ Outside', sla_na: '— N/A',
@@ -488,7 +484,7 @@
             filter_product_line: 'Línea',
             product_line_dental: 'Dental',
             product_line_imaging: 'Imagen',
-            filter_month_year: 'Mes/Año', filter_country: 'País / Región', filter_country_only: 'Pa\u00eds', country_all: 'Todos',
+            filter_month_year: 'Mes/Año', filter_country: 'País / Región', country_all: 'Todos',
             col_ticket_n: 'Ticket #', col_country: 'País/Región', col_priority: 'Prioridad',
             col_mtfc_h: 'MTFC', col_mtts_d: 'MTTS', col_sla_status: 'SLA', col_closed_date: 'Fecha Cierre',
             sla_within: '✓ Dentro', sla_outside: '✗ Fuera', sla_na: '— N/A',
@@ -553,7 +549,6 @@
     ];
 
     let rawData = [];
-    let countryOptionsSource = [];
     let closedTicketsList = [];
     let closedTicketsFiltered = [];
     let closedTicketsPage = 1;
@@ -738,9 +733,8 @@
         if (current && [...select.options].some(o => o.value === current)) select.value = current;
     }
 
-    function populateFilterOptions(data, countryRows = data) {
+    function populateFilterOptions(data) {
         renderCountryFilter();
-        renderCountrySelect('filter-country', countryRows, applyPage);
 
         const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
             .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
@@ -781,7 +775,6 @@
             const next = {};
             document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
             next.region = FilterState.get().region || 'all';
-            next.country = normalizeFilterList(FilterState.get().country);
             next.agentGroups = FilterState.get().agentGroups || [...AGENT_GROUPS];
             FilterState.set(next);
             applyPage();
@@ -790,12 +783,10 @@
             FilterState.reset();
             FilterState.update('agentGroups', [...AGENT_GROUPS]);
             FilterState.update('region', 'all');
-            FilterState.update('country', []);
             document.querySelectorAll('[data-filter]').forEach(i => {
                 i.value = i.tagName === 'SELECT' ? 'all' : '';
             });
             renderCountryFilter();
-            renderCountrySelect('filter-country', countryOptionsSource.length ? countryOptionsSource : rawData, applyPage);
             renderAgentGroupFilter();
             applyPage();
         });
@@ -1130,8 +1121,8 @@
         const pMeta = document.getElementById('print-meta');
         if (pMeta) pMeta.textContent = `${tx('print_generated')}: ${new Date().toLocaleDateString('pt-BR')}`;
 
-        // Region Map + Table + Trend: respeita os filtros aplicados na pagina
-        initMonthlyRegionSection(monthKey, filtered);
+        // Region Map + Table + Trend (new section) — usa rawData internamente
+        initMonthlyRegionSection(monthKey);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -1147,7 +1138,6 @@
     async function refreshData() {
         clearCache();
         rawData = [];
-        countryOptionsSource = [];
         await init();
     }
 
@@ -1160,16 +1150,8 @@
         try {
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-            const [ticketsResult, countryResult] = await Promise.all([
-                fetchDashboardBiTickets(),
-                fetchDashboardBiCountryOptionsFallback().catch(error => {
-                    console.warn('[Monthly] Nao foi possivel carregar catalogo historico de paises.', error);
-                    return { countries: [] };
-                })
-            ]);
-            rawData = ticketsResult.tickets;
-            countryOptionsSource = (countryResult.countries && countryResult.countries.length) ? countryResult.countries : rawData;
-            populateFilterOptions(rawData, countryOptionsSource);
+            rawData = (await fetchDashboardBiTickets()).tickets;
+            populateFilterOptions(rawData);
             applyExtraI18n();
             showLoading(false);
             applyPage();
@@ -1417,15 +1399,15 @@
             () => (prevMtts !== null && currMtts !== null ? fmt(currMtts, 2) + 'd vs ' + fmt(prevMtts, 2) + 'd' : ''));
     }
 
-    // Chamado pelo renderPage() a cada mudanca de mes: usa dados ja filtrados pela UI
-    function initMonthlyRegionSection(monthKey, scopedData = rawData) {
+    // Chamado pelo renderPage() a cada mudança de mês — usa rawData (sem filtros de UI)
+    function initMonthlyRegionSection(monthKey) {
         const section = document.getElementById('monthly-mrm-section');
         if (!section || !monthKey) return;
 
-        // scopedData ja traz os filtros dimensionais da UI (regiao, pais, prioridade, etc.)
-        // Garante que mapa, tabela e trend reflitam o filtro atual.
-        const monthData = regionTicketsInMonth(scopedData, 'Global', monthKey);
-        const prevData  = regionTicketsInMonth(scopedData, 'Global', prevMonthKey(monthKey));
+        // rawData ignora TODOS os filtros dimensionais da UI (região, prioridade, etc.)
+        // Garante que a tabela sempre mostra as 6 regiões independentemente do filtro selecionado
+        const monthData = regionTicketsInMonth(rawData, 'Global', monthKey);
+        const prevData  = regionTicketsInMonth(rawData, 'Global', prevMonthKey(monthKey));
 
         // Métricas por região via computeMetrics() — idêntico ao Executive Summary
         const regionMetrics = {};
@@ -1461,7 +1443,7 @@
     document.addEventListener('filterschange', applyPage);
     document.addEventListener('langchange', () => {
         applyExtraI18n();
-        if (rawData.length) { populateFilterOptions(rawData, countryOptionsSource.length ? countryOptionsSource : rawData); applyPage(); }
+        if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
     });
     window.addEventListener('load', init);
     </script>

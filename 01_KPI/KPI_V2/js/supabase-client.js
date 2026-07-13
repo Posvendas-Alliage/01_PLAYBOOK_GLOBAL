@@ -9,7 +9,7 @@ let _cacheTime = null;
 let _dashboardCache = {};
 let _dashboardCacheTime = {};
 const CACHE_TTL = 5 * 60 * 1000;
-const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'bi-country-options', 'sync-health'];
+const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
 
 async function supabaseAccessToken() {
     try {
@@ -101,15 +101,7 @@ async function fetchDashboardBiBacklog() {
 
 async function fetchDashboardBiTickets(limit = 10000) {
     const payload = await fetchDashboard('bi-tickets', { limit });
-    const tickets = payload.data.map(normalizeBiTicketRow).filter(row => !isExcludedTicket(row));
-    return {
-        tickets,
-        meta: payload
-    };
-}
-
-function normalizeBiTicketRow(row) {
-    return {
+    const tickets = payload.data.map(row => ({
         ...row,
         id: row.ticket_id,
         source_region: row.region,
@@ -126,34 +118,10 @@ function normalizeBiTicketRow(row) {
         marca_produto: row.produtos,
         categoria_custom: row.categoria,
         numero_serie: row.numero_serie
-    };
-}
-
-async function fetchDashboardBiCountryOptions(limit = 50000) {
-    const payload = await fetchDashboard('bi-country-options', { limit });
-    const countries = payload.data.map(row => ({
-        ...row,
-        id: row.ticket_id,
-        country_filter: row.pais_detalhado || row.cf_pais_1 || row.pais
     })).filter(row => !isExcludedTicket(row));
     return {
-        countries,
+        tickets,
         meta: payload
-    };
-}
-
-async function fetchDashboardBiCountryOptionsFallback() {
-    try {
-        const result = await fetchDashboardBiCountryOptions();
-        if (result.countries.length) return result;
-    } catch (error) {
-        console.warn('[Supabase] bi-country-options indisponivel; usando bi-tickets como fallback.', error);
-    }
-
-    const { tickets, meta } = await fetchDashboardBiTickets();
-    return {
-        countries: tickets,
-        meta
     };
 }
 

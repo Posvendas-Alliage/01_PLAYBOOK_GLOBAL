@@ -114,7 +114,6 @@
                 <a href="page4-weekly.html" class="is-active" data-i18n="nav_weekly">Weekly</a>
                 <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
                 <a href="kanban-status.html" data-i18n="nav_kanban">Kanban de Status</a>
-                <a href="page6-whole-history.html" data-i18n="nav_whole_history">Whole History</a>
             </div>
         </nav>
         <div id="banner-validity" class="banner-validity">
@@ -131,13 +130,10 @@
 
         <main class="app-main">
             <section class="filter-bar" aria-label="Filtros">
+                <!-- Country filter (replaces region select) -->
                 <div class="filter-field filter-field-countries">
-                    <label data-i18n="filter_region">Regi&atilde;o</label>
+                    <label data-tx="filter_country">País / Região</label>
                     <div id="country-filter" class="country-filter-btns"></div>
-                </div>
-                <div class="filter-field filter-field-countries">
-                    <label data-tx="filter_country_only">Pa&iacute;s</label>
-                    <select id="filter-country"></select>
                 </div>
                 <div class="filter-field">
                     <label for="filter-priority" data-i18n="filter_priority">Prioridade</label>
@@ -358,7 +354,7 @@
         pt: {
             brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Voltar', to_label: 'Até',
             btn_apply: 'Aplicar', btn_clear: 'Limpar', btn_retry: 'Tentar novamente',
-            week_selector_label: 'Semana', filter_country: 'País / Região', filter_country_only: 'Pa\u00eds', country_all: 'Todos',
+            week_selector_label: 'Semana', filter_country: 'País / Região', country_all: 'Todos',
             filter_dept: 'Departamento', dept_all: 'Todos',
             weekly_title: 'Report semanal',
             sec_summary: 'Executive Summary', sec_trend: 'Trend — Semana atual vs anterior',
@@ -383,7 +379,7 @@
         en: {
             brand_subtitle: 'Global Playbook | KPI', back_to_playbook: 'Back', to_label: 'To',
             btn_apply: 'Apply', btn_clear: 'Clear', btn_retry: 'Retry',
-            week_selector_label: 'Week', filter_country: 'Country / Region', filter_country_only: 'Country', country_all: 'All',
+            week_selector_label: 'Week', filter_country: 'Country / Region', country_all: 'All',
             filter_dept: 'Department', dept_all: 'All',
             weekly_title: 'Weekly report',
             sec_summary: 'Executive Summary', sec_trend: 'Trend — current vs previous week',
@@ -408,7 +404,7 @@
         es: {
             brand_subtitle: 'Playbook Global | KPI', back_to_playbook: 'Volver', to_label: 'Hasta',
             btn_apply: 'Aplicar', btn_clear: 'Limpiar', btn_retry: 'Reintentar',
-            week_selector_label: 'Semana', filter_country: 'País / Región', filter_country_only: 'Pa\u00eds', country_all: 'Todos',
+            week_selector_label: 'Semana', filter_country: 'País / Región', country_all: 'Todos',
             filter_dept: 'Departamento', dept_all: 'Todos',
             weekly_title: 'Reporte semanal',
             sec_summary: 'Executive Summary', sec_trend: 'Snapshot — semana actual vs anterior',
@@ -445,7 +441,7 @@
         });
     }
 
-    async function refreshData() { clearCache(); rawData = []; countryOptionsSource = []; globalBacklogList = []; globalBacklogCount = 0; await init(); }
+    async function refreshData() { clearCache(); rawData = []; globalBacklogList = []; globalBacklogCount = 0; await init(); }
 
     // ──────────────────────────────────────────────────────────
     // CONSTANTS & STATE
@@ -477,7 +473,6 @@
 
     let rawData = [];
     let globalBacklogList = []; // linhas canônicas via bi-backlog (igual ao Daily)
-    let countryOptionsSource = [];
     let globalBacklogCount = 0; // contagem do backlog canônico após filtros dimensionais ativos
     let lastCurrentClosedWeek = [];
     let sortStateRegion = { column: 'sla', direction: 'asc' };
@@ -723,9 +718,8 @@
         if (current && [...select.options].some(o => o.value === current)) select.value = current;
     }
 
-    function populateFilterOptions(data, countryRows = data) {
+    function populateFilterOptions(data) {
         renderCountryFilter();
-        renderCountrySelect('filter-country', countryRows, applyPage);
         const priorities = [...new Set(data.map(d => d.priority).filter(Boolean))]
             .sort((a, b) => PRIORITY_ORDER.indexOf(a) - PRIORITY_ORDER.indexOf(b));
         buildSelectOptions(document.getElementById('filter-priority'), priorities, t('filter_all'));
@@ -752,7 +746,6 @@
             const next = {};
             document.querySelectorAll('[data-filter]').forEach(i => { next[i.dataset.filter] = i.value; });
             next.region = FilterState.get().region || 'all';
-            next.country = normalizeFilterList(FilterState.get().country);
             next.agentGroups = FilterState.get().agentGroups || [...DEFAULT_AGENT_GROUPS];
             next.department = FilterState.get().department || 'all';
             const sel = document.getElementById('week-selector');
@@ -767,7 +760,6 @@
             const weeks = buildWeekOptions();
             FilterState.reset();
             FilterState.update('region', 'all');
-            FilterState.update('country', []);
             FilterState.update('agentGroups', [...DEFAULT_AGENT_GROUPS]);
             FilterState.update('department', 'all');
             FilterState.update('dateFrom', weeks[0].from);
@@ -776,7 +768,6 @@
                 i.value = i.tagName === 'SELECT' ? 'all' : '';
             });
             renderCountryFilter();
-            renderCountrySelect('filter-country', countryOptionsSource.length ? countryOptionsSource : rawData, applyPage);
             renderAgentGroupFilter();
             renderDeptFilter();
             updateDeptFilterVisibility();
@@ -1244,7 +1235,7 @@
         open.forEach(t => { t._aging = (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24); });
 
         // Backlog canônico (bi-backlog) recalculado com os mesmos filtros dimensionais
-        // (regiao, pais, departamento, tipo, prioridade, produto, grupo do agente) - igual ao Daily.
+        // (região, departamento, tipo, prioridade, produto, grupo do agente) — igual ao Daily.
         const backlogDimFilters = { ...filters, dateFrom: '', dateTo: '' };
         globalBacklogCount = applyFilters(globalBacklogList, backlogDimFilters).length;
 
@@ -1268,10 +1259,8 @@
         const _regiao = filters.region     || 'all';
         const _grupos = filters.agentGroups;
         const _dept   = filters.department || 'all';
-        const _paises = normalizeFilterList(filters.country);
         const _passExec = (t) =>
             (_regiao === 'all' || getTicketRegionGroup(t) === _regiao) &&
-            (!_paises.length || _paises.includes(getTicketCountry(t))) &&
             (!_grupos || !Array.isArray(_grupos) || _grupos.includes(getTicketAgentGroup(t))) &&
             (_dept   === 'all' || (t.department_name || '') === _dept);
 
@@ -1413,18 +1402,13 @@
         try {
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-            const [ticketsResult, backlogResult, countryResult] = await Promise.all([
+            const [ticketsResult, backlogResult] = await Promise.all([
                 fetchDashboardBiTickets(),
-                fetchDashboardBiBacklog(),
-                fetchDashboardBiCountryOptionsFallback().catch(error => {
-                    console.warn('[Weekly] Nao foi possivel carregar catalogo historico de paises.', error);
-                    return { countries: [] };
-                })
+                fetchDashboardBiBacklog()
             ]);
             rawData = ticketsResult.tickets;
-            countryOptionsSource = (countryResult.countries && countryResult.countries.length) ? countryResult.countries : rawData;
-            globalBacklogList = enrichTicketsWithCountry(backlogResult.backlog, countryOptionsSource);
-            populateFilterOptions(rawData, countryOptionsSource);
+            globalBacklogList = backlogResult.backlog;
+            populateFilterOptions(rawData);
             applyExtraI18n();
             showLoading(false);
             applyPage();
@@ -1442,7 +1426,7 @@
     document.addEventListener('filterschange', applyPage);
     document.addEventListener('langchange', () => {
         applyExtraI18n();
-        if (rawData.length) { populateFilterOptions(rawData, countryOptionsSource.length ? countryOptionsSource : rawData); applyPage(); }
+        if (rawData.length) { populateFilterOptions(rawData); applyPage(); }
     });
     window.addEventListener('load', init);
     </script>
