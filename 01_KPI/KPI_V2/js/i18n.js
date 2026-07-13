@@ -7,6 +7,7 @@ const TRANSLATIONS = {
         nav_quality: "Qualidade de Dados",
         nav_weekly: "Weekly",
         nav_monthly: "Monthly",
+        nav_whole_history: "Whole History",
         // ── Header ────────────────────────────────────────────
         btn_refresh: "Atualizar",
         btn_export_pdf: "Exportar PDF",
@@ -218,6 +219,7 @@ const TRANSLATIONS = {
         hub_quality_desc: "Completude dos campos obrigatórios usando a mesma base BI filtrada do report.",
         hub_weekly_desc: "Leitura semanal em formato de report, com indicadores comparativos e follow-up operacional.",
         hub_monthly_desc: "Visao mensal direta para diretoria: key metrics do periodo e backlog consolidado por regiao.",
+        hub_whole_history_desc: "Historico completo dos tickets disponiveis, com tendencia mensal e cortes por pais e regiao.",
         // ── Kanban de Status ──────────────────────────────────
         nav_kanban: "Kanban de Status",
         hub_kanban_desc: "Visão kanban dos status operacionais com métricas de tempo e detecção de gargalos por região.",
@@ -236,6 +238,7 @@ const TRANSLATIONS = {
         nav_quality: "Data Quality",
         nav_weekly: "Weekly",
         nav_monthly: "Monthly",
+        nav_whole_history: "Whole History",
         // ── Header ────────────────────────────────────────────
         btn_refresh: "Refresh",
         btn_export_pdf: "Export PDF",
@@ -447,6 +450,7 @@ const TRANSLATIONS = {
         hub_quality_desc: "Required-field completeness using the same filtered BI base as the report.",
         hub_weekly_desc: "Weekly report view with comparative indicators and operational follow-up.",
         hub_monthly_desc: "Direct executive monthly view: period key metrics and consolidated backlog by region.",
+        hub_whole_history_desc: "Full available ticket history with monthly trend and country and region breakdowns.",
         // ── Kanban de Status ──────────────────────────────────
         nav_kanban: "Status Kanban",
         hub_kanban_desc: "Kanban view of operational statuses with time metrics and bottleneck detection by region.",
@@ -465,6 +469,7 @@ const TRANSLATIONS = {
         nav_quality: "Calidad de Datos",
         nav_weekly: "Weekly",
         nav_monthly: "Monthly",
+        nav_whole_history: "Whole History",
         // ── Header ────────────────────────────────────────────
         btn_refresh: "Actualizar",
         btn_export_pdf: "Exportar PDF",
@@ -676,6 +681,7 @@ const TRANSLATIONS = {
         hub_quality_desc: "Completitud de campos obligatorios usando la misma base BI filtrada del reporte.",
         hub_weekly_desc: "Vista semanal en formato de reporte, con indicadores comparativos y follow-up operacional.",
         hub_monthly_desc: "Vista mensual directa para direccion: key metrics del periodo y backlog consolidado por region.",
+        hub_whole_history_desc: "Historial completo de tickets disponibles, con tendencia mensual y cortes por pais y region.",
         // ── Kanban de Status ──────────────────────────────────
         nav_kanban: "Kanban de Estado",
         hub_kanban_desc: "Vista kanban de los estados operativos con métricas de tiempo y detección de cuellos de botella por región.",

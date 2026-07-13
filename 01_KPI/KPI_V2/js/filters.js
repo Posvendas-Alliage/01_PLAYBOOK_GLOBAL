@@ -1,5 +1,6 @@
 const DEFAULT_FILTERS = {
     region: 'all',
+    country: [],
     priority: 'all',
     department: 'all',
     type: 'all',
