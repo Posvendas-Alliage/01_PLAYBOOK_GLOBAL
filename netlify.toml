@@ -6,12 +6,6 @@
   node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/config/supabase.js"
-  to = "/.netlify/functions/supabase-config"
-  status = 200
-  force = true
-
-[[redirects]]
   from = "/01_KPI/"
   to = "/01_KPI/index.html"
   status = 200
