@@ -12,8 +12,8 @@ const CACHE_TTL = 5 * 60 * 1000;
 const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
 
 function shouldUseLegacyDashboardSource(dateFrom, dateTo) {
-    const end = String(dateTo || dateFrom || '').slice(0, 10);
-    return !!end && end < HISTORICAL_SOURCE_CUTOFF_DATE;
+    const start = String(dateFrom || dateTo || '').slice(0, 10);
+    return !!start && start < HISTORICAL_SOURCE_CUTOFF_DATE;
 }
 
 function getDashboardSourceKeyForPeriod(dateFrom, dateTo) {
