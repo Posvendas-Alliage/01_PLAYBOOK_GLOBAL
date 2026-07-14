@@ -1,20 +1,29 @@
 (function () {
-    function isTemporaryPublicDashboard() {
-        const path = String(window.location.pathname || "").toLowerCase();
-        return path === "/01_kpi/kpi_v2" || path.indexOf("/01_kpi/kpi_v2/") === 0;
-    }
-
-    function revealPublicDashboard() {
-        document.documentElement.classList.remove("playbook-auth-pending");
-        document.documentElement.classList.add("playbook-auth-ready");
+    async function getServerSessionFallback() {
+        try {
+            const response = await fetch("/api/auth/session", {
+                method: "GET",
+                credentials: "same-origin",
+                headers: { "Accept": "application/json" }
+            });
+            const payload = await response.json().catch(function () { return {}; });
+            if (!response.ok || !payload || !payload.authenticated) {
+                return {
+                    ok: false,
+                    reason: payload && payload.reason ? payload.reason : "missing_session"
+                };
+            }
+            return {
+                ok: true,
+                user: payload.user || null,
+                profile: payload.profile || null
+            };
+        } catch (_error) {
+            return null;
+        }
     }
 
     async function runGuard() {
-        if (isTemporaryPublicDashboard()) {
-            revealPublicDashboard();
-            return;
-        }
-
         const auth = window.PlaybookAuth;
         if (!auth) {
             document.documentElement.classList.remove("playbook-auth-pending");
@@ -26,18 +35,35 @@
         try {
             auth.blockPage();
             const session = await auth.getSession();
-            if (!session) {
-                auth.redirectToLogin("missing_session");
-                return;
+            let user = null;
+            let profile = null;
+
+            if (session) {
+                user = await auth.getUser();
+                if (!user) {
+                    auth.redirectToLogin("missing_user");
+                    return;
+                }
+
+                profile = await auth.getProfile({ user: user, forceRefresh: true });
+            } else {
+                const serverSession = await getServerSessionFallback();
+                if (!serverSession || !serverSession.ok) {
+                    const reason = serverSession && serverSession.reason ? serverSession.reason : "missing_session";
+                    if (reason === "must_change_password") {
+                        auth.redirectToPasswordChange(auth.currentReturnTo());
+                    } else {
+                        auth.redirectToLogin(reason);
+                    }
+                    return;
+                }
+
+                profile = serverSession.profile;
+                user = serverSession.user || {
+                    email: profile && profile.email ? profile.email : ""
+                };
             }
 
-            const user = await auth.getUser();
-            if (!user) {
-                auth.redirectToLogin("missing_user");
-                return;
-            }
-
-            const profile = await auth.getProfile({ user: user, forceRefresh: true });
             if (!profile) {
                 auth.redirectToLogin("missing_profile");
                 return;

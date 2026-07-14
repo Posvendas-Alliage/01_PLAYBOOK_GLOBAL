@@ -1,8 +1,8 @@
-﻿const SUPABASE_URL = window.SUPABASE_URL || '';
+const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
-const DASHBOARD_READ_URL = SUPABASE_URL
-    ? `${SUPABASE_URL}/functions/v1/dashboard-read`
-    : '';
+const LEGACY_SUPABASE_URL = window.PLAYBOOK_LEGACY_SUPABASE_URL || 'https://hqaxpbnduupjdhuuwpmg.supabase.co';
+const LEGACY_SUPABASE_KEY = window.PLAYBOOK_LEGACY_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxYXhwYm5kdXVwamRodXV3cG1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTk4NDUsImV4cCI6MjA5MzQ5NTg0NX0.8mfyVws9T8EnCOKkc0r4F56OP_wDQyIac3Xbxt2KaFs';
+const HISTORICAL_SOURCE_CUTOFF_DATE = window.PLAYBOOK_HISTORICAL_SOURCE_CUTOFF_DATE || '2026-07-12';
 
 let _cache = null;
 let _cacheTime = null;
@@ -10,6 +10,38 @@ let _dashboardCache = {};
 let _dashboardCacheTime = {};
 const CACHE_TTL = 5 * 60 * 1000;
 const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
+
+function shouldUseLegacyDashboardSource(dateFrom, dateTo) {
+    const end = String(dateTo || dateFrom || '').slice(0, 10);
+    return !!end && end < HISTORICAL_SOURCE_CUTOFF_DATE;
+}
+
+function getDashboardSourceKeyForPeriod(dateFrom, dateTo) {
+    return shouldUseLegacyDashboardSource(dateFrom, dateTo) ? 'legacy' : 'current';
+}
+
+function normalizeDashboardOptions(options) {
+    if (typeof options === 'string') return { source: options };
+    return options || {};
+}
+
+function resolveDashboardSource(options) {
+    const opts = normalizeDashboardOptions(options);
+    if (opts.source === 'legacy') {
+        return {
+            key: 'legacy',
+            url: LEGACY_SUPABASE_URL,
+            anonKey: LEGACY_SUPABASE_KEY,
+            useSession: false
+        };
+    }
+    return {
+        key: 'current',
+        url: SUPABASE_URL,
+        anonKey: SUPABASE_KEY,
+        useSession: true
+    };
+}
 
 async function supabaseAccessToken() {
     try {
@@ -24,39 +56,41 @@ async function supabaseAccessToken() {
     return SUPABASE_KEY;
 }
 
-async function supabaseHeaders() {
-    const accessToken = await supabaseAccessToken();
+async function supabaseHeaders(source) {
+    const accessToken = source.useSession ? await supabaseAccessToken() : source.anonKey;
 
     return {
-        'apikey': SUPABASE_KEY,
+        'apikey': source.anonKey,
         'Authorization': 'Bearer ' + accessToken,
         'Content-Type': 'application/json'
     };
 }
 
-async function fetchDashboard(type, params = {}) {
+async function fetchDashboard(type, params = {}, options = {}) {
     if (!BI_DASHBOARD_TYPES.includes(type)) {
         throw new Error(`Dashboard endpoint nao permitido: ${type}`);
     }
-    if (!DASHBOARD_READ_URL || !SUPABASE_KEY) {
+    const source = resolveDashboardSource(options);
+    if (!source.url || !source.anonKey) {
         throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
     }
+    const dashboardReadUrl = `${source.url}/functions/v1/dashboard-read`;
     const search = new URLSearchParams({ type });
     Object.entries(params).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== '') {
             search.set(key, String(value));
         }
     });
-    const cacheKey = search.toString();
+    const cacheKey = `${source.key}:${search.toString()}`;
     if (_dashboardCache[cacheKey] && (Date.now() - _dashboardCacheTime[cacheKey] < CACHE_TTL)) {
         return _dashboardCache[cacheKey];
     }
 
-    const res = await fetch(`${DASHBOARD_READ_URL}?${search.toString()}`, {
+    const res = await fetch(`${dashboardReadUrl}?${search.toString()}`, {
         method: 'GET',
-        headers: await supabaseHeaders()
+        headers: await supabaseHeaders(source)
     });
-    if (!res.ok) throw new Error(`Dashboard API error (${type}): ${res.status}`);
+    if (!res.ok) throw new Error(`Dashboard API error (${type}/${source.key}): ${res.status}`);
 
     const payload = await res.json();
     if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
@@ -68,11 +102,11 @@ async function fetchDashboard(type, params = {}) {
     return payload;
 }
 
-async function fetchDashboardBiData() {
+async function fetchDashboardBiData(options = {}) {
     const [kpis, regionSummary, summary] = await Promise.all([
-        fetchDashboard('bi-kpis'),
-        fetchDashboard('bi-region-summary'),
-        fetchDashboard('bi-summary')
+        fetchDashboard('bi-kpis', {}, options),
+        fetchDashboard('bi-region-summary', {}, options),
+        fetchDashboard('bi-summary', {}, options)
     ]);
 
     return {
@@ -87,8 +121,8 @@ async function fetchDashboardBiData() {
     };
 }
 
-async function fetchDashboardBiBacklog() {
-    const backlog = await fetchDashboard('bi-backlog', { limit: 500 });
+async function fetchDashboardBiBacklog(options = {}) {
+    const backlog = await fetchDashboard('bi-backlog', { limit: 500 }, options);
     const OFICINA_DEPT_ID = '1128522000008788112';
     const data = backlog.data
         .filter(row => row.department_id !== OFICINA_DEPT_ID)
@@ -99,8 +133,8 @@ async function fetchDashboardBiBacklog() {
     };
 }
 
-async function fetchDashboardBiTickets(limit = 10000) {
-    const payload = await fetchDashboard('bi-tickets', { limit });
+async function fetchDashboardBiTickets(limit = 10000, options = {}) {
+    const payload = await fetchDashboard('bi-tickets', { limit }, options);
     const tickets = payload.data.map(row => ({
         ...row,
         id: row.ticket_id,
@@ -125,8 +159,8 @@ async function fetchDashboardBiTickets(limit = 10000) {
     };
 }
 
-async function fetchSyncHealth() {
-    const payload = await fetchDashboard('sync-health');
+async function fetchSyncHealth(options = {}) {
+    const payload = await fetchDashboard('sync-health', {}, options);
     return {
         health: payload.data && payload.data[0] ? payload.data[0] : null,
         meta: payload
@@ -156,5 +190,5 @@ function clearCache() {
 }
 
 function hasSupabaseCredentials() {
-    return !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
+    return !!((window.SUPABASE_URL && window.SUPABASE_ANON_KEY) || (LEGACY_SUPABASE_URL && LEGACY_SUPABASE_KEY));
 }

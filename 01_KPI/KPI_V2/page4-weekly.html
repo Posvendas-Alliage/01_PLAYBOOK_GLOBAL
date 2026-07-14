@@ -441,7 +441,7 @@
         });
     }
 
-    async function refreshData() { clearCache(); rawData = []; globalBacklogList = []; globalBacklogCount = 0; await init(); }
+    async function refreshData() { clearCache(); rawData = []; activeDashboardSourceKey = ''; globalBacklogList = []; globalBacklogCount = 0; await init(); }
 
     // ──────────────────────────────────────────────────────────
     // CONSTANTS & STATE
@@ -472,6 +472,9 @@
     const SORT_SLA_ORDER = { 'Dentro SLA': 1, 'Não elegível': 2, 'Fora SLA': 3 };
 
     let rawData = [];
+    let activeDashboardSourceKey = '';
+    let weeklyDataLoadPromise = null;
+    let weeklyBootstrapping = true;
     let globalBacklogList = []; // linhas canônicas via bi-backlog (igual ao Daily)
     let globalBacklogCount = 0; // contagem do backlog canônico após filtros dimensionais ativos
     let lastCurrentClosedWeek = [];
@@ -1384,10 +1387,48 @@
     // ──────────────────────────────────────────────────────────
     // APP LIFECYCLE
     // ──────────────────────────────────────────────────────────
-    function applyPage() {
+    function weeklyDataSourceKey(filters) {
+        if (typeof getDashboardSourceKeyForPeriod === 'function') {
+            return getDashboardSourceKeyForPeriod(filters.dateFrom, filters.dateTo);
+        }
+        return 'current';
+    }
+
+    async function ensureWeeklyData(filters, force) {
+        const sourceKey = weeklyDataSourceKey(filters || {});
+        if (!force && rawData.length && activeDashboardSourceKey === sourceKey) return;
+        if (weeklyDataLoadPromise && !force) return weeklyDataLoadPromise;
+
+        weeklyDataLoadPromise = (async function () {
+            showLoading(true);
+            const sourceOptions = { source: sourceKey };
+            const [ticketsResult, backlogResult] = await Promise.all([
+                fetchDashboardBiTickets(10000, sourceOptions),
+                fetchDashboardBiBacklog(sourceOptions)
+            ]);
+            rawData = ticketsResult.tickets;
+            globalBacklogList = backlogResult.backlog;
+            activeDashboardSourceKey = sourceKey;
+            populateFilterOptions(rawData);
+            applyExtraI18n();
+            showLoading(false);
+        })().finally(function () {
+            weeklyDataLoadPromise = null;
+        });
+
+        return weeklyDataLoadPromise;
+    }
+    async function applyPage() {
+        if (weeklyBootstrapping) return;
         applyExtraI18n();
-        if (!rawData.length) return;
         const filters = FilterState.get();
+        try {
+            await ensureWeeklyData(filters, false);
+        } catch (e) {
+            showError((e && e.message) ? e.message + ' � ' + t('error_fetch') : t('error_fetch'));
+            return;
+        }
+        if (!rawData.length) return;
         const dimensionFilters = { ...filters, dateFrom: '', dateTo: '' };
         renderPage(applyFilters(rawData, dimensionFilters), filters);
     }
@@ -1402,15 +1443,8 @@
         try {
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-            const [ticketsResult, backlogResult] = await Promise.all([
-                fetchDashboardBiTickets(),
-                fetchDashboardBiBacklog()
-            ]);
-            rawData = ticketsResult.tickets;
-            globalBacklogList = backlogResult.backlog;
-            populateFilterOptions(rawData);
-            applyExtraI18n();
-            showLoading(false);
+            weeklyBootstrapping = false;
+            await ensureWeeklyData(FilterState.get(), true);
             applyPage();
             fetchSyncHealth().then(({ health }) => {
                 const ts = health && (health.freshness && health.freshness.updated_in_supabase_at || health.last_sync_at || health.synced_at);

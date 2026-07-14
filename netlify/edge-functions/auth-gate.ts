@@ -123,7 +123,6 @@ function getSessionTokens(cookies: Record<string, string>): { accessToken: strin
 function isPublicPath(pathname: string): boolean {
   const path = pathname.toLowerCase();
 
-  if (path === "/01_kpi/kpi_v2" || path.startsWith("/01_kpi/kpi_v2/")) return true;
   if (path === "/auth.html") return true;
   if (path === "/login.html" || path === "/alterar-senha.html") return true;
   if (path === "/api/auth/session" || path === "/api/auth/logout") return true;
@@ -211,7 +210,6 @@ function canonicalRedirectPath(pathname: string): string {
 
   return path;
 }
-
 function canonicalReturnTo(url: URL): string {
   return canonicalPlaybookPath(url.pathname) + url.search + url.hash;
 }
@@ -417,7 +415,6 @@ export default async (req: Request, context: Context) => {
     validation.setCookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
     return new Response(null, { status: 302, headers });
   }
-
   const response = await context.next();
   response.headers.set("Cache-Control", "private, no-store");
   validation.setCookies.forEach((cookie) => response.headers.append("Set-Cookie", cookie));

@@ -549,6 +549,9 @@
     ];
 
     let rawData = [];
+    let activeDashboardSourceKey = '';
+    let monthlyDataLoadPromise = null;
+    let monthlyBootstrapping = true;
     let closedTicketsList = [];
     let closedTicketsFiltered = [];
     let closedTicketsPage = 1;
@@ -1128,8 +1131,48 @@
     // ──────────────────────────────────────────────────────────
     // APP LIFECYCLE
     // ──────────────────────────────────────────────────────────
-    function applyPage() {
+    function monthEndIso(monthKey) {
+        const parts = String(monthKey || '').split('-').map(Number);
+        if (parts.length !== 2 || parts.some(n => !Number.isFinite(n))) return '';
+        const end = new Date(parts[0], parts[1], 0);
+        return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    }
+
+    function monthlyDataSourceKey() {
+        const monthKey = document.getElementById('filter-month-year')?.value || '';
+        if (typeof getDashboardSourceKeyForPeriod === 'function' && monthKey) {
+            return getDashboardSourceKeyForPeriod(`${monthKey}-01`, monthEndIso(monthKey));
+        }
+        return 'current';
+    }
+
+    async function ensureMonthlyData(force) {
+        const sourceKey = monthlyDataSourceKey();
+        if (!force && rawData.length && activeDashboardSourceKey === sourceKey) return;
+        if (monthlyDataLoadPromise && !force) return monthlyDataLoadPromise;
+
+        monthlyDataLoadPromise = (async function () {
+            showLoading(true);
+            rawData = (await fetchDashboardBiTickets(10000, { source: sourceKey })).tickets;
+            activeDashboardSourceKey = sourceKey;
+            populateFilterOptions(rawData);
+            applyExtraI18n();
+            showLoading(false);
+        })().finally(function () {
+            monthlyDataLoadPromise = null;
+        });
+
+        return monthlyDataLoadPromise;
+    }
+    async function applyPage() {
+        if (monthlyBootstrapping) return;
         applyExtraI18n();
+        try {
+            await ensureMonthlyData(false);
+        } catch (e) {
+            showError((e && e.message) ? e.message + ' � ' + t('error_fetch') : t('error_fetch'));
+            return;
+        }
         if (!rawData.length) return;
         const filters = { ...FilterState.get(), dateFrom: '', dateTo: '' };
         renderPage(applyFilters(rawData, filters));
@@ -1138,6 +1181,7 @@
     async function refreshData() {
         clearCache();
         rawData = [];
+        activeDashboardSourceKey = '';
         await init();
     }
 
@@ -1150,10 +1194,8 @@
         try {
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-            rawData = (await fetchDashboardBiTickets()).tickets;
-            populateFilterOptions(rawData);
-            applyExtraI18n();
-            showLoading(false);
+            monthlyBootstrapping = false;
+            await ensureMonthlyData(true);
             applyPage();
             fetchSyncHealth().then(({ health }) => {
                 const ts = health && (health.freshness && health.freshness.updated_in_supabase_at || health.last_sync_at || health.synced_at);
