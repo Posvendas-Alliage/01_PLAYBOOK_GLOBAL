@@ -1082,6 +1082,22 @@
         colorKpiTopBar('monthly-kpi-mtts',    !metrics.closed ? 'gray' : (metrics.avgMtts <= 7 ? 'green' : metrics.avgMtts <= 14 ? 'yellow' : 'red'));
         colorKpiTopBar('monthly-kpi-backlog', openBacklog.length <= 100 ? 'green' : openBacklog.length <= 200 ? 'yellow' : 'red');
 
+        const historicalKpi = typeof getHistoricalMonthlyKpiSnapshot === 'function'
+            ? getHistoricalMonthlyKpiSnapshot(monthKey)
+            : null;
+        if (historicalKpi) {
+            document.getElementById('monthly-kpi-sla').textContent = historicalKpi.sla !== null && historicalKpi.sla !== undefined ? `${fmt(historicalKpi.sla, 2)}%` : '--';
+            document.getElementById('monthly-kpi-closed').textContent = fmt(historicalKpi.closed, 0);
+            document.getElementById('monthly-kpi-mtfc').textContent = historicalKpi.mtfc !== null && historicalKpi.mtfc !== undefined ? `${fmt(historicalKpi.mtfc, 2)} h` : '--';
+            document.getElementById('monthly-kpi-mtts').textContent = historicalKpi.mtts !== null && historicalKpi.mtts !== undefined ? `${fmt(historicalKpi.mtts, 2)} d` : '--';
+            document.getElementById('monthly-kpi-backlog').textContent = fmt(historicalKpi.backlog, 0);
+            colorKpiTopBar('monthly-kpi-sla', historicalKpi.sla >= 80 ? 'green' : historicalKpi.sla >= 50 ? 'yellow' : 'red');
+            colorKpiTopBar('monthly-kpi-closed', historicalKpi.closed > 0 ? 'green' : 'gray');
+            colorKpiTopBar('monthly-kpi-mtfc', historicalKpi.mtfc === null || historicalKpi.mtfc === undefined ? 'gray' : (historicalKpi.mtfc <= 8 ? 'green' : historicalKpi.mtfc <= 16 ? 'yellow' : 'red'));
+            colorKpiTopBar('monthly-kpi-mtts', historicalKpi.mtts === null || historicalKpi.mtts === undefined ? 'gray' : (historicalKpi.mtts <= 7 ? 'green' : historicalKpi.mtts <= 14 ? 'yellow' : 'red'));
+            colorKpiTopBar('monthly-kpi-backlog', historicalKpi.backlog <= 100 ? 'green' : historicalKpi.backlog <= 200 ? 'yellow' : 'red');
+        }
+
         // SLA badge
         const badge = document.getElementById('monthly-sla-badge');
         badge.textContent = metrics.eligible
@@ -1170,7 +1186,7 @@
         try {
             await ensureMonthlyData(false);
         } catch (e) {
-            showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
+            showError((e && e.message) ? e.message + ' ï¿½ ' + t('error_fetch') : t('error_fetch'));
             return;
         }
         if (!rawData.length) return;
@@ -1195,6 +1211,7 @@
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
             monthlyBootstrapping = false;
+            if (typeof loadHistoricalKpiSnapshots === 'function') await loadHistoricalKpiSnapshots();
             await ensureMonthlyData(true);
             applyPage();
             fetchSyncHealth().then(({ health }) => {

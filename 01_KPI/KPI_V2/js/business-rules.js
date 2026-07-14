@@ -371,3 +371,32 @@ function applyFilters(tickets, filters) {
 
 const AGENT_GROUPS = ['Suporte geral', 'Especialista', 'Instala\u00e7\u00e3o', 'Terceiro', 'Sem dono'];
 const DEFAULT_AGENT_GROUPS = ['Suporte geral', 'Especialista', 'Sem dono'];
+
+
+const HISTORICAL_KPI_SNAPSHOTS_URL = 'data/historical-kpi-snapshots.json';
+let _historicalKpiSnapshotsPromise = null;
+let _historicalKpiSnapshots = null;
+
+async function loadHistoricalKpiSnapshots() {
+    if (_historicalKpiSnapshots) return _historicalKpiSnapshots;
+    if (!_historicalKpiSnapshotsPromise) {
+        _historicalKpiSnapshotsPromise = fetch(HISTORICAL_KPI_SNAPSHOTS_URL, { method: 'GET' }).then(async response => {
+            if (!response.ok) return null;
+            return response.json();
+        }).catch(() => null);
+    }
+    _historicalKpiSnapshots = await _historicalKpiSnapshotsPromise;
+    return _historicalKpiSnapshots;
+}
+
+function getHistoricalWeeklyKpiSnapshot(dateFrom, dateTo) {
+    const snapshots = _historicalKpiSnapshots && _historicalKpiSnapshots.weekly;
+    if (!snapshots || !dateFrom || !dateTo) return null;
+    return snapshots[String(dateFrom).slice(0, 10) + '__' + String(dateTo).slice(0, 10)] || null;
+}
+
+function getHistoricalMonthlyKpiSnapshot(monthKey) {
+    const snapshots = _historicalKpiSnapshots && _historicalKpiSnapshots.monthly;
+    if (!snapshots || !monthKey) return null;
+    return snapshots[String(monthKey).slice(0, 7)] || null;
+}

@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-07-14T15:26:41.046Z",
+  "source": "US antiga congelada em 2026-07-14T12:00:00Z",
+  "cutoff_date": "2026-07-12",
+  "weekly": {
+    "2026-06-21__2026-06-27": {
+      "sla": 80,
+      "closed": 378,
+      "created": 377,
+      "mtfc": 2.38,
+      "mtts": 1.54,
+      "backlog": 93,
+      "eligible": 360,
+      "within": 288
+    },
+    "2026-06-28__2026-07-04": {
+      "sla": 80.06,
+      "closed": 345,
+      "created": 343,
+      "mtfc": 2.61,
+      "mtts": 1.59,
+      "backlog": 93,
+      "eligible": 321,
+      "within": 257
+    },
+    "2026-07-05__2026-07-11": {
+      "sla": 78.29,
+      "closed": 320,
+      "created": 347,
+      "mtfc": 3.84,
+      "mtts": 2.22,
+      "backlog": 93,
+      "eligible": 304,
+      "within": 238
+    }
+  },
+  "monthly": {
+    "2026-06": {
+      "sla": 71.05,
+      "closed": 1854,
+      "created": 1748,
+      "mtfc": 6.69,
+      "mtts": 3.08,
+      "backlog": 93,
+      "eligible": 1741,
+      "within": 1237
+    }
+  }
+}

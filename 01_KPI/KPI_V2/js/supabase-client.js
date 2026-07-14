@@ -1,7 +1,5 @@
 const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
-const LEGACY_SUPABASE_URL = window.PLAYBOOK_LEGACY_SUPABASE_URL || 'https://hqaxpbnduupjdhuuwpmg.supabase.co';
-const LEGACY_SUPABASE_KEY = window.PLAYBOOK_LEGACY_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxYXhwYm5kdXVwamRodXV3cG1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTk4NDUsImV4cCI6MjA5MzQ5NTg0NX0.8mfyVws9T8EnCOKkc0r4F56OP_wDQyIac3Xbxt2KaFs';
 const HISTORICAL_SOURCE_CUTOFF_DATE = window.PLAYBOOK_HISTORICAL_SOURCE_CUTOFF_DATE || '2026-07-12';
 
 let _cache = null;
@@ -12,12 +10,11 @@ const CACHE_TTL = 5 * 60 * 1000;
 const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
 
 function shouldUseLegacyDashboardSource(dateFrom, dateTo) {
-    const start = String(dateFrom || dateTo || '').slice(0, 10);
-    return !!start && start < HISTORICAL_SOURCE_CUTOFF_DATE;
+    return false;
 }
 
 function getDashboardSourceKeyForPeriod(dateFrom, dateTo) {
-    return shouldUseLegacyDashboardSource(dateFrom, dateTo) ? 'legacy' : 'current';
+    return 'current';
 }
 
 function normalizeDashboardOptions(options) {
@@ -27,14 +24,6 @@ function normalizeDashboardOptions(options) {
 
 function resolveDashboardSource(options) {
     const opts = normalizeDashboardOptions(options);
-    if (opts.source === 'legacy') {
-        return {
-            key: 'legacy',
-            url: LEGACY_SUPABASE_URL,
-            anonKey: LEGACY_SUPABASE_KEY,
-            useSession: false
-        };
-    }
     return {
         key: 'current',
         url: SUPABASE_URL,
@@ -71,10 +60,6 @@ async function fetchDashboard(type, params = {}, options = {}) {
         throw new Error(`Dashboard endpoint nao permitido: ${type}`);
     }
     const source = resolveDashboardSource(options);
-    if (!source.url || !source.anonKey) {
-        throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-    }
-    const dashboardReadUrl = `${source.url}/functions/v1/dashboard-read`;
     const search = new URLSearchParams({ type });
     Object.entries(params).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== '') {
@@ -86,6 +71,10 @@ async function fetchDashboard(type, params = {}, options = {}) {
         return _dashboardCache[cacheKey];
     }
 
+    if (!source.url || !source.anonKey) {
+        throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
+    }
+    const dashboardReadUrl = `${source.url}/functions/v1/dashboard-read`;
     const res = await fetch(`${dashboardReadUrl}?${search.toString()}`, {
         method: 'GET',
         headers: await supabaseHeaders(source)
@@ -190,5 +179,5 @@ function clearCache() {
 }
 
 function hasSupabaseCredentials() {
-    return !!((window.SUPABASE_URL && window.SUPABASE_ANON_KEY) || (LEGACY_SUPABASE_URL && LEGACY_SUPABASE_KEY));
+    return !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
 }

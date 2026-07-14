@@ -1294,6 +1294,23 @@
         colorKpiTopBar('kpi-mtts',   execMtts === null ? 'gray' : (execMtts <= 7 ? 'green' : execMtts <= 14 ? 'yellow' : 'red'));
         colorKpiTopBar('kpi-backlog', globalBacklogCount <= 100 ? 'green' : globalBacklogCount <= 200 ? 'yellow' : 'red');
 
+        const historicalKpi = typeof getHistoricalWeeklyKpiSnapshot === 'function'
+            ? getHistoricalWeeklyKpiSnapshot(filters.dateFrom, filters.dateTo)
+            : null;
+        if (historicalKpi) {
+            setKpi('kpi-sla', historicalKpi.sla !== null && historicalKpi.sla !== undefined ? fmt(historicalKpi.sla, 2) + '%' : '--');
+            setKpi('kpi-closed', fmt(historicalKpi.closed, 0));
+            setKpi('kpi-created', fmt(historicalKpi.created, 0));
+            setKpi('kpi-mtfc', historicalKpi.mtfc !== null && historicalKpi.mtfc !== undefined ? fmt(historicalKpi.mtfc, 2) + ' h' : '--');
+            setKpi('kpi-mtts', historicalKpi.mtts !== null && historicalKpi.mtts !== undefined ? fmt(historicalKpi.mtts, 2) + ' d' : '--');
+            setKpi('kpi-backlog', fmt(historicalKpi.backlog, 0));
+            colorKpiTopBar('kpi-sla', historicalKpi.sla >= 80 ? 'green' : historicalKpi.sla >= 50 ? 'yellow' : 'red');
+            colorKpiTopBar('kpi-closed', historicalKpi.closed > 0 ? 'green' : 'gray');
+            colorKpiTopBar('kpi-mtfc', historicalKpi.mtfc === null || historicalKpi.mtfc === undefined ? 'gray' : (historicalKpi.mtfc <= 8 ? 'green' : historicalKpi.mtfc <= 16 ? 'yellow' : 'red'));
+            colorKpiTopBar('kpi-mtts', historicalKpi.mtts === null || historicalKpi.mtts === undefined ? 'gray' : (historicalKpi.mtts <= 7 ? 'green' : historicalKpi.mtts <= 14 ? 'yellow' : 'red'));
+            colorKpiTopBar('kpi-backlog', historicalKpi.backlog <= 100 ? 'green' : historicalKpi.backlog <= 200 ? 'yellow' : 'red');
+        }
+
         // Week range in title
         const fromFmt = period.from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
         const toFmt   = period.to.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -1425,7 +1442,7 @@
         try {
             await ensureWeeklyData(filters, false);
         } catch (e) {
-            showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
+            showError((e && e.message) ? e.message + ' ï¿½ ' + t('error_fetch') : t('error_fetch'));
             return;
         }
         if (!rawData.length) return;
@@ -1444,6 +1461,7 @@
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
             weeklyBootstrapping = false;
+            if (typeof loadHistoricalKpiSnapshots === 'function') await loadHistoricalKpiSnapshots();
             await ensureWeeklyData(FilterState.get(), true);
             applyPage();
             fetchSyncHealth().then(({ health }) => {
