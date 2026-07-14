@@ -123,6 +123,8 @@ function getSessionTokens(cookies: Record<string, string>): { accessToken: strin
 function isPublicPath(pathname: string): boolean {
   const path = pathname.toLowerCase();
 
+  if (path === "/01_kpi" || path === "/01_kpi/" || path === "/01_kpi/index.html") return true;
+  if (path === "/01_kpi/kpi_v2" || path.startsWith("/01_kpi/kpi_v2/")) return true;
   if (path === "/auth.html") return true;
   if (path === "/login.html" || path === "/alterar-senha.html") return true;
   if (path === "/api/auth/session" || path === "/api/auth/logout") return true;

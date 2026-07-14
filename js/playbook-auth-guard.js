@@ -1,4 +1,17 @@
 (function () {
+    function isPublicDashboardPath() {
+        const path = String(window.location.pathname || "").toLowerCase();
+        return path === "/01_kpi" ||
+            path === "/01_kpi/" ||
+            path === "/01_kpi/index.html" ||
+            path === "/01_kpi/kpi_v2" ||
+            path.indexOf("/01_kpi/kpi_v2/") === 0;
+    }
+
+    function revealPublicDashboard() {
+        document.documentElement.classList.remove("playbook-auth-pending");
+        document.documentElement.classList.add("playbook-auth-ready");
+    }
     async function getServerSessionFallback() {
         try {
             const response = await fetch("/api/auth/session", {
@@ -24,6 +37,10 @@
     }
 
     async function runGuard() {
+        if (isPublicDashboardPath()) {
+            revealPublicDashboard();
+            return;
+        }
         const auth = window.PlaybookAuth;
         if (!auth) {
             document.documentElement.classList.remove("playbook-auth-pending");
