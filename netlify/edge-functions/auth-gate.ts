@@ -383,6 +383,18 @@ export default async (req: Request, context: Context) => {
     return context.next();
   }
 
+  const canonicalPath = canonicalRedirectPath(url.pathname);
+  if (canonicalPath !== url.pathname) {
+    const canonicalUrl = new URL(req.url);
+    canonicalUrl.pathname = canonicalPath;
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: canonicalUrl.toString(),
+        "Cache-Control": "no-store",
+      },
+    });
+  }
   const validation = await validateSession(req);
 
   if (!validation.ok) {
@@ -404,17 +416,7 @@ export default async (req: Request, context: Context) => {
     return redirectToAuth(req, "admin_required");
   }
 
-  const canonicalPath = canonicalRedirectPath(url.pathname);
-  if (canonicalPath !== url.pathname) {
-    const canonicalUrl = new URL(req.url);
-    canonicalUrl.pathname = canonicalPath;
-    const headers = new Headers({
-      Location: canonicalUrl.toString(),
-      "Cache-Control": "no-store",
-    });
-    validation.setCookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
-    return new Response(null, { status: 302, headers });
-  }
+
   const response = await context.next();
   response.headers.set("Cache-Control", "private, no-store");
   validation.setCookies.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
