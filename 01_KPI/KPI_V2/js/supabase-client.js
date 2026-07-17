@@ -8,6 +8,51 @@ let _dashboardCache = {};
 let _dashboardCacheTime = {};
 const CACHE_TTL = 5 * 60 * 1000;
 const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
+const DASHBOARD_AUTH_REDIRECT_KEY = 'playbookDashboardAuthRedirectAt';
+const KPI_AUTH_SESSION_KEY = 'playbookKpiAuthRequired';
+
+function readDashboardBooleanFlag(value) {
+    if (value === true) return true;
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function isDashboardAuthRequired() {
+    if (readDashboardBooleanFlag(window.PLAYBOOK_KPI_AUTH_REQUIRED)) return true;
+    try {
+        return window.sessionStorage.getItem(KPI_AUTH_SESSION_KEY) === '1';
+    } catch (_error) {
+        return false;
+    }
+}
+
+function redirectToDashboardLogin(reason) {
+    const normalizedReason = reason || 'missing_session';
+    try {
+        const raw = window.sessionStorage.getItem(DASHBOARD_AUTH_REDIRECT_KEY);
+        if (raw && Date.now() - Number(raw) < 5000) return;
+        window.sessionStorage.setItem(DASHBOARD_AUTH_REDIRECT_KEY, String(Date.now()));
+    } catch (_error) {
+        // Storage can be unavailable; continue with a single best-effort redirect.
+    }
+
+    if (window.PlaybookAuth && typeof window.PlaybookAuth.redirectToLogin === 'function') {
+        window.PlaybookAuth.redirectToLogin(normalizedReason);
+        return;
+    }
+
+    const loginUrl = new URL('/login.html', window.location.origin);
+    loginUrl.searchParams.set('returnTo', window.location.pathname + window.location.search + window.location.hash);
+    loginUrl.searchParams.set('reason', normalizedReason);
+    loginUrl.searchParams.set('auto', '0');
+    window.location.replace(loginUrl.href);
+}
+
+function handleDashboardAuthFailure(status) {
+    if (status !== 401 && status !== 403) return false;
+    redirectToDashboardLogin(status === 403 ? 'not_approved' : 'missing_session');
+    return true;
+}
 
 function shouldUseLegacyDashboardSource(dateFrom, dateTo) {
     return false;
@@ -40,6 +85,11 @@ async function supabaseAccessToken() {
         }
     } catch (error) {
         console.warn('[Supabase] Nao foi possivel recuperar sessao autenticada.', error);
+    }
+
+    if (isDashboardAuthRequired()) {
+        redirectToDashboardLogin('missing_session');
+        throw new Error('Sessao obrigatoria para acessar a dashboard.');
     }
 
     return SUPABASE_KEY;
@@ -79,7 +129,12 @@ async function fetchDashboard(type, params = {}, options = {}) {
         method: 'GET',
         headers: await supabaseHeaders(source)
     });
-    if (!res.ok) throw new Error(`Dashboard API error (${type}/${source.key}): ${res.status}`);
+    if (!res.ok) {
+        if (handleDashboardAuthFailure(res.status)) {
+            throw new Error(`Dashboard API exige autenticacao (${type}/${source.key}): ${res.status}`);
+        }
+        throw new Error(`Dashboard API error (${type}/${source.key}): ${res.status}`);
+    }
 
     const payload = await res.json();
     if (!payload || payload.success !== true || !Array.isArray(payload.data)) {

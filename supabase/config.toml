@@ -1,0 +1,8 @@
+[functions.dashboard-read]
+verify_jwt = true
+
+[functions.playbook-admin]
+verify_jwt = true
+
+[functions.playbook-bootstrap-admin]
+verify_jwt = false

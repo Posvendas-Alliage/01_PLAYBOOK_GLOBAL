@@ -1,4 +1,33 @@
 (function () {
+    const KPI_AUTH_SESSION_KEY = "playbookKpiAuthRequired";
+
+    function readBooleanFlag(value) {
+        if (value === true) return true;
+        const normalized = String(value || "").trim().toLowerCase();
+        return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+    }
+
+    function isKpiAuthRequired() {
+        try {
+            const params = new URLSearchParams(window.location.search || "");
+            const paramValue = params.get("kpiAuth");
+            if (readBooleanFlag(paramValue)) {
+                window.sessionStorage.setItem(KPI_AUTH_SESSION_KEY, "1");
+            } else if (paramValue === "0" || String(paramValue || "").toLowerCase() === "false") {
+                window.sessionStorage.removeItem(KPI_AUTH_SESSION_KEY);
+            }
+        } catch (_error) {
+            // Session storage can be unavailable; fall back to the global flag.
+        }
+
+        if (readBooleanFlag(window.PLAYBOOK_KPI_AUTH_REQUIRED)) return true;
+
+        try {
+            return window.sessionStorage.getItem(KPI_AUTH_SESSION_KEY) === "1";
+        } catch (_error) {
+            return false;
+        }
+    }
     function isPublicDashboardPath() {
         const path = String(window.location.pathname || "").toLowerCase();
         return path === "/01_kpi" ||
@@ -37,7 +66,7 @@
     }
 
     async function runGuard() {
-        if (isPublicDashboardPath()) {
+        if (isPublicDashboardPath() && !isKpiAuthRequired()) {
             revealPublicDashboard();
             return;
         }

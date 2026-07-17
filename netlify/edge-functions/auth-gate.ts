@@ -46,6 +46,14 @@ function getSupabaseUrl(): string {
   return env("PLAYBOOK_SUPABASE_URL") || env("SUPABASE_URL");
 }
 
+function readBooleanEnv(name: string): boolean {
+  const value = env(name).trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isKpiAuthRequired(): boolean {
+  return readBooleanEnv("PLAYBOOK_KPI_AUTH_REQUIRED");
+}
 function getPublishableKey(): string {
   return env("PLAYBOOK_SUPABASE_PUBLISHABLE_KEY") ||
     env("SUPABASE_PUBLISHABLE_KEY") ||
@@ -123,8 +131,10 @@ function getSessionTokens(cookies: Record<string, string>): { accessToken: strin
 function isPublicPath(pathname: string): boolean {
   const path = pathname.toLowerCase();
 
-  if (path === "/01_kpi" || path === "/01_kpi/" || path === "/01_kpi/index.html") return true;
-  if (path === "/01_kpi/kpi_v2" || path.startsWith("/01_kpi/kpi_v2/")) return true;
+  if (!isKpiAuthRequired()) {
+    if (path === "/01_kpi" || path === "/01_kpi/" || path === "/01_kpi/index.html") return true;
+    if (path === "/01_kpi/kpi_v2" || path.startsWith("/01_kpi/kpi_v2/")) return true;
+  }
   if (path === "/auth.html") return true;
   if (path === "/login.html" || path === "/alterar-senha.html") return true;
   if (path === "/api/auth/session" || path === "/api/auth/logout") return true;
