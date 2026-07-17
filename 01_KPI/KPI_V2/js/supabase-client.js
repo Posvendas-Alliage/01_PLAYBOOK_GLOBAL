@@ -8,7 +8,6 @@ let _dashboardCache = {};
 let _dashboardCacheTime = {};
 const CACHE_TTL = 5 * 60 * 1000;
 const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
-const DASHBOARD_AUTH_REDIRECT_KEY = 'playbookDashboardAuthRedirectAt';
 const KPI_AUTH_SESSION_KEY = 'playbookKpiAuthRequired';
 
 function readDashboardBooleanFlag(value) {
@@ -26,31 +25,60 @@ function isDashboardAuthRequired() {
     }
 }
 
-function redirectToDashboardLogin(reason) {
-    const normalizedReason = reason || 'missing_session';
-    try {
-        const raw = window.sessionStorage.getItem(DASHBOARD_AUTH_REDIRECT_KEY);
-        if (raw && Date.now() - Number(raw) < 5000) return;
-        window.sessionStorage.setItem(DASHBOARD_AUTH_REDIRECT_KEY, String(Date.now()));
-    } catch (_error) {
-        // Storage can be unavailable; continue with a single best-effort redirect.
-    }
-
-    if (window.PlaybookAuth && typeof window.PlaybookAuth.redirectToLogin === 'function') {
-        window.PlaybookAuth.redirectToLogin(normalizedReason);
-        return;
-    }
-
+function dashboardLoginUrl(reason) {
     const loginUrl = new URL('/login.html', window.location.origin);
     loginUrl.searchParams.set('returnTo', window.location.pathname + window.location.search + window.location.hash);
-    loginUrl.searchParams.set('reason', normalizedReason);
+    loginUrl.searchParams.set('reason', reason || 'missing_session');
     loginUrl.searchParams.set('auto', '0');
-    window.location.replace(loginUrl.href);
+    return loginUrl.href;
 }
 
+function showDashboardLoginNotice(reason) {
+    const normalizedReason = reason || 'missing_session';
+    const existing = document.getElementById('dashboard-login-notice');
+    if (existing) existing.remove();
+
+    ['loading', 'page-body', 'error-banner', 'error-message'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+
+    const target = document.querySelector('.app-main') || document.querySelector('main') || document.body;
+    const notice = document.createElement('section');
+    notice.id = 'dashboard-login-notice';
+    notice.className = 'dashboard-login-notice';
+    notice.setAttribute('role', 'status');
+    notice.setAttribute('aria-live', 'polite');
+
+    const title = document.createElement('h2');
+    title.textContent = 'Login necessario para acessar a dashboard';
+
+    const text = document.createElement('p');
+    text.textContent = normalizedReason === 'not_approved'
+        ? 'Sua conta precisa estar aprovada para visualizar os indicadores protegidos.'
+        : 'Os dados desta dashboard sao protegidos. Entre com sua conta aprovada para visualizar os indicadores.';
+
+    const action = document.createElement('a');
+    action.className = 'dashboard-login-notice-action';
+    action.href = dashboardLoginUrl(normalizedReason);
+    action.textContent = 'Fazer login';
+
+    notice.appendChild(title);
+    notice.appendChild(text);
+    notice.appendChild(action);
+    target.prepend(notice);
+}
+
+function redirectToDashboardLogin(reason) {
+    showDashboardLoginNotice(reason);
+}
+
+function waitForDashboardLogin() {
+    return new Promise(() => {});
+}
 function handleDashboardAuthFailure(status) {
     if (status !== 401 && status !== 403) return false;
-    redirectToDashboardLogin(status === 403 ? 'not_approved' : 'missing_session');
+    showDashboardLoginNotice(status === 403 ? 'not_approved' : 'missing_session');
     return true;
 }
 
@@ -89,7 +117,7 @@ async function supabaseAccessToken() {
 
     if (isDashboardAuthRequired()) {
         redirectToDashboardLogin('missing_session');
-        throw new Error('Sessao obrigatoria para acessar a dashboard.');
+        return waitForDashboardLogin();
     }
 
     return SUPABASE_KEY;
@@ -131,7 +159,7 @@ async function fetchDashboard(type, params = {}, options = {}) {
     });
     if (!res.ok) {
         if (handleDashboardAuthFailure(res.status)) {
-            throw new Error(`Dashboard API exige autenticacao (${type}/${source.key}): ${res.status}`);
+            return waitForDashboardLogin();
         }
         throw new Error(`Dashboard API error (${type}/${source.key}): ${res.status}`);
     }
