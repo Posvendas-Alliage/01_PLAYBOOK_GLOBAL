@@ -121,7 +121,7 @@
                 <a href="page2-backlog.html" data-i18n="nav_backlog">Daily</a>
                 <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
                 <a href="page5-monthly.html" class="is-active" data-i18n="nav_monthly">Monthly</a>
-                <a href="kanban-status.html" data-i18n="nav_kanban">Kanban de Status</a>
+                <a href="page6-business-hours.html" data-i18n="nav_business_hours">Hor&aacute;rios Comerciais</a>
             </div>
         </nav>
         <div id="banner-validity" class="banner-validity">
@@ -394,6 +394,7 @@
     <script src="js/filters.js"></script>
     <script src="js/supabase-client.js"></script>
     <script src="js/business-rules.js"></script>
+    <script src="js/business-hours-mode.js"></script>
     <script src="js/charts.js"></script>
     <script>
     // ──────────────────────────────────────────────────────────
@@ -518,7 +519,7 @@
                 let span = document.getElementById('month-title');
                 if (!span) { span = document.createElement('span'); span.id = 'month-title'; span.textContent = '--'; }
                 node.textContent = '';
-                node.appendChild(document.createTextNode(tx('monthly_title') + ' '));
+                node.appendChild(document.createTextNode(tx('monthly_title') + ' - '));
                 node.appendChild(span);
                 return;
             }
@@ -628,7 +629,6 @@
             btn.addEventListener('click', () => {
                 FilterState.update('region', key);
                 renderCountryFilter();
-                applyPage();
             });
             container.appendChild(btn);
         });
@@ -655,7 +655,6 @@
                 if (idx >= 0) groups.splice(idx, 1); else groups.push(group);
                 FilterState.update('agentGroups', groups);
                 renderAgentGroupFilter();
-                applyPage();
             });
             container.appendChild(btn);
         });
@@ -780,18 +779,14 @@
             next.region = FilterState.get().region || 'all';
             next.agentGroups = FilterState.get().agentGroups || [...AGENT_GROUPS];
             FilterState.set(next);
-            applyPage();
         });
         document.getElementById('btn-clear').addEventListener('click', () => {
-            FilterState.reset();
-            FilterState.update('agentGroups', [...AGENT_GROUPS]);
-            FilterState.update('region', 'all');
+            FilterState.set({ region: 'all', priority: 'all', department: 'all', type: 'all', productLine: 'all', product: 'all', dateFrom: '', dateTo: '', agentGroups: [...AGENT_GROUPS] });
             document.querySelectorAll('[data-filter]').forEach(i => {
                 i.value = i.tagName === 'SELECT' ? 'all' : '';
             });
             renderCountryFilter();
             renderAgentGroupFilter();
-            applyPage();
         });
         document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
         document.getElementById('filter-month-year').addEventListener('change', applyPage);
@@ -825,7 +820,7 @@
 
     function regionTicketsInMonth(tickets, regionGroup, monthKey) {
         return tickets.filter(t => {
-            if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+            if (regionGroup !== 'Global' && getTicketRegionGroup(t) !== regionGroup) return false;
             if (!t.closed_time) return false;
             return String(t.closed_time).substring(0, 7) === monthKey;
         });
@@ -834,14 +829,14 @@
     function regionOpenBacklog(tickets, regionGroup) {
         const now = new Date();
         return tickets.filter(t => {
-            if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+            if (regionGroup !== 'Global' && getTicketRegionGroup(t) !== regionGroup) return false;
             return !t.closed_time;
         }).map(t => ({ ...t, _aging: (now - new Date(t.created_time)) / (1000 * 60 * 60 * 24) }));
     }
 
     function regionCreatedInMonth(tickets, regionGroup, monthKey) {
         return tickets.filter(t => {
-            if (regionGroup !== 'Global' && REGION_MAP[t.region] !== regionGroup) return false;
+            if (regionGroup !== 'Global' && getTicketRegionGroup(t) !== regionGroup) return false;
             return String(t.created_time || '').substring(0, 7) === monthKey;
         });
     }
@@ -985,7 +980,17 @@
     function sortTickets(tickets, column, direction) {
         return [...tickets].sort((a, b) => {
             let valA, valB;
-            switch (column) {
+            const businessSorter = window.BusinessHoursMode && window.BusinessHoursMode.monthlySortValue;
+            if (typeof businessSorter === 'function') {
+                const businessA = businessSorter(a, column);
+                const businessB = businessSorter(b, column);
+                if (businessA !== null && businessB !== null) {
+                    valA = businessA;
+                    valB = businessB;
+                }
+            }
+            if (valA === undefined || valB === undefined) {
+                switch (column) {
                 case 'ticket_number':
                     valA = Number(a.ticket_number) || 0;
                     valB = Number(b.ticket_number) || 0;
@@ -1015,13 +1020,13 @@
                     valA = new Date(a.closed_time || 0).getTime();
                     valB = new Date(b.closed_time || 0).getTime();
                     break;
+                }
             }
             if (valA < valB) return direction === 'asc' ? -1 : 1;
             if (valA > valB) return direction === 'asc' ? 1 : -1;
             return 0;
         });
     }
-
     function handleColumnClick(column) {
         if (sortState.column === column) {
             if (sortState.direction === 'asc') {
@@ -1054,6 +1059,19 @@
     // ──────────────────────────────────────────────────────────
     // MAIN RENDER
     // ──────────────────────────────────────────────────────────
+    function isMonthlyGlobalSnapshotScope() {
+        const filters = FilterState.get();
+        const agentGroups = Array.isArray(filters.agentGroups) ? filters.agentGroups : [...AGENT_GROUPS];
+        const allAgentGroups = AGENT_GROUPS.every(group => agentGroups.includes(group));
+        return (!filters.region || filters.region === 'all') &&
+            (!filters.priority || filters.priority === 'all') &&
+            (!filters.department || filters.department === 'all') &&
+            (!filters.type || filters.type === 'all') &&
+            (!filters.productLine || filters.productLine === 'all') &&
+            (!filters.product || filters.product === 'all') &&
+            allAgentGroups;
+    }
+
     function renderPage(filtered) {
         const monthKey = document.getElementById('filter-month-year').value;
         if (!monthKey) {
@@ -1082,7 +1100,7 @@
         colorKpiTopBar('monthly-kpi-mtts',    !metrics.closed ? 'gray' : (metrics.avgMtts <= 7 ? 'green' : metrics.avgMtts <= 14 ? 'yellow' : 'red'));
         colorKpiTopBar('monthly-kpi-backlog', openBacklog.length <= 100 ? 'green' : openBacklog.length <= 200 ? 'yellow' : 'red');
 
-        const historicalKpi = typeof getHistoricalMonthlyKpiSnapshot === 'function'
+        const historicalKpi = isMonthlyGlobalSnapshotScope() && typeof getHistoricalMonthlyKpiSnapshot === 'function'
             ? getHistoricalMonthlyKpiSnapshot(monthKey)
             : null;
         if (historicalKpi) {
@@ -1140,8 +1158,8 @@
         const pMeta = document.getElementById('print-meta');
         if (pMeta) pMeta.textContent = `${tx('print_generated')}: ${new Date().toLocaleDateString('pt-BR')}`;
 
-        // Region Map + Table + Trend (new section) — usa rawData internamente
-        initMonthlyRegionSection(monthKey);
+        // Region Map + Table + Trend (new section) — usa o mesmo recorte filtrado da página
+        initMonthlyRegionSection(monthKey, filtered);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -1186,7 +1204,7 @@
         try {
             await ensureMonthlyData(false);
         } catch (e) {
-            showError((e && e.message) ? e.message + ' � ' + t('error_fetch') : t('error_fetch'));
+            showError((e && e.message) ? e.message + ' - ' + t('error_fetch') : t('error_fetch'));
             return;
         }
         if (!rawData.length) return;
@@ -1218,7 +1236,7 @@
                 const ts = health && (health.freshness && health.freshness.updated_in_supabase_at || health.last_sync_at || health.synced_at);
                 if (!ts) return;
                 const el = document.getElementById('last-sync');
-                if (el) el.textContent = t('last_sync_label') + ' ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                if (el) el.textContent = t('last_sync_label') + ' - ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
             }).catch(() => {});
         } catch (e) {
             showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));
@@ -1404,7 +1422,7 @@
 
             const tr = document.createElement('tr');
             tr.innerHTML =
-                '<td>' + (REGION_FLAGS[region] || '') + ' ' + regionLabel(region) + '</td>' +
+                '<td>' + (REGION_FLAGS[region] || '') + ' - ' + regionLabel(region) + '</td>' +
                 '<td class="mono">' + fmt(m.closed, 0) + '</td>' +
                 '<td>' + mtfcStr + '</td>' +
                 '<td>' + mttsStr + '</td>' +
@@ -1458,15 +1476,14 @@
             () => (prevMtts !== null && currMtts !== null ? fmt(currMtts, 2) + 'd vs ' + fmt(prevMtts, 2) + 'd' : ''));
     }
 
-    // Chamado pelo renderPage() a cada mudança de mês — usa rawData (sem filtros de UI)
-    function initMonthlyRegionSection(monthKey) {
+    // Chamado pelo renderPage() a cada mudança de mês/filtro — usa o mesmo recorte filtrado da página
+    function initMonthlyRegionSection(monthKey, scopedData) {
         const section = document.getElementById('monthly-mrm-section');
         if (!section || !monthKey) return;
 
-        // rawData ignora TODOS os filtros dimensionais da UI (região, prioridade, etc.)
-        // Garante que a tabela sempre mostra as 6 regiões independentemente do filtro selecionado
-        const monthData = regionTicketsInMonth(rawData, 'Global', monthKey);
-        const prevData  = regionTicketsInMonth(rawData, 'Global', prevMonthKey(monthKey));
+        const sourceData = Array.isArray(scopedData) ? scopedData : rawData;
+        const monthData = regionTicketsInMonth(sourceData, 'Global', monthKey);
+        const prevData  = regionTicketsInMonth(sourceData, 'Global', prevMonthKey(monthKey));
 
         // Métricas por região via computeMetrics() — idêntico ao Executive Summary
         const regionMetrics = {};

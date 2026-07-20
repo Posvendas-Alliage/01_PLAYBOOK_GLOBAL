@@ -10,6 +10,87 @@ const CACHE_TTL = 5 * 60 * 1000;
 const BI_DASHBOARD_TYPES = ['bi-kpis', 'bi-region-summary', 'bi-summary', 'bi-backlog', 'bi-tickets', 'sync-health'];
 const KPI_AUTH_SESSION_KEY = 'playbookKpiAuthRequired';
 
+
+const LOCAL_REST_BI_TICKET_COLUMNS = 'ticket_id,ticket_number,subject,status,priority,department_name,agent_name,pais,region,categoria,produtos,tipo_atendimento,created_time,closed_time,due_date,response_due_date,regiao_grupo,priority_standard,mtfc_horas_bi,mtts_dias_bi,aging_backlog_dias,is_open,is_closed,is_sla_eligible,meta_mtts_dias,meta_mtfc_horas,sla_status_bi,agent_email,contact_name,contact_email,regiao,grupo_operacional_agente';
+
+function isLocalDashboardDevHost() {
+    const host = window.location.hostname;
+    return host === '127.0.0.1' || host === 'localhost';
+}
+
+async function fetchRestPagedLocal(source, table, select, params = {}, limit = 10000) {
+    const pageSize = Math.min(1000, limit);
+    const rows = [];
+    for (let offset = 0; offset < limit; offset += pageSize) {
+        const search = new URLSearchParams({ select, limit: String(pageSize), offset: String(offset) });
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') search.set(key, String(value));
+        });
+        const res = await fetch(`${source.url}/rest/v1/${table}?${search.toString()}`, {
+            headers: {
+                apikey: source.anonKey,
+                Authorization: `Bearer ${source.anonKey}`,
+                Accept: 'application/json'
+            }
+        });
+        if (!res.ok) throw new Error(`REST local fallback error (${table}): ${res.status}`);
+        const page = await res.json();
+        if (!Array.isArray(page)) throw new Error(`REST local fallback retornou formato invalido (${table}).`);
+        rows.push(...page);
+        if (page.length < pageSize) break;
+    }
+    return rows.slice(0, limit);
+}
+
+async function fetchDashboardLocalFallback(type, params, source) {
+    if (!isLocalDashboardDevHost()) return null;
+    if (!source.url || !source.anonKey) return null;
+
+    if (type === 'bi-tickets') {
+        const limit = Math.min(Number(params.limit || 10000) || 10000, 10000);
+        const rows = await fetchRestPagedLocal(
+            source,
+            'vw_tickets_bi_base',
+            LOCAL_REST_BI_TICKET_COLUMNS,
+            {
+                or: '(is_weekly_report_filter_included.eq.true,department_name.eq.SAC)',
+                order: 'created_time.desc'
+            },
+            limit
+        );
+        return { success: true, data: rows, source: 'local-rest-fallback', type };
+    }
+
+    if (type === 'bi-backlog') {
+        const limit = Math.min(Number(params.limit || 500) || 500, 10000);
+        const rows = await fetchRestPagedLocal(
+            source,
+            'vw_dashboard_bi_backlog',
+            '*',
+            { order: 'aging_backlog_dias.desc' },
+            limit
+        );
+        return { success: true, data: rows, source: 'local-rest-fallback', type };
+    }
+
+    if (type === 'bi-kpis') {
+        const rows = await fetchRestPagedLocal(source, 'vw_dashboard_bi_kpis', '*', {}, 1000);
+        return { success: true, data: rows, source: 'local-rest-fallback', type };
+    }
+
+    if (type === 'bi-region-summary') {
+        const rows = await fetchRestPagedLocal(source, 'vw_dashboard_bi_region_summary', '*', {}, 1000);
+        return { success: true, data: rows, source: 'local-rest-fallback', type };
+    }
+
+    if (type === 'bi-summary') {
+        const rows = await fetchRestPagedLocal(source, 'vw_dashboard_bi_summary', '*', {}, 10000);
+        return { success: true, data: rows, source: 'local-rest-fallback', type };
+    }
+
+    return null;
+}
+
 function readDashboardBooleanFlag(value) {
     if (value === true) return true;
     const normalized = String(value || '').trim().toLowerCase();
@@ -158,6 +239,15 @@ async function fetchDashboard(type, params = {}, options = {}) {
         headers: await supabaseHeaders(source)
     });
     if (!res.ok) {
+        const localFallback = await fetchDashboardLocalFallback(type, params, source).catch(error => {
+            console.warn('[Supabase] REST local fallback falhou.', error);
+            return null;
+        });
+        if (localFallback) {
+            _dashboardCache[cacheKey] = localFallback;
+            _dashboardCacheTime[cacheKey] = Date.now();
+            return localFallback;
+        }
         if (handleDashboardAuthFailure(res.status)) {
             return waitForDashboardLogin();
         }

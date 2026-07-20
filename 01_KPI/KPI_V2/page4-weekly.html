@@ -113,7 +113,7 @@
                 <a href="page2-backlog.html" data-i18n="nav_backlog">Daily</a>
                 <a href="page4-weekly.html" class="is-active" data-i18n="nav_weekly">Weekly</a>
                 <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
-                <a href="kanban-status.html" data-i18n="nav_kanban">Kanban de Status</a>
+                <a href="page6-business-hours.html" data-i18n="nav_business_hours">Hor&aacute;rios Comerciais</a>
             </div>
         </nav>
         <div id="banner-validity" class="banner-validity">
@@ -345,6 +345,7 @@
     <script src="js/filters.js"></script>
     <script src="js/supabase-client.js"></script>
     <script src="js/business-rules.js"></script>
+    <script src="js/business-hours-mode.js"></script>
     <script src="js/charts.js"></script>
     <script>
     // ──────────────────────────────────────────────────────────
@@ -589,7 +590,6 @@
                 FilterState.update('region', key);
                 renderCountryFilter();
                 updateDeptFilterVisibility();
-                applyPage();
             });
             container.appendChild(btn);
         });
@@ -616,7 +616,6 @@
                 if (idx >= 0) groups.splice(idx, 1); else groups.push(group);
                 FilterState.update('agentGroups', groups);
                 renderAgentGroupFilter();
-                applyPage();
             });
             container.appendChild(btn);
         });
@@ -641,7 +640,6 @@
             btn.addEventListener('click', () => {
                 FilterState.update('department', key);
                 renderDeptFilter();
-                applyPage();
             });
             container.appendChild(btn);
         });
@@ -757,16 +755,19 @@
                 next.dateFrom = from; next.dateTo = to;
             }
             FilterState.set(next);
-            applyPage();
         });
         document.getElementById('btn-clear').addEventListener('click', () => {
             const weeks = buildWeekOptions();
-            FilterState.reset();
-            FilterState.update('region', 'all');
-            FilterState.update('agentGroups', [...DEFAULT_AGENT_GROUPS]);
-            FilterState.update('department', 'all');
-            FilterState.update('dateFrom', weeks[0].from);
-            FilterState.update('dateTo', weeks[0].to);
+            FilterState.set({
+                region: 'all',
+                priority: 'all',
+                type: 'all',
+                product: 'all',
+                agentGroups: [...DEFAULT_AGENT_GROUPS],
+                department: 'all',
+                dateFrom: weeks[0].from,
+                dateTo: weeks[0].to
+            });
             document.querySelectorAll('[data-filter]').forEach(i => {
                 i.value = i.tagName === 'SELECT' ? 'all' : '';
             });
@@ -776,14 +777,11 @@
             updateDeptFilterVisibility();
             const sel = document.getElementById('week-selector');
             if (sel) { sel.selectedIndex = 0; }
-            applyPage();
         });
         document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
         document.getElementById('week-selector').addEventListener('change', function() {
             const [from, to] = this.value.split('__');
-            FilterState.update('dateFrom', from);
-            FilterState.update('dateTo', to);
-            applyPage();
+            FilterState.set({ ...FilterState.get(), dateFrom: from, dateTo: to });
         });
         document.getElementById('weekly-prev').addEventListener('click', () => {
             if (weeklyClosedPage > 1) { weeklyClosedPage--; renderWeeklyClosedTable(); }
@@ -939,7 +937,17 @@
     function sortWeeklyTickets(tickets, column, direction) {
         return [...tickets].sort((a, b) => {
             let valA, valB;
-            switch (column) {
+            const businessSorter = window.BusinessHoursMode && window.BusinessHoursMode.weeklySortValue;
+            if (typeof businessSorter === 'function') {
+                const businessA = businessSorter(a, column);
+                const businessB = businessSorter(b, column);
+                if (businessA !== null && businessB !== null) {
+                    valA = businessA;
+                    valB = businessB;
+                }
+            }
+            if (valA === undefined || valB === undefined) {
+                switch (column) {
                 case 'ticket_number':    valA = Number(a.ticket_number) || 0; valB = Number(b.ticket_number) || 0; break;
                 case 'regiao_grupo':     valA = (getTicketRegionGroup(a) || '').toLowerCase(); valB = (getTicketRegionGroup(b) || '').toLowerCase(); break;
                 case 'priority_standard': valA = SORT_PRIORITY_ORDER[getTicketPriority(a)] || 9; valB = SORT_PRIORITY_ORDER[getTicketPriority(b)] || 9; break;
@@ -948,6 +956,7 @@
                 case 'sla_status_bi':    valA = SORT_SLA_ORDER[a.sla_status_bi] || 9; valB = SORT_SLA_ORDER[b.sla_status_bi] || 9; break;
                 case 'closed_time':
                 default:                 valA = new Date(a.closed_time || 0).getTime(); valB = new Date(b.closed_time || 0).getTime(); break;
+                }
             }
             if (valA < valB) return direction === 'asc' ? -1 : 1;
             if (valA > valB) return direction === 'asc' ? 1 : -1;
@@ -1248,9 +1257,7 @@
         crossBaseOpen           = [...open];
         crossBasePrevClosedWeek = [...previousClosedWeek];
 
-        // ── Executive Summary: CRIADOS / FECHADOS / SLA / MTFC / MTTS ──
-        // Usa rawData com filtro dinâmico por região, grupo e departamento.
-        // Data filtrada com offset BRT (UTC-3) explícito para portabilidade.
+        // Executive Summary: same dimensional filters as the page, with BRT week boundaries.
         const _weekBRT = { start: filters.dateFrom || '', end: filters.dateTo || '' };
         const _inWeekBRT = (dateStr) => {
             if (!dateStr || !_weekBRT.start || !_weekBRT.end) return false;
@@ -1259,16 +1266,9 @@
             const brtDate = new Date(ms - 3 * 3600000).toISOString().slice(0, 10);
             return brtDate >= _weekBRT.start && brtDate <= _weekBRT.end;
         };
-        const _regiao = filters.region     || 'all';
-        const _grupos = filters.agentGroups;
-        const _dept   = filters.department || 'all';
-        const _passExec = (t) =>
-            (_regiao === 'all' || getTicketRegionGroup(t) === _regiao) &&
-            (!_grupos || !Array.isArray(_grupos) || _grupos.includes(getTicketAgentGroup(t))) &&
-            (_dept   === 'all' || (t.department_name || '') === _dept);
 
-        const ticketsCriados  = rawData.filter(t => t.created_time && _inWeekBRT(t.created_time) && _passExec(t));
-        const ticketsFechados = rawData.filter(t => t.closed_time   && _inWeekBRT(t.closed_time)  && _passExec(t));
+        const ticketsCriados  = filtered.filter(t => t.created_time && _inWeekBRT(t.created_time));
+        const ticketsFechados = filtered.filter(t => t.closed_time   && _inWeekBRT(t.closed_time));
 
         const execSlaElig = ticketsFechados.filter(t => t.is_sla_eligible);
         const execSla     = execSlaElig.length > 0
@@ -1442,7 +1442,7 @@
         try {
             await ensureWeeklyData(filters, false);
         } catch (e) {
-            showError((e && e.message) ? e.message + ' � ' + t('error_fetch') : t('error_fetch'));
+            showError((e && e.message) ? e.message + ' - ' + t('error_fetch') : t('error_fetch'));
             return;
         }
         if (!rawData.length) return;
@@ -1468,7 +1468,7 @@
                 const ts = health && (health.freshness && health.freshness.updated_in_supabase_at || health.last_sync_at || health.synced_at);
                 if (!ts) return;
                 const el = document.getElementById('last-sync');
-                if (el) el.textContent = t('last_sync_label') + ' ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                if (el) el.textContent = t('last_sync_label') + ' - ' + new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
             }).catch(() => {});
         } catch (e) {
             showError((e && e.message) ? e.message + ' — ' + t('error_fetch') : t('error_fetch'));

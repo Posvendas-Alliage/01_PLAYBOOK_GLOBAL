@@ -1,4 +1,4 @@
-.dashboard-shell {
+﻿.dashboard-shell {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -708,13 +708,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 40px;
-    padding: 0 16px;
+    min-height: 52px;
+    padding: 0 28px;
     border-radius: var(--radius-md);
     background: var(--color-primary);
     color: #fff;
-    font-weight: 700;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
     text-decoration: none;
+    box-shadow: 0 10px 24px rgba(31, 111, 235, 0.22);
 }
 
 .dashboard-login-notice-action:hover {
@@ -722,3 +725,4 @@
     text-decoration: none;
     filter: brightness(1.06);
 }
+

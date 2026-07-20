@@ -95,7 +95,7 @@
                 <a href="page2-backlog.html" class="is-active" data-i18n="nav_backlog">Daily</a>
                 <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
                 <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
-                <a href="kanban-status.html" data-i18n="nav_kanban">Kanban de Status</a>
+                <a href="page6-business-hours.html" data-i18n="nav_business_hours">Hor&aacute;rios Comerciais</a>
             </div>
         </nav>
         <div id="banner-validity" class="banner-validity">
@@ -283,6 +283,7 @@
     <script src="js/filters.js"></script>
     <script src="js/supabase-client.js"></script>
     <script src="js/business-rules.js"></script>
+    <script src="js/business-hours-mode.js"></script>
     <script src="js/charts.js"></script>
     <script>
     // ──────────────────────────────────────────────────────────
@@ -585,7 +586,6 @@
             btn.addEventListener('click', () => {
                 FilterState.update('region', key);
                 renderCountryFilter();
-                applyPage();
             });
             container.appendChild(btn);
         });
@@ -612,7 +612,6 @@
                 if (idx >= 0) groups.splice(idx, 1); else groups.push(group);
                 FilterState.update('agentGroups', groups);
                 renderAgentGroupFilter();
-                applyPage();
             });
             container.appendChild(btn);
         });
@@ -674,7 +673,6 @@
             });
             renderCountryFilter();
             renderAgentGroupFilter();
-            applyPage();
         });
         document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
         document.getElementById('page-prev').addEventListener('click', () => {
@@ -895,7 +893,10 @@
             if (filters.priority && filters.priority !== 'all' && getTicketPriority(row) !== filters.priority) return false;
             if (filters.type && filters.type !== 'all' && (row.department_name || row.department || '') !== filters.type) return false;
             if (filters.product && filters.product !== 'all' && (row.status || '') !== filters.product) return false;
-            if (filters.agentGroups && filters.agentGroups.length && !filters.agentGroups.includes(getTicketAgentGroup(row))) return false;
+            if (Array.isArray(filters.agentGroups)) {
+                if (!filters.agentGroups.length) return false;
+                if (!filters.agentGroups.includes(getTicketAgentGroup(row))) return false;
+            }
             return true;
         });
     }

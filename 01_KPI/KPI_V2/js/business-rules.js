@@ -81,13 +81,22 @@ const REGIOES_PRINCIPAIS = [
     'Estados Unidos',
     'América latina - Exceto Argentina e México',
 ];
-
+function normalizeRegionText(value) {
+    return String(value || '')
+        .trim()
+        .replace(/M\u00c3\u00a9xico/g, 'México')
+        .replace(/Am\u00c3\u00a9rica/g, 'América')
+        .replace(/\u00c3\u0081frica/g, 'África')
+        .replace(/\u00c3\u0081sia/g, 'Ásia')
+        .replace(/\u00c3\u008dndia/g, 'Índia');
+}
 // Critério único de ROW — usado em todos os componentes
 function isROW(regiao) {
-    return regiao != null &&
-        regiao !== '' &&
-        regiao !== '-Nenhum-' &&
-        !REGIOES_PRINCIPAIS.includes(regiao);
+    const normalized = normalizeRegionText(regiao);
+    return normalized !== '' &&
+        normalized !== '-Nenhum-' &&
+        !REGIOES_PRINCIPAIS.includes(normalized) &&
+        !REGIOES_PRINCIPAIS.includes(REGION_MAP[normalized]);
 }
 
 function isExcludedTicket(ticket) {
@@ -230,7 +239,7 @@ function computeByRegion(tickets) {
 }
 
 function getTicketRegionGroup(ticket) {
-    const raw = ticket.regiao_grupo || ticket.region || '';
+    const raw = normalizeRegionText(ticket.regiao_grupo || ticket.region || '');
     return REGION_MAP[raw] || raw;
 }
 

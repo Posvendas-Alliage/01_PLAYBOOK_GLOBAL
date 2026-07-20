@@ -24,6 +24,8 @@ function createBarChart(canvasId, labels, values, colors, title) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
+            resizeDelay: 100,
             plugins: {
                 legend: { display: false },
                 title: {
@@ -60,6 +62,8 @@ function createStackedBarChart(canvasId, labels, datasets, title) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
+            resizeDelay: 100,
             plugins: {
                 legend: {
                     display: true,
@@ -102,6 +106,8 @@ function createLineChart(canvasId, labels, datasets, title) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
+            resizeDelay: 100,
             plugins: {
                 legend: {
                     display: true,
@@ -158,6 +164,8 @@ function createBarChartWithTarget(canvasId, labels, values, colors, title, targe
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
+            resizeDelay: 100,
             plugins: {
                 legend: {
                     display: targetValue !== undefined,
@@ -195,3 +203,4 @@ function destroyChart(canvasId) {
         ctx._chartInstance = null;
     }
 }
+
