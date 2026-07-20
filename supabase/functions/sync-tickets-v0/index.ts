@@ -1,4 +1,4 @@
-﻿import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -22,7 +22,7 @@ const DEFAULT_MAX_PAGES_PER_DEPARTMENT = 100;
 const DEFAULT_BACKFILL_MAX_PAGES = 50;
 const DEFAULT_CONTACTS_MAX_PAGES = 10;
 const FUNCTION_NAME = "sync-tickets-v0";
-const FUNCTION_CODE_VERSION = "2026-06-09-v37b-status-history-backlog-dedupe";
+const FUNCTION_CODE_VERSION = "2026-06-11-v54-trash-410-delete-no-resolution-probe";
 const ZOHO_FETCH_MAX_ATTEMPTS = 3;
 const ZOHO_FETCH_BASE_BACKOFF_MS = 750;
 const DEFAULT_MAX_RUNTIME_SECONDS = 110;
@@ -341,7 +341,7 @@ function errorType(error: unknown): string {
     return "auth_or_permission";
   }
 
-  if (status === 404) {
+  if (status === 404 || status === 410) {
     return "not_found";
   }
 
@@ -719,6 +719,10 @@ const MAX_INCREMENTAL_LOOKBACK_HOURS = 168;
 const DEFAULT_INCREMENTAL_MAX_PAGES = 10;
 const MAX_INCREMENTAL_MAX_PAGES = 50;
 const MAX_INCREMENTAL_TICKETS = 500;
+// Cota fixa por departamento: sem isso, um departamento com muito volume (ex: Suporte
+// tecnico) pode consumir o teto global sozinho e impedir que departamentos processados
+// depois na ordem (ex: SAC) sejam sincronizados naquela rodada.
+const PER_DEPARTMENT_MAX_INCREMENTAL_TICKETS = Math.ceil(MAX_INCREMENTAL_TICKETS / DEPARTMENT_IDS.length);
 const DEFAULT_OPEN_TICKET_SWEEP_MAX_TICKETS = 50;
 const MAX_OPEN_TICKET_SWEEP_MAX_TICKETS = 100;
 const DEFAULT_MISSING_METRICS_SWEEP_MAX_TICKETS = 50;
@@ -1049,7 +1053,7 @@ function ticketMetricsRawError(error: unknown, fallbackPayload: unknown): unknow
 
 function isZohoTicketNotFoundError(error: unknown): boolean {
   const status = httpStatusFromError(error);
-  if (status === 404) {
+  if (status === 404 || status === 410) {
     return true;
   }
 
@@ -1422,25 +1426,8 @@ function metricText(metrics: JsonRecord, fieldName: string): string | null {
 }
 
 async function ticketResolutionColumnExists(supabase: SupabaseClient): Promise<boolean> {
-  try {
-    const result = await supabase
-      .from("zoho_tickets")
-      .select("resolution")
-      .limit(1) as SupabaseCallResult<JsonRecord[]> | undefined;
-
-    if (!result || result.error) {
-      console.warn(
-        "Coluna resolution nao sera atualizada em zoho_tickets",
-        supabaseErrorMessage(result, "retorno vazio do Supabase"),
-      );
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.warn("Coluna resolution nao sera atualizada em zoho_tickets", errorMessage(error));
-    return false;
-  }
+  void supabase;
+  return false;
 }
 
 function mapTicketDetailToUpdateRow(detail: JsonRecord, includeResolution: boolean): JsonRecord {
@@ -3388,10 +3375,22 @@ Deno.serve(async (req) => {
         ? await ticketResolutionColumnExists(supabase)
         : false;
       const seenTicketIds = new Set<string>();
+      // Tickets sao coletados por departamento e so intercalados (round-robin) depois de
+      // toda a fase de busca. O enriquecimento (detalhe + metricas) que vem a seguir e o
+      // que realmente consome o orcamento de tempo (1 chamada HTTP por ticket) e processa
+      // ticketsToProcess na ordem em que aparece — sem intercalar, um departamento com muito
+      // volume no inicio da lista (ex: Suporte tecnico) consumiria todo o tempo disponivel
+      // antes do enriquecimento alcancar os departamentos seguintes (ex: SAC).
+      const ticketsByDepartment = new Map<string, ZohoTicket[]>(
+        DEPARTMENT_IDS.map((departmentId) => [departmentId, [] as ZohoTicket[]]),
+      );
       const ticketsToProcess: ZohoTicket[] = [];
       let incrementalPageLimitReached = false;
 
       for (const departmentId of DEPARTMENT_IDS) {
+        let departmentTicketCount = 0;
+        const departmentTickets = ticketsByDepartment.get(departmentId)!;
+
         for (let pageIndex = 0; pageIndex < incrementalMaxPages; pageIndex += 1) {
           if (!runtimeGuard.canStartWork()) {
             runtimeGuardStopped = true;
@@ -3399,7 +3398,7 @@ Deno.serve(async (req) => {
             break;
           }
 
-          if (ticketsToProcess.length >= MAX_INCREMENTAL_TICKETS) {
+          if (departmentTicketCount >= PER_DEPARTMENT_MAX_INCREMENTAL_TICKETS) {
             incrementalHasMore = true;
             break;
           }
@@ -3411,7 +3410,7 @@ Deno.serve(async (req) => {
           const reachedOlderBoundary = tickets.some((ticket) => isTicketOlderThanIncrementalWindow(ticket, fromDateTime));
 
           for (const ticket of tickets) {
-            if (ticketsToProcess.length >= MAX_INCREMENTAL_TICKETS) {
+            if (departmentTicketCount >= PER_DEPARTMENT_MAX_INCREMENTAL_TICKETS) {
               incrementalHasMore = true;
               break;
             }
@@ -3430,7 +3429,8 @@ Deno.serve(async (req) => {
               seenTicketIds.add(ticketId);
             }
 
-            ticketsToProcess.push(ticket);
+            departmentTickets.push(ticket);
+            departmentTicketCount += 1;
           }
 
           if (tickets.length < PAGE_LIMIT) {
@@ -3447,9 +3447,31 @@ Deno.serve(async (req) => {
           }
         }
 
-        if (runtimeGuardStopped || ticketsToProcess.length >= MAX_INCREMENTAL_TICKETS) {
+        // So interrompe todos os departamentos restantes por estouro de tempo — nunca por
+        // volume de um departamento anterior, para que cada departamento sempre receba sua
+        // cota nesta rodada.
+        if (runtimeGuardStopped) {
           break;
         }
+      }
+
+      // Intercala (round-robin) os tickets coletados de cada departamento antes do
+      // enriquecimento. Se o orcamento de tempo acabar no meio do caminho, cada
+      // departamento ja tera recebido uma fatia justa em vez de o primeiro da lista
+      // (Suporte tecnico) consumir tudo antes de SAC/Oficina serem alcancados.
+      let interleaveIndex = 0;
+      let departmentsWithTicketsRemaining = true;
+      while (departmentsWithTicketsRemaining) {
+        departmentsWithTicketsRemaining = false;
+        for (const departmentId of DEPARTMENT_IDS) {
+          const departmentTickets = ticketsByDepartment.get(departmentId)!;
+          if (interleaveIndex < departmentTickets.length) {
+            ticketsToProcess.push(departmentTickets[interleaveIndex]);
+            departmentsWithTicketsRemaining = departmentsWithTicketsRemaining ||
+              interleaveIndex + 1 < departmentTickets.length;
+          }
+        }
+        interleaveIndex += 1;
       }
 
       totalRecords = ticketsToProcess.length;
@@ -4512,6 +4534,12 @@ Deno.serve(async (req) => {
         },
       },
     );
+
+    // Guarda defensiva: este e o fallback padrao quando "mode" nao bate com nenhum modo
+    // reconhecido (ex: chamada antiga usando "loadStrategy" em vez de "mode"). Sem isso,
+    // uma chamada malformada recorrente (cron mal configurado, script antigo) pode empilhar
+    // sync_runs presos em "running" para sempre, pois este caminho nao tinha auto-cura.
+    await markStaleRunningSyncRuns(supabase);
 
     syncRunId = await createSyncRun(
       supabase,

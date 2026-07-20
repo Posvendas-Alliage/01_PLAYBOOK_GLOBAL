@@ -17,3 +17,7 @@ reports/
 supabase/.temp/
 supabase/.branches/
 supabase/.env
+
+# Python cache
+__pycache__/
+*.pyc
