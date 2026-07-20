@@ -8,6 +8,7 @@ const TRANSLATIONS = {
         nav_weekly: "Weekly",
         nav_monthly: "Monthly",
         nav_business_hours: "Hor\u00e1rios Comerciais",
+        nav_hours_comparison: "Comparativo",
 
         business_hours_title: "Hor\u00e1rios Comerciais",
         business_hours_eyebrow: "Hor\u00e1rios \u00fateis",
@@ -200,6 +201,8 @@ const TRANSLATIONS = {
         audience_daily: "Linha de frente + Coordenador",
         audience_weekly: "Gerente + Coordenador",
         audience_monthly: "Gerente + Diretor",
+        audience_hours_comparison: "Gerente + Coordenador",
+        audience_business_hours: "Simula\u00e7\u00e3o local",
         // ── Com/Sem primeira resposta ─────────────────────────
         with_first_response: "Com primeira resposta",
         without_first_response: "Sem primeira resposta",
@@ -255,6 +258,8 @@ const TRANSLATIONS = {
         hub_quality_desc: "Completude dos campos obrigatórios usando a mesma base BI filtrada do report.",
         hub_weekly_desc: "Leitura semanal em formato de report, com indicadores comparativos e follow-up operacional.",
         hub_monthly_desc: "Visao mensal direta para diretoria: key metrics do periodo e backlog consolidado por regiao.",
+        hub_hours_comparison_desc: "Compare SLA, MTFC e MTTS em horas corridas e horas \u00fateis no mesmo recorte.",
+        hub_business_hours_desc: "Consulte hor\u00e1rios \u00fateis mundiais e agrega\u00e7\u00f5es usadas no modo comercial.",
         // ── Kanban de Status ──────────────────────────────────
         nav_kanban: "Kanban de Status",
         hub_kanban_desc: "Visão kanban dos status operacionais com métricas de tempo e detecção de gargalos por região.",
@@ -274,6 +279,7 @@ const TRANSLATIONS = {
         nav_weekly: "Weekly",
         nav_monthly: "Monthly",
         nav_business_hours: "Business Hours",
+        nav_hours_comparison: "Comparison",
 
         business_hours_title: "Business Hours",
         business_hours_eyebrow: "Business hours",
@@ -466,6 +472,8 @@ const TRANSLATIONS = {
         audience_daily: "Front line + Coordinator",
         audience_weekly: "Manager + Coordinator",
         audience_monthly: "Manager + Director",
+        audience_hours_comparison: "Manager + Coordinator",
+        audience_business_hours: "Local simulation",
         // ── Com/Sem primeira resposta ─────────────────────────
         with_first_response: "With first response",
         without_first_response: "Without first response",
@@ -521,6 +529,8 @@ const TRANSLATIONS = {
         hub_quality_desc: "Required-field completeness using the same filtered BI base as the report.",
         hub_weekly_desc: "Weekly report view with comparative indicators and operational follow-up.",
         hub_monthly_desc: "Direct executive monthly view: period key metrics and consolidated backlog by region.",
+        hub_hours_comparison_desc: "Compare SLA, MTFC, and MTTS in elapsed hours and business hours on the same scope.",
+        hub_business_hours_desc: "Check world business schedules and aggregations used by business-hours mode.",
         // ── Kanban de Status ──────────────────────────────────
         nav_kanban: "Status Kanban",
         hub_kanban_desc: "Kanban view of operational statuses with time metrics and bottleneck detection by region.",
@@ -540,6 +550,7 @@ const TRANSLATIONS = {
         nav_weekly: "Weekly",
         nav_monthly: "Monthly",
         nav_business_hours: "Horarios Comerciales",
+        nav_hours_comparison: "Comparativo",
 
         business_hours_title: "Horarios comerciales",
         business_hours_eyebrow: "Horas h\u00e1biles",
@@ -732,6 +743,8 @@ const TRANSLATIONS = {
         audience_daily: "Primera línea + Coordinador",
         audience_weekly: "Gerente + Coordinador",
         audience_monthly: "Gerente + Director",
+        audience_hours_comparison: "Gerente + Coordinador",
+        audience_business_hours: "Simulaci\u00f3n local",
         // ── Com/Sem primeira resposta ─────────────────────────
         with_first_response: "Con primera respuesta",
         without_first_response: "Sin primera respuesta",
@@ -787,6 +800,8 @@ const TRANSLATIONS = {
         hub_quality_desc: "Completitud de campos obligatorios usando la misma base BI filtrada del reporte.",
         hub_weekly_desc: "Vista semanal en formato de reporte, con indicadores comparativos y follow-up operacional.",
         hub_monthly_desc: "Vista mensual directa para direccion: key metrics del periodo y backlog consolidado por region.",
+        hub_hours_comparison_desc: "Compara SLA, MTFC y MTTS en horas corridas y horas h\u00e1biles en el mismo recorte.",
+        hub_business_hours_desc: "Consulta horarios h\u00e1biles mundiales y agregaciones usadas en el modo comercial.",
         // ── Kanban de Status ──────────────────────────────────
         nav_kanban: "Kanban de Estado",
         hub_kanban_desc: "Vista kanban de los estados operativos con métricas de tiempo y detección de cuellos de botella por región.",

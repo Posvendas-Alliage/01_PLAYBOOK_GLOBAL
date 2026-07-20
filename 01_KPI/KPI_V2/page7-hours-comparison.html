@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparativo Corridas x &Uacute;teis | KPI</title>
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <style>
+    .cmp-hero { margin-bottom:18px; padding:22px; border:1px solid var(--color-border); border-radius:var(--radius-lg); background:linear-gradient(135deg, rgba(31,111,235,.12), rgba(18,223,52,.06), rgba(228,191,20,.06)), var(--color-surface); }
+    .cmp-eyebrow { margin:0 0 8px; color:var(--color-primary-hover); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; font-weight:800; }
+    .cmp-title { margin:0; font-size:1.75rem; line-height:1.16; }
+    .cmp-meta { margin:10px 0 0; color:var(--color-text-muted); font-size:.86rem; max-width:980px; }
+    .cmp-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:end; justify-content:space-between; padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface-2); margin-bottom:12px; }
+    .cmp-controls { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; flex:1; min-width:0; }
+    .cmp-field label { display:block; margin:0 0 5px; color:var(--color-text-muted); font-size:.68rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+    .cmp-field select { width:100%; height:36px; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); color:var(--color-text); padding:0 10px; }
+    .cmp-actions { display:flex; gap:8px; }
+    .cmp-legend { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:0 0 18px; color:var(--color-text-muted); font-size:.78rem; }
+    .cmp-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 10px; border:1px solid var(--color-border); border-radius:999px; background:var(--color-surface-2); }
+    .cmp-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+    .cmp-dot.common { background:#7d8590; }
+    .cmp-dot.business { background:#12df34; }
+    .cmp-dot.good { background:var(--color-green); }
+    .cmp-dot.bad { background:var(--color-red); }
+    .cmp-guide { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+    .cmp-guide-card { display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:start; padding:13px; border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface-2); }
+    .cmp-guide-icon { width:30px; height:30px; border-radius:8px; display:grid; place-items:center; font-weight:900; border:1px solid var(--color-border); }
+    .cmp-guide-icon.good { color:var(--color-green); background:rgba(18,223,52,.08); border-color:rgba(18,223,52,.35); }
+    .cmp-guide-icon.warn { color:var(--color-yellow); background:rgba(228,191,20,.08); border-color:rgba(228,191,20,.35); }
+    .cmp-guide-card h3 { margin:0 0 4px; font-size:.82rem; }
+    .cmp-guide-card p { margin:0; color:var(--color-text-muted); font-size:.76rem; line-height:1.35; }
+    .cmp-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+    .cmp-card { background:var(--color-surface-2); border:1px solid var(--color-border); border-top:4px solid var(--color-border); border-radius:var(--radius-lg); padding:16px; min-height:156px; }
+    .cmp-card.good { border-top-color:var(--color-green); }
+    .cmp-card.warn { border-top-color:var(--color-yellow); }
+    .cmp-card.bad { border-top-color:var(--color-red); }
+    .cmp-card h3 { color:var(--color-text-muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; margin:0 0 12px; }
+    .cmp-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+    .cmp-pair span { display:block; color:var(--color-text-muted); font-size:.72rem; margin-bottom:3px; }
+    .cmp-pair strong { font-family:var(--font-mono); font-size:1.25rem; color:var(--color-text); }
+    .cmp-delta { display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border-radius:999px; font-size:.72rem; font-weight:800; border:1px solid var(--color-border); color:var(--color-text-muted); }
+    .cmp-delta.good { color:var(--color-green); border-color:rgba(18,223,52,.4); background:rgba(18,223,52,.08); }
+    .cmp-delta.warn { color:var(--color-yellow); border-color:rgba(228,191,20,.45); background:rgba(228,191,20,.08); }
+    .cmp-delta.bad { color:var(--color-red); border-color:rgba(255,91,110,.45); background:rgba(255,91,110,.08); }
+    .cmp-insight { margin:10px 0 0; color:var(--color-text-muted); font-size:.76rem; line-height:1.35; }
+    .cmp-chart-grid { display:grid; grid-template-columns:1fr; gap:14px; margin-bottom:18px; }
+    .cmp-chart-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .cmp-mini-chart-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+    .cmp-delta-chart-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+    .cmp-chart-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .cmp-focus-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0 0 14px; }
+    .cmp-focus-item { padding:12px; border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface-2); }
+    .cmp-focus-item span { display:block; color:var(--color-text-muted); font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+    .cmp-focus-item strong { font-family:var(--font-mono); font-size:1.15rem; }
+    .cmp-chart-head h3 { margin:0; }
+    .cmp-chart-head p { margin:4px 0 0; color:var(--color-text-muted); font-size:.76rem; line-height:1.35; }
+    .cmp-region-toolbar { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .cmp-region-toolbar select { height:34px; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); color:var(--color-text); padding:0 10px; }
+    .chart-card { min-height:320px; }
+    .chart-card.compact { min-height:260px; }
+    .chart-canvas-wrap { height:260px; }
+    .chart-card.compact .chart-canvas-wrap { height:200px; }
+    .chart-note { margin:10px 0 0; color:var(--color-text-muted); font-size:.75rem; line-height:1.35; }
+    .section-title { display:flex; align-items:end; justify-content:space-between; gap:14px; margin:22px 0 12px; }
+    .section-title h2 { margin:0; font-size:1.05rem; }
+    .section-title p { margin:0; color:var(--color-text-muted); font-size:.82rem; }
+    .data-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    .data-table th, .data-table td { padding:9px 11px; text-align:left; border-bottom:1px solid var(--color-border); }
+    .data-table th { color:var(--color-text-muted); font-weight:700; font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; background:var(--color-surface); position:sticky; top:0; z-index:1; }
+    .table-wrap { overflow:auto; max-height:560px; border:1px solid var(--color-border); border-radius:var(--radius-lg); background:var(--color-surface-2); }
+    .mono { font-family:var(--font-mono); }
+    .muted { color:var(--color-text-muted); }
+    @media (max-width:1180px){ .cmp-guide{grid-template-columns:repeat(2,minmax(0,1fr));}.cmp-delta-chart-row,.cmp-mini-chart-row{grid-template-columns:1fr;} }
+    @media (max-width:1100px){ .cmp-controls{grid-template-columns:repeat(3,minmax(150px,1fr));}.cmp-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.cmp-chart-row{grid-template-columns:1fr;} }
+    @media (max-width:720px){ .cmp-controls{grid-template-columns:1fr;}.cmp-grid,.cmp-guide,.cmp-focus-strip{grid-template-columns:1fr;}.cmp-actions{width:100%;}.cmp-actions .btn{flex:1;} }
+  </style>
+  <style id="playbook-auth-pending-style">html.playbook-auth-pending body{visibility:hidden}</style>
+  <script>document.documentElement.classList.add("playbook-auth-pending");</script>
+  <script src="../../config/supabase.js"></script>
+  <script src="../../js/playbook-auth.js"></script>
+  <script src="../../js/playbook-auth-guard.js"></script>
+  <script src="js/i18n.js"></script>
+</head>
+<body>
+  <div class="dashboard-shell">
+    <header class="app-header">
+      <div class="app-header-inner">
+        <div class="app-brand">
+          <p class="app-brand-title">Comparativo Corridas x &Uacute;teis</p>
+          <p class="app-brand-subtitle">Playbook Global | KPI</p>
+          <p id="last-sync" style="font-size:.7rem;color:var(--color-text-muted);margin:2px 0 0;opacity:.8;">--</p>
+        </div>
+        <div class="app-header-actions">
+          <a href="../../index.html" class="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            <span data-i18n="back_to_playbook">Voltar</span>
+          </a>
+          <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" data-lang="pt">PT</button>
+            <button type="button" data-lang="en">EN</button>
+            <button type="button" data-lang="es">ES</button>
+          </div>
+          <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-sm" title="Alternar tema" style="padding:6px 10px;font-size:15px;line-height:1;">Lua</button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="app-nav" aria-label="Dashboard pages">
+      <div class="app-nav-inner">
+        <a href="page2-backlog.html" data-i18n="nav_backlog">Daily</a>
+        <a href="page4-weekly.html" data-i18n="nav_weekly">Weekly</a>
+        <a href="page5-monthly.html" data-i18n="nav_monthly">Monthly</a>
+        <a href="page6-business-hours.html" data-i18n="nav_business_hours">Hor&aacute;rios Comerciais</a>
+        <a href="page7-hours-comparison.html" class="is-active" data-i18n="nav_hours_comparison">Comparativo</a>
+      </div>
+    </nav>
+
+    <main class="app-main">
+      <section class="cmp-hero">
+        <p class="cmp-eyebrow">Auditoria de metrica</p>
+        <h1 class="cmp-title">Corridas x &Uacute;teis no mesmo recorte</h1>
+        <p class="cmp-meta" id="summary-note">SLA, MTFC e MTTS sao comparados com a mesma base usada nas abas Weekly e Monthly. Fechados e backlog nao mudam por modo de hora.</p>
+      </section>
+
+      <section class="cmp-toolbar" aria-label="Filtros do comparativo">
+        <div class="cmp-controls">
+          <div class="cmp-field"><label for="cmp-grain">Periodo</label><select id="cmp-grain"><option value="monthly">Monthly</option><option value="weekly">Weekly</option></select></div>
+          <div class="cmp-field"><label for="cmp-period">Recorte</label><select id="cmp-period"></select></div>
+          <div class="cmp-field"><label for="cmp-region">Pais / Regiao</label><select id="cmp-region"></select></div>
+          <div class="cmp-field"><label for="cmp-priority">Prioridade</label><select id="cmp-priority"></select></div>
+          <div class="cmp-field"><label for="cmp-type">Tipo</label><select id="cmp-type"></select></div>
+          <div class="cmp-field"><label for="cmp-department">Departamento</label><select id="cmp-department"></select></div>
+          <div class="cmp-field"><label for="cmp-line">Linha</label><select id="cmp-line"></select></div>
+          <div class="cmp-field"><label for="cmp-agent-group">Grupo do agente</label><select id="cmp-agent-group"></select></div>
+        </div>
+        <div class="cmp-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="cmp-apply">Aplicar</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="cmp-clear">Limpar</button>
+        </div>
+      </section>
+
+      <section class="cmp-legend" aria-label="Legenda visual">
+        <span class="cmp-pill"><i class="cmp-dot common"></i>Corridas: tempo calendario</span>
+        <span class="cmp-pill"><i class="cmp-dot business"></i>&Uacute;teis: somente jornada comercial</span>
+        <span class="cmp-pill"><i class="cmp-dot good"></i>Verde: resultado melhor</span>
+        <span class="cmp-pill"><i class="cmp-dot bad"></i>Vermelho: resultado pior</span>
+      </section>
+
+      <section class="cmp-guide" aria-label="Como ler os indicadores">
+        <article class="cmp-guide-card"><span class="cmp-guide-icon good">&#8593;</span><div><h3>SLA</h3><p>Quanto maior, melhor. O delta mostra quantos pontos percentuais o modo util mudou.</p></div></article>
+        <article class="cmp-guide-card"><span class="cmp-guide-icon good">&#8595;</span><div><h3>MTFC</h3><p>Quanto menor, melhor. Reducao em horas indica atendimento inicial mais rapido na jornada util.</p></div></article>
+        <article class="cmp-guide-card"><span class="cmp-guide-icon good">&#8595;</span><div><h3>MTTS</h3><p>Quanto menor, melhor. Reducao em dias indica resolucao mais rapida no calendario util.</p></div></article>
+        <article class="cmp-guide-card"><span class="cmp-guide-icon warn">=</span><div><h3>Volume</h3><p>Fechados nao muda entre modos. Ele serve para garantir que a comparacao usa o mesmo recorte.</p></div></article>
+      </section>
+
+      <section class="cmp-grid" aria-label="Resumo comparativo">
+        <article class="cmp-card" id="card-sla"><h3>SLA Compliance</h3><div class="cmp-pair"><div><span>Corridas</span><strong id="card-sla-common">--</strong></div><div><span>&Uacute;teis</span><strong id="card-sla-business">--</strong></div></div><span id="delta-sla" class="cmp-delta">--</span><p id="insight-sla" class="cmp-insight">--</p></article>
+        <article class="cmp-card" id="card-mtfc"><h3>MTFC</h3><div class="cmp-pair"><div><span>Corridas</span><strong id="card-mtfc-common">--</strong></div><div><span>&Uacute;teis</span><strong id="card-mtfc-business">--</strong></div></div><span id="delta-mtfc" class="cmp-delta">--</span><p id="insight-mtfc" class="cmp-insight">--</p></article>
+        <article class="cmp-card" id="card-mtts"><h3>MTTS</h3><div class="cmp-pair"><div><span>Corridas</span><strong id="card-mtts-common">--</strong></div><div><span>&Uacute;teis</span><strong id="card-mtts-business">--</strong></div></div><span id="delta-mtts" class="cmp-delta">--</span><p id="insight-mtts" class="cmp-insight">--</p></article>
+        <article class="cmp-card warn" id="card-volume"><h3>Volume base</h3><div class="cmp-pair"><div><span>Fechados</span><strong id="card-closed">--</strong></div><div><span>Elegiveis</span><strong id="card-eligible">--</strong></div></div><span id="card-source" class="cmp-delta warn">--</span><p class="cmp-insight">Mesmo volume para comparar os dois modos sem ambiguidade.</p></article>
+      </section>
+
+      <section class="cmp-chart-grid">
+        <div class="cmp-chart-head">
+          <div>
+            <h2 style="margin:0;font-size:1.05rem;">Periodo selecionado</h2>
+            <p>Barras lado a lado, sempre com uma unica unidade por grafico.</p>
+          </div>
+        </div>
+        <div class="cmp-mini-chart-row">
+          <article class="card chart-card compact"><h3>SLA do recorte</h3><div class="chart-canvas-wrap"><canvas id="chart-selected-sla"></canvas></div><p class="chart-note">Quanto maior, melhor.</p></article>
+          <article class="card chart-card compact"><h3>MTFC do recorte</h3><div class="chart-canvas-wrap"><canvas id="chart-selected-mtfc"></canvas></div><p class="chart-note">Quanto menor, melhor.</p></article>
+          <article class="card chart-card compact"><h3>MTTS do recorte</h3><div class="chart-canvas-wrap"><canvas id="chart-selected-mtts"></canvas></div><p class="chart-note">Quanto menor, melhor.</p></article>
+        </div>
+
+        <article class="card chart-card"><h3>SLA periodo a periodo</h3><div class="chart-canvas-wrap"><canvas id="chart-sla-trend"></canvas></div><p class="chart-note">Barras lado a lado: cinza = Corridas, verde = Uteis. Quanto maior, melhor.</p></article>
+        <div class="cmp-chart-row">
+          <article class="card chart-card"><h3>MTFC periodo a periodo</h3><div class="chart-canvas-wrap"><canvas id="chart-mtfc-trend"></canvas></div><p class="chart-note">Barras lado a lado. Quanto menor, melhor.</p></article>
+          <article class="card chart-card"><h3>MTTS periodo a periodo</h3><div class="chart-canvas-wrap"><canvas id="chart-mtts-trend"></canvas></div><p class="chart-note">Barras lado a lado. Quanto menor, melhor.</p></article>
+        </div>
+        <div class="cmp-delta-chart-row">
+          <article class="card chart-card compact"><h3>Delta SLA em p.p.</h3><div class="chart-canvas-wrap"><canvas id="chart-delta-sla"></canvas></div><p class="chart-note">Acima de zero melhora o SLA.</p></article>
+          <article class="card chart-card compact"><h3>Delta MTFC em horas</h3><div class="chart-canvas-wrap"><canvas id="chart-delta-mtfc"></canvas></div><p class="chart-note">Abaixo de zero reduz o MTFC.</p></article>
+          <article class="card chart-card compact"><h3>Delta MTTS em dias</h3><div class="chart-canvas-wrap"><canvas id="chart-delta-mtts"></canvas></div><p class="chart-note">Abaixo de zero reduz o MTTS.</p></article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-title">
+          <div>
+            <h2>Evolucao por regiao</h2>
+            <p>Varias linhas no mesmo grafico, usando o mesmo recorte e filtros atuais.</p>
+          </div>
+          <div class="cmp-region-toolbar">
+            <select id="region-metric" title="Metrica por regiao"><option value="sla">SLA %</option><option value="mtfc">MTFC h</option><option value="mtts">MTTS d</option></select>
+            <select id="region-mode" title="Modo por regiao"><option value="business">Uteis</option><option value="common">Corridas</option><option value="delta">Delta</option></select>
+          </div>
+        </div>
+        <div class="cmp-focus-strip">
+          <div class="cmp-focus-item"><span>Periodo</span><strong id="region-selected-period">--</strong></div>
+          <div class="cmp-focus-item"><span>Metrica</span><strong id="region-selected-metric">--</strong></div>
+          <div class="cmp-focus-item"><span>Leitura</span><strong id="region-selected-rule">--</strong></div>
+        </div>
+        <article class="card chart-card"><h3>Corridas x Uteis por regiao</h3><div class="chart-canvas-wrap"><canvas id="chart-region-selected-bars"></canvas></div><p class="chart-note">Barras agrupadas por regiao no periodo selecionado.</p></article>
+        <article class="card chart-card"><h3>Evolucao regional com varias linhas</h3><div class="chart-canvas-wrap"><canvas id="chart-region-trend"></canvas></div><p class="chart-note" id="region-note">Cada linha representa uma regiao no tempo.</p></article>
+      </section>
+
+      <section>
+        <div class="section-title"><h2>Comparativo por periodo</h2><p id="table-count">--</p></div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Periodo</th><th>Fechados</th><th>SLA Corridas</th><th>SLA &Uacute;teis</th><th>&Delta; SLA</th><th>MTFC Corridas</th><th>MTFC &Uacute;teis</th><th>&Delta; MTFC</th><th>MTTS Corridas</th><th>MTTS &Uacute;teis</th><th>&Delta; MTTS</th></tr></thead>
+            <tbody id="cmp-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">Playbook Global - KPI local</footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="js/charts.js"></script>
+  <script>
+    const state = { audit: null, grain: 'monthly', filters: {}, rows: [] };
+    const BAR_VALUE_LABELS = {
+      id: 'barValueLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const unit = chart.options.plugins && chart.options.plugins.valueLabels && chart.options.plugins.valueLabels.unit || '';
+        ctx.save();
+        ctx.font = '700 10px ' + CHART_THEME.fontFamily;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+          const meta = chart.getDatasetMeta(datasetIndex);
+          if (!meta || meta.type !== 'bar' || meta.hidden) return;
+          meta.data.forEach((bar, index) => {
+            const value = dataset.data[index];
+            if (value === null || value === undefined || Number.isNaN(Number(value))) return;
+            ctx.fillStyle = dataset.borderColor || dataset.backgroundColor || CHART_THEME.text;
+            ctx.fillText(fmt(value, unit === '%' ? 1 : 2) + (unit ? ' ' + unit : ''), bar.x, bar.y - 5);
+          });
+        });
+        ctx.restore();
+      }
+    };
+    const fmtInt = value => value === null || value === undefined || Number.isNaN(Number(value)) ? '--' : Number(value).toLocaleString('pt-BR');
+    const fmt = (value, digits = 2) => value === null || value === undefined || Number.isNaN(Number(value)) ? '--' : Number(value).toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    const fmtPct = value => value === null || value === undefined || Number.isNaN(Number(value)) ? '--' : fmt(value, 2) + '%';
+    const num = value => value === null || value === undefined || Number.isNaN(Number(value)) ? null : Number(value);
+    const getPeriods = () => state.grain === 'weekly' ? (state.audit.weekly_periods || []) : (state.audit.monthly_periods || []);
+    const labelFor = period => period.label || period.key || '--';
+    const filterConfig = [
+      ['region', 'cmp-region', row => row.region],
+      ['priority', 'cmp-priority', row => row.priority],
+      ['type', 'cmp-type', row => row.type],
+      ['department_name', 'cmp-department', row => row.department_name],
+      ['product_line', 'cmp-line', row => row.product_line],
+      ['agent_group', 'cmp-agent-group', row => row.agent_group]
+    ];
+
+    function hasDimensionFilters() {
+      return Object.values(state.filters).some(Boolean);
+    }
+
+    function matchesFilters(row) {
+      return filterConfig.every(([key,, getter]) => !state.filters[key] || String(getter(row) || '') === state.filters[key]);
+    }
+
+    function aggregateTicketRows(rows) {
+      const commonEligible = rows.filter(row => row.orig && row.orig.eligible === true);
+      const commonWithin = commonEligible.filter(row => row.orig && row.orig.within === true);
+      const businessEligible = rows.filter(row => row.business_hours && row.business_hours.eligible === true);
+      const businessWithin = businessEligible.filter(row => row.business_hours && row.business_hours.within === true);
+      const average = values => {
+        const nums = values.map(num).filter(value => value !== null);
+        return nums.length ? nums.reduce((acc, value) => acc + value, 0) / nums.length : null;
+      };
+      return {
+        closed: rows.length,
+        common: {
+          eligible: commonEligible.length,
+          within: commonWithin.length,
+          sla_pct: commonEligible.length ? commonWithin.length / commonEligible.length * 100 : null,
+          avg_mtfc_h: average(rows.map(row => row.orig && row.orig.mtfc_h)),
+          avg_mtts_d: average(rows.map(row => row.orig && row.orig.mtts_d))
+        },
+        business: {
+          eligible: businessEligible.length,
+          within: businessWithin.length,
+          sla_pct: businessEligible.length ? businessWithin.length / businessEligible.length * 100 : null,
+          avg_mtfc_h: average(rows.map(row => row.business_hours && row.business_hours.mtfc_h)),
+          avg_mtts_business_days: average(rows.map(row => row.business_hours && row.business_hours.mtts_business_days))
+        },
+        source: 'tickets'
+      };
+    }
+
+    function aggregateTickets(tickets) {
+      return aggregateTicketRows((tickets || []).filter(matchesFilters));
+    }
+
+    function metricsFor(period) {
+      if (!hasDimensionFilters()) {
+        const metrics = period.metrics || {};
+        return {
+          closed: Number(metrics.closed || 0),
+          common: metrics.orig || {},
+          business: metrics.business_hours || {},
+          source: 'agregado oficial'
+        };
+      }
+      return aggregateTickets(period.tickets || []);
+    }
+
+    function buildRows() {
+      state.rows = getPeriods().map(period => ({ period, label: labelFor(period), metrics: metricsFor(period) }));
+    }
+
+    function setOptions(selectId, values, allLabel) {
+      const select = document.getElementById(selectId);
+      const current = select.value;
+      select.innerHTML = '<option value="">' + allLabel + '</option>' + values.map(value => '<option value="' + String(value).replace(/"/g, '&quot;') + '">' + value + '</option>').join('');
+      if ([...select.options].some(option => option.value === current)) select.value = current;
+    }
+
+    function populateFilters() {
+      const tickets = getPeriods().flatMap(period => period.tickets || []);
+      filterConfig.forEach(([key, selectId, getter]) => {
+        const values = [...new Set(tickets.map(getter).filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const labels = {
+          region: 'Todas as regioes', priority: 'Todas as prioridades', type: 'Todos os tipos', department_name: 'Todos os departamentos', product_line: 'Todas as linhas', agent_group: 'Todos os grupos'
+        };
+        setOptions(selectId, values, labels[key]);
+      });
+    }
+
+    function populatePeriods() {
+      const select = document.getElementById('cmp-period');
+      select.innerHTML = getPeriods().map((period, index) => '<option value="' + index + '">' + labelFor(period) + '</option>').join('');
+      select.value = '0';
+    }
+
+    function deltaClass(value, lowerIsBetter) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '';
+      if (Number(value) === 0) return 'warn';
+      return lowerIsBetter ? (Number(value) < 0 ? 'good' : 'bad') : (Number(value) > 0 ? 'good' : 'bad');
+    }
+
+    function deltaText(value, suffix, lowerIsBetter) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '--';
+      const cls = deltaClass(value, lowerIsBetter);
+      const prefix = cls === 'good' ? 'Melhorou' : (cls === 'bad' ? 'Piorou' : 'Igual');
+      const arrow = value > 0 ? '\u2191' : (value < 0 ? '\u2193' : '=');
+      return prefix + ' ' + arrow + ' ' + (value > 0 ? '+' : '') + fmt(value, 2) + suffix;
+    }
+
+    function setDelta(id, value, suffix, lowerIsBetter) {
+      const el = document.getElementById(id);
+      el.className = 'cmp-delta ' + deltaClass(value, lowerIsBetter);
+      el.textContent = deltaText(value, suffix, lowerIsBetter);
+    }
+
+    function setCardState(cardId, value, lowerIsBetter) {
+      const card = document.getElementById(cardId);
+      card.classList.remove('good', 'warn', 'bad');
+      const cls = deltaClass(value, lowerIsBetter);
+      if (cls) card.classList.add(cls);
+    }
+
+    function setInsight(id, value, suffix, lowerIsBetter, metricLabel) {
+      const el = document.getElementById(id);
+      const cls = deltaClass(value, lowerIsBetter);
+      if (!cls) {
+        el.textContent = 'Sem base comparavel no periodo selecionado.';
+        return;
+      }
+      if (cls === 'warn') {
+        el.textContent = metricLabel + ' ficou igual entre Corridas e Uteis.';
+        return;
+      }
+      const direction = value > 0 ? 'subiu' : 'caiu';
+      const quality = cls === 'good' ? 'resultado melhor' : 'ponto de atencao';
+      el.textContent = metricLabel + ' ' + direction + ' ' + fmt(Math.abs(value), 2) + suffix + ' em Uteis: ' + quality + '.';
+    }
+
+    function renderCards() {
+      const selected = state.rows[Number(document.getElementById('cmp-period').value || 0)] || state.rows[0];
+      const m = selected ? selected.metrics : { common: {}, business: {} };
+      const common = m.common || {};
+      const business = m.business || {};
+      const dSla = num(business.sla_pct) === null || num(common.sla_pct) === null ? null : business.sla_pct - common.sla_pct;
+      const dMtfc = num(business.avg_mtfc_h) === null || num(common.avg_mtfc_h) === null ? null : business.avg_mtfc_h - common.avg_mtfc_h;
+      const dMtts = num(business.avg_mtts_business_days) === null || num(common.avg_mtts_d) === null ? null : business.avg_mtts_business_days - common.avg_mtts_d;
+      document.getElementById('card-sla-common').textContent = fmtPct(common.sla_pct);
+      document.getElementById('card-sla-business').textContent = fmtPct(business.sla_pct);
+      document.getElementById('card-mtfc-common').textContent = num(common.avg_mtfc_h) === null ? '--' : fmt(common.avg_mtfc_h, 2) + ' h';
+      document.getElementById('card-mtfc-business').textContent = num(business.avg_mtfc_h) === null ? '--' : fmt(business.avg_mtfc_h, 2) + ' h';
+      document.getElementById('card-mtts-common').textContent = num(common.avg_mtts_d) === null ? '--' : fmt(common.avg_mtts_d, 2) + ' d';
+      document.getElementById('card-mtts-business').textContent = num(business.avg_mtts_business_days) === null ? '--' : fmt(business.avg_mtts_business_days, 2) + ' d';
+      document.getElementById('card-closed').textContent = fmtInt(m.closed);
+      document.getElementById('card-eligible').textContent = fmtInt(common.eligible) + ' / ' + fmtInt(business.eligible);
+      document.getElementById('card-source').textContent = m.source || '--';
+      setDelta('delta-sla', dSla, ' p.p.', false);
+      setDelta('delta-mtfc', dMtfc, ' h', true);
+      setDelta('delta-mtts', dMtts, ' d', true);
+      setCardState('card-sla', dSla, false);
+      setCardState('card-mtfc', dMtfc, true);
+      setCardState('card-mtts', dMtts, true);
+      setInsight('insight-sla', dSla, ' p.p.', false, 'SLA');
+      setInsight('insight-mtfc', dMtfc, ' h', true, 'MTFC');
+      setInsight('insight-mtts', dMtts, ' d', true, 'MTTS');
+    }
+
+    function dataset(label, data, color) {
+      return { label, data, borderColor: color, backgroundColor: color, tension: .28, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2.5, spanGaps: true };
+    }
+
+    function destroyCanvasChart(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      if (canvas && canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+        canvas._chartInstance = null;
+      }
+    }
+
+    function makeChart(canvasId, config) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || typeof Chart === 'undefined') return null;
+      destroyCanvasChart(canvasId);
+      canvas._chartInstance = new Chart(canvas, config);
+      return canvas._chartInstance;
+    }
+
+    function baseChartOptions(title, yTitle, suggestedMax) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        resizeDelay: 100,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, position: 'top', labels: { color: CHART_THEME.muted, usePointStyle: true, boxWidth: 8, font: { family: CHART_THEME.fontFamily } } },
+          title: { display: !!title, text: title, color: CHART_THEME.text, font: { size: 14, weight: '700', family: CHART_THEME.fontFamily } },
+          tooltip: { callbacks: { label: context => context.dataset.label + ': ' + (context.parsed.y === null ? '--' : fmt(context.parsed.y, 2)) } }
+        },
+        scales: {
+          x: { ticks: { color: CHART_THEME.muted, font: { family: CHART_THEME.fontFamily } }, grid: { color: 'rgba(125,133,144,.14)' } },
+          y: { title: { display: !!yTitle, text: yTitle, color: CHART_THEME.muted }, ticks: { color: CHART_THEME.muted, font: { family: CHART_THEME.fontFamily } }, grid: { color: CHART_THEME.grid }, beginAtZero: true, suggestedMax: suggestedMax || undefined }
+        }
+      };
+    }
+
+    function createReadableLineChart(canvasId, labels, datasets, title, yTitle, suggestedMax) {
+      return makeChart(canvasId, { type: 'line', data: { labels, datasets }, options: baseChartOptions(title, yTitle, suggestedMax) });
+    }
+
+    function createGroupedCompareChart(canvasId, labels, commonValues, businessValues, title, yTitle, unit, suggestedMax) {
+      const options = baseChartOptions(title, yTitle, suggestedMax);
+      options.plugins.valueLabels = { unit: unit || '' };
+      options.scales.x.grid = { display: false };
+      return makeChart(canvasId, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Corridas', data: commonValues, backgroundColor: 'rgba(125,133,144,.72)', borderColor: '#7d8590', borderWidth: 1, borderRadius: 7, borderSkipped: false, maxBarThickness: 34 },
+            { label: 'Uteis', data: businessValues, backgroundColor: 'rgba(18,223,52,.68)', borderColor: '#12df34', borderWidth: 1, borderRadius: 7, borderSkipped: false, maxBarThickness: 34 }
+          ]
+        },
+        options,
+        plugins: [BAR_VALUE_LABELS]
+      });
+    }
+
+    function createMiniCompareChart(canvasId, values, title, yTitle, lowerIsBetter, suggestedMax) {
+      const colors = ['rgba(125,133,144,.85)', lowerIsBetter ? 'rgba(31,111,235,.9)' : 'rgba(18,223,52,.9)'];
+      return makeChart(canvasId, {
+        type: 'bar',
+        data: { labels: ['Corridas', 'Uteis'], datasets: [{ label: title, data: values, backgroundColor: colors, borderRadius: 8, borderSkipped: false }] },
+        options: {
+          ...baseChartOptions(title, yTitle, suggestedMax),
+          plugins: { ...baseChartOptions(title, yTitle, suggestedMax).plugins, legend: { display: false }, valueLabels: { unit: yTitle === '%' ? '%' : '' } }
+        },
+        plugins: [BAR_VALUE_LABELS]
+      });
+    }
+
+    function createDeltaBarChart(canvasId, labels, values, title, yTitle, lowerIsBetter) {
+      const colors = values.map(value => {
+        const cls = deltaClass(value, lowerIsBetter);
+        if (cls === 'good') return 'rgba(18,223,52,.82)';
+        if (cls === 'bad') return 'rgba(255,91,110,.82)';
+        return 'rgba(228,191,20,.78)';
+      });
+      return makeChart(canvasId, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: title, data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
+        options: {
+          ...baseChartOptions(title, yTitle),
+          plugins: { ...baseChartOptions(title, yTitle).plugins, legend: { display: false } },
+          scales: {
+            x: { ticks: { color: CHART_THEME.muted }, grid: { color: 'rgba(125,133,144,.14)' } },
+            y: { title: { display: true, text: yTitle, color: CHART_THEME.muted }, ticks: { color: CHART_THEME.muted }, grid: { color: CHART_THEME.grid }, beginAtZero: false }
+          }
+        }
+      });
+    }
+
+    function selectedMetrics() {
+      const selected = state.rows[Number(document.getElementById('cmp-period').value || 0)] || state.rows[0];
+      return selected ? selected.metrics : { common: {}, business: {} };
+    }
+
+    function renderSelectedCharts() {
+      const m = selectedMetrics();
+      const c = m.common || {};
+      const b = m.business || {};
+      createMiniCompareChart('chart-selected-sla', [num(c.sla_pct), num(b.sla_pct)], 'SLA %', '%', false, 100);
+      createMiniCompareChart('chart-selected-mtfc', [num(c.avg_mtfc_h), num(b.avg_mtfc_h)], 'MTFC h', 'horas', true);
+      createMiniCompareChart('chart-selected-mtts', [num(c.avg_mtts_d), num(b.avg_mtts_business_days)], 'MTTS d', 'dias', true);
+    }
+
+    function regionMetricsFor(period) {
+      if (!hasDimensionFilters() && period.by_region) {
+        return Object.entries(period.by_region).map(([region, metrics]) => ({
+          region,
+          metrics: { closed: metrics.closed || 0, common: metrics.orig || {}, business: metrics.business_hours || {} }
+        }));
+      }
+      const groups = new Map();
+      (period.tickets || []).filter(matchesFilters).forEach(ticket => {
+        const region = ticket.region || 'Sem regiao';
+        if (!groups.has(region)) groups.set(region, []);
+        groups.get(region).push(ticket);
+      });
+      return [...groups.entries()].map(([region, tickets]) => ({ region, metrics: aggregateTicketRows(tickets) }));
+    }
+
+    function metricValue(metrics, mode, metric) {
+      const c = metrics.common || {};
+      const b = metrics.business || {};
+      if (metric === 'sla') {
+        if (mode === 'common') return num(c.sla_pct);
+        if (mode === 'business') return num(b.sla_pct);
+        return num(b.sla_pct) === null || num(c.sla_pct) === null ? null : b.sla_pct - c.sla_pct;
+      }
+      if (metric === 'mtfc') {
+        if (mode === 'common') return num(c.avg_mtfc_h);
+        if (mode === 'business') return num(b.avg_mtfc_h);
+        return num(b.avg_mtfc_h) === null || num(c.avg_mtfc_h) === null ? null : b.avg_mtfc_h - c.avg_mtfc_h;
+      }
+      if (mode === 'common') return num(c.avg_mtts_d);
+      if (mode === 'business') return num(b.avg_mtts_business_days);
+      return num(b.avg_mtts_business_days) === null || num(c.avg_mtts_d) === null ? null : b.avg_mtts_business_days - c.avg_mtts_d;
+    }
+
+    function renderRegionTrend() {
+      const metric = document.getElementById('region-metric').value;
+      const mode = document.getElementById('region-mode').value;
+      const periods = [...getPeriods()].reverse();
+      const labels = periods.map(labelFor);
+      const periodRegions = periods.map(regionMetricsFor);
+      const regions = [...new Set(periodRegions.flatMap(items => items.map(item => item.region)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const palette = ['#12df34', '#1f6feb', '#e4bf14', '#ff5b6e', '#8b949e', '#2dd4bf', '#f97316', '#a78bfa'];
+      const datasets = regions.map((region, index) => dataset(region, periodRegions.map(items => {
+        const found = items.find(item => item.region === region);
+        return found ? metricValue(found.metrics, mode, metric) : null;
+      }), palette[index % palette.length]));
+      const metricLabel = metric === 'sla' ? 'SLA %' : (metric === 'mtfc' ? 'MTFC h' : 'MTTS d');
+      const modeLabel = mode === 'business' ? 'Uteis' : (mode === 'common' ? 'Corridas' : 'Delta Uteis - Corridas');
+      const yTitle = metric === 'sla' ? (mode === 'delta' ? 'p.p.' : '%') : (metric === 'mtfc' ? 'horas' : 'dias');
+      createReadableLineChart('chart-region-trend', labels, datasets, metricLabel + ' por regiao - ' + modeLabel, yTitle, metric === 'sla' && mode !== 'delta' ? 100 : undefined);
+      document.getElementById('region-note').textContent = regions.length ? ('Mostrando ' + regions.length + ' regioes. Use os filtros acima para reduzir linhas e comparar com mais precisao.') : 'Sem regioes no recorte atual.';
+    }
+
+    function renderCharts() {
+      const rows = [...state.rows].reverse();
+      const labels = rows.map(row => row.label);
+      const deltaSla = rows.map(row => num(row.metrics.business.sla_pct) === null || num(row.metrics.common.sla_pct) === null ? null : row.metrics.business.sla_pct - row.metrics.common.sla_pct);
+      const deltaMtfc = rows.map(row => num(row.metrics.business.avg_mtfc_h) === null || num(row.metrics.common.avg_mtfc_h) === null ? null : row.metrics.business.avg_mtfc_h - row.metrics.common.avg_mtfc_h);
+      const deltaMtts = rows.map(row => num(row.metrics.business.avg_mtts_business_days) === null || num(row.metrics.common.avg_mtts_d) === null ? null : row.metrics.business.avg_mtts_business_days - row.metrics.common.avg_mtts_d);
+      renderSelectedCharts();
+      createGroupedCompareChart('chart-sla-trend', labels, rows.map(row => num(row.metrics.common.sla_pct)), rows.map(row => num(row.metrics.business.sla_pct)), 'SLA Compliance periodo a periodo', '%', '%', 100);
+      createGroupedCompareChart('chart-mtfc-trend', labels, rows.map(row => num(row.metrics.common.avg_mtfc_h)), rows.map(row => num(row.metrics.business.avg_mtfc_h)), 'MTFC medio periodo a periodo', 'horas', 'h');
+      createGroupedCompareChart('chart-mtts-trend', labels, rows.map(row => num(row.metrics.common.avg_mtts_d)), rows.map(row => num(row.metrics.business.avg_mtts_business_days)), 'MTTS medio periodo a periodo', 'dias', 'd');
+      createDeltaBarChart('chart-delta-sla', labels, deltaSla, 'Delta SLA', 'p.p.', false);
+      createDeltaBarChart('chart-delta-mtfc', labels, deltaMtfc, 'Delta MTFC', 'horas', true);
+      createDeltaBarChart('chart-delta-mtts', labels, deltaMtts, 'Delta MTTS', 'dias', true);
+      renderSelectedRegionBars();
+      renderRegionTrend();
+    }
+
+    function selectedPeriod() {
+      const index = Number(document.getElementById('cmp-period').value || 0);
+      return getPeriods()[index] || getPeriods()[0];
+    }
+
+    function renderSelectedRegionBars() {
+      const period = selectedPeriod();
+      const metric = document.getElementById('region-metric').value;
+      const items = period ? regionMetricsFor(period) : [];
+      const labels = items.map(item => item.region);
+      const commonValues = items.map(item => metricValue(item.metrics, 'common', metric));
+      const businessValues = items.map(item => metricValue(item.metrics, 'business', metric));
+      const metricLabel = metric === 'sla' ? 'SLA %' : (metric === 'mtfc' ? 'MTFC h' : 'MTTS d');
+      const yTitle = metric === 'sla' ? '%' : (metric === 'mtfc' ? 'horas' : 'dias');
+      const unit = metric === 'sla' ? '%' : (metric === 'mtfc' ? 'h' : 'd');
+      createGroupedCompareChart('chart-region-selected-bars', labels, commonValues, businessValues, metricLabel + ' por regiao no periodo selecionado', yTitle, unit, metric === 'sla' ? 100 : undefined);
+      document.getElementById('region-selected-period').textContent = period ? labelFor(period) : '--';
+      document.getElementById('region-selected-metric').textContent = metricLabel;
+      document.getElementById('region-selected-rule').textContent = metric === 'sla' ? 'maior e melhor' : 'menor e melhor';
+    }
+
+    function renderTable() {
+      document.getElementById('table-count').textContent = fmtInt(state.rows.length) + ' periodos';
+      document.getElementById('cmp-body').innerHTML = state.rows.map(row => {
+        const c = row.metrics.common || {};
+        const b = row.metrics.business || {};
+        const dSla = num(b.sla_pct) === null || num(c.sla_pct) === null ? null : b.sla_pct - c.sla_pct;
+        const dMtfc = num(b.avg_mtfc_h) === null || num(c.avg_mtfc_h) === null ? null : b.avg_mtfc_h - c.avg_mtfc_h;
+        const dMtts = num(b.avg_mtts_business_days) === null || num(c.avg_mtts_d) === null ? null : b.avg_mtts_business_days - c.avg_mtts_d;
+        return '<tr>' +
+          '<td><strong>' + row.label + '</strong><br><span class="muted">' + row.metrics.source + '</span></td>' +
+          '<td class="mono">' + fmtInt(row.metrics.closed) + '</td>' +
+          '<td class="mono">' + fmtPct(c.sla_pct) + '</td>' +
+          '<td class="mono">' + fmtPct(b.sla_pct) + '</td>' +
+          '<td class="mono">' + (dSla === null ? '--' : (dSla > 0 ? '+' : '') + fmt(dSla, 2) + ' p.p.') + '</td>' +
+          '<td class="mono">' + (num(c.avg_mtfc_h) === null ? '--' : fmt(c.avg_mtfc_h, 2) + ' h') + '</td>' +
+          '<td class="mono">' + (num(b.avg_mtfc_h) === null ? '--' : fmt(b.avg_mtfc_h, 2) + ' h') + '</td>' +
+          '<td class="mono">' + (dMtfc === null ? '--' : (dMtfc > 0 ? '+' : '') + fmt(dMtfc, 2) + ' h') + '</td>' +
+          '<td class="mono">' + (num(c.avg_mtts_d) === null ? '--' : fmt(c.avg_mtts_d, 2) + ' d') + '</td>' +
+          '<td class="mono">' + (num(b.avg_mtts_business_days) === null ? '--' : fmt(b.avg_mtts_business_days, 2) + ' d') + '</td>' +
+          '<td class="mono">' + (dMtts === null ? '--' : (dMtts > 0 ? '+' : '') + fmt(dMtts, 2) + ' d') + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function collectFilters() {
+      state.filters = {};
+      filterConfig.forEach(([key, selectId]) => { state.filters[key] = document.getElementById(selectId).value; });
+    }
+
+    function renderAll() {
+      collectFilters();
+      buildRows();
+      renderCards();
+      renderCharts();
+      renderTable();
+      const mode = hasDimensionFilters() ? 'recalculado por ticket no recorte filtrado' : 'agregado oficial do periodo';
+      document.getElementById('summary-note').textContent = 'SLA, MTFC e MTTS usam ' + mode + '. Fechados e elegiveis exibem a mesma base de tickets do periodo selecionado.';
+    }
+
+    async function loadData() {
+      const res = await fetch('data/business-hours-kpi-audit-latest.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Falha ao carregar auditoria de horarios uteis');
+      state.audit = await res.json();
+      document.getElementById('last-sync').textContent = 'Gerado: ' + (state.audit.generated_at ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(state.audit.generated_at)) : '--');
+      populatePeriods();
+      populateFilters();
+      renderAll();
+    }
+
+    document.getElementById('cmp-grain').addEventListener('change', event => {
+      state.grain = event.target.value;
+      state.filters = {};
+      populatePeriods();
+      populateFilters();
+      renderAll();
+    });
+    document.getElementById('cmp-period').addEventListener('change', () => { renderCards(); renderSelectedCharts(); renderSelectedRegionBars(); renderRegionTrend(); });
+    document.getElementById('region-metric').addEventListener('change', () => { renderSelectedRegionBars(); renderRegionTrend(); });
+    document.getElementById('region-mode').addEventListener('change', renderRegionTrend);
+    document.getElementById('cmp-apply').addEventListener('click', renderAll);
+    document.getElementById('cmp-clear').addEventListener('click', () => {
+      filterConfig.forEach(([, selectId]) => { document.getElementById(selectId).value = ''; });
+      renderAll();
+    });
+    loadData().catch(error => {
+      document.querySelector('.app-main').innerHTML = '<section class="card"><h2>Erro ao carregar comparativo</h2><p>' + error.message + '</p></section>';
+    }).finally(() => document.documentElement.classList.remove('playbook-auth-pending'));
+  </script>
+</body>
+</html>
