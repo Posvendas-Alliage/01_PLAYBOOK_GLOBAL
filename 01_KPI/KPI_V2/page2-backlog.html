@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -18,29 +18,117 @@
         .filter-field-countries { width: 100%; min-width: 100%; }
 
         /* ── Ticket link ───────────────────────────────── */
-        .ticket-link { color: #388bfd; text-decoration: none; font-family: var(--font-mono); font-size: .85rem; display: inline-flex; align-items: center; gap: 2px; }
+        .ticket-link { color: #388bfd; text-decoration: none; font-family: var(--font-mono); font-size: .98rem; display: inline-flex; align-items: center; gap: 2px; }
         .ticket-link:hover { color: #58a6ff; text-decoration: underline; }
-
-        /* ── Sortable columns ──────────────────────────── */
-        .daily-tickets-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
-        .daily-tickets-table th.sortable:hover { color: var(--color-text); background: rgba(31,111,235,.08); }
-        .daily-tickets-table th.sortable .sort-icon { margin-left: 4px; font-size: 10px; color: var(--color-text-muted); }
-        .daily-tickets-table th.sortable.sort-active .sort-icon { color: #1f6feb; }
-        .daily-tickets-table thead th { color: var(--color-text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); padding: 9px 11px; border-bottom: 1px solid var(--color-border); text-align: left; }
-        .daily-tickets-table td { padding: 9px 11px; border-bottom: 1px solid var(--color-border); text-align: left; font-size: 0.85rem; vertical-align: middle; }
+        .daily-tickets-table .sort-icon { margin-left: 4px; font-size: 11px; color: #1f6feb; }
+        .daily-tickets-table thead th { color: var(--color-text-muted); font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); padding: 9px 11px; border-bottom: 1px solid var(--color-border); text-align: left; }
+        .daily-tickets-table td { padding: 11px 12px; border-bottom: 1px solid var(--color-border); text-align: left; font-size: 0.98rem; vertical-align: middle; }
         .daily-tickets-table tbody tr { transition: background-color 0.12s; }
         .daily-tickets-table tbody tr:hover { background: rgba(31,111,235,0.05) !important; }
+        .daily-tickets-table tr.aging-critical-row { border-left: 4px solid #E31424; background: rgba(227,20,36,0.045); }
+        .daily-tickets-table tr.aging-critical-row:hover { background: rgba(227,20,36,0.075) !important; }
+        .table-aging-legend { display:inline-flex; align-items:center; gap:7px; margin-left:8px; color:var(--color-text-muted); font-size:.74rem; font-weight:600; }
+        .legend-line-red { width:22px; height:4px; border-radius:999px; background:#E31424; display:inline-block; }
 
-        /* ── Alerts section ────────────────────────────── */
-        .daily-alerts { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
-        .alert-card { padding: 10px 16px; border-radius: var(--radius-md); font-size: 0.86rem; font-weight: 500; border: 1px solid transparent; flex: 1 1 200px; }
-        .alert-card-red    { background: rgba(227,20,36,.09);   border-color: rgba(227,20,36,.35);   color: #E31424; }
-        .alert-card-yellow { background: rgba(228,191,20,.09);  border-color: rgba(228,191,20,.35);  color: #9a7d08; }
-        .alert-card-green  { background: rgba(18,223,52,.09);   border-color: rgba(18,223,52,.35);   color: #0a9e20; }
+        .daily-aging-filter-card {
+            width: 100%;
+            margin: 14px 0 0;
+            padding: 0;
+            border: 1px solid rgba(227,20,36,.30);
+            background: linear-gradient(135deg, rgba(227,20,36,.10), rgba(228,191,20,.12));
+            color: var(--color-text);
+            cursor: pointer;
+            text-align: left;
+            overflow: hidden;
+            transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .daily-aging-filter-card:hover {
+            transform: translateY(-1px);
+            border-color: rgba(227,20,36,.55);
+            box-shadow: 0 12px 28px rgba(227,20,36,.12);
+        }
+        .daily-aging-filter-card.is-active {
+            border-color: #E31424;
+            background: linear-gradient(135deg, rgba(227,20,36,.16), rgba(227,20,36,.08));
+            box-shadow: 0 0 0 2px rgba(227,20,36,.12);
+        }
+        .aging-filter-inner {
+            display: grid;
+            grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 18px;
+            padding: 20px 22px;
+        }
+        .aging-filter-number {
+            font-family: var(--font-mono);
+            font-size: clamp(2.4rem, 6vw, 4.8rem);
+            line-height: .9;
+            font-weight: 800;
+            color: #E31424;
+            letter-spacing: 0;
+        }
+        .aging-filter-copy { min-width: 0; }
+        .aging-filter-label {
+            display: block;
+            color: var(--color-text-muted);
+            font-size: .76rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .aging-filter-title {
+            display: block;
+            font-size: clamp(1.1rem, 2vw, 1.55rem);
+            font-weight: 800;
+            line-height: 1.15;
+            color: var(--color-text);
+        }
+        .aging-filter-subtitle {
+            display: block;
+            margin-top: 5px;
+            color: var(--color-text-muted);
+            font-size: .88rem;
+            line-height: 1.35;
+        }
+        .aging-filter-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 132px;
+            min-height: 38px;
+            padding: 8px 13px;
+            border-radius: 999px;
+            background: #E31424;
+            color: #fff;
+            font-size: .78rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .daily-aging-filter-card.is-active .aging-filter-action {
+            background: var(--color-surface);
+            color: #E31424;
+            border: 1px solid rgba(227,20,36,.45);
+        }
+        .table-filter-pill {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(227,20,36,.35);
+            background: rgba(227,20,36,.08);
+            color: #E31424;
+            font-size: .74rem;
+            font-weight: 700;
+        }
+        .table-filter-pill.is-visible { display: inline-flex; }
 
         /* ── Misc ──────────────────────────────────────── */
         @media (max-width: 768px) {
             .daily-kpi-strip { grid-template-columns: repeat(2, 1fr) !important; }
+            .aging-filter-inner { grid-template-columns: 1fr; gap: 10px; padding: 17px; }
+            .aging-filter-action { width: 100%; }
             .daily-tickets-table th:nth-child(2),
             .daily-tickets-table td:nth-child(2),
             .daily-tickets-table th:nth-child(3),
@@ -174,19 +262,9 @@
                         <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_no_resp">aguardando primeiro contato</p>
                     </article>
                     <article class="card">
-                        <div class="kpi-label" data-tx="kpi_over_10">&gt; 10 dias</div>
-                        <div class="kpi-number mono" id="kpi-over-10">--</div>
-                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_over10">tickets acima de 10 dias</p>
-                    </article>
-                    <article class="card">
                         <div class="kpi-label" data-tx="kpi_dependency">Dependencia externa</div>
                         <div class="kpi-number mono" id="kpi-dependency">--</div>
                         <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_dep">aguardando resposta externa</p>
-                    </article>
-                    <article class="card">
-                        <div class="kpi-label" data-tx="kpi_p12">P1/P2 abertos</div>
-                        <div class="kpi-number mono" id="kpi-p12">--</div>
-                        <p class="text-muted" style="font-size:.76rem;margin:4px 0 0" data-tx="kpi_sub_p12">tickets urgentes/alta prioridade</p>
                     </article>
                     <article class="card">
                         <div class="kpi-label" data-tx="kpi_avg_aging">Aging medio</div>
@@ -195,27 +273,55 @@
                     </article>
                 </section>
 
-                <!-- Decision grid -->
-                <section class="decision-grid">
-                    <article class="card daily-decision-card">
-                        <span class="decision-label" data-tx="decision_aging">Fila critica</span>
-                        <strong class="decision-value mono" id="decision-aging-value">--</strong>
-                        <span class="decision-note" id="decision-aging-note">--</span>
-                    </article>
-                    <article class="card daily-decision-card">
-                        <span class="decision-label" data-tx="decision_response">Primeira resposta</span>
-                        <strong class="decision-value mono" id="decision-response-value">--</strong>
-                        <span class="decision-note" id="decision-response-note">--</span>
-                    </article>
-                    <article class="card daily-decision-card">
-                        <span class="decision-label" data-tx="decision_dependency">Dependencias</span>
-                        <strong class="decision-value mono" id="decision-dependency-value">--</strong>
-                        <span class="decision-note" id="decision-dependency-note">--</span>
-                    </article>
-                </section>
 
-                <!-- Alerts section (NEW) -->
-                <div id="daily-alerts" class="daily-alerts"></div>
+                <button type="button" class="card daily-aging-filter-card" id="aging-filter-card" aria-pressed="false" aria-controls="open-tickets-body">
+                    <span class="aging-filter-inner">
+                        <span class="aging-filter-number mono" id="aging-filter-count">--</span>
+                        <span class="aging-filter-copy">
+                            <span class="aging-filter-label" data-tx="aging_filter_label">Filtro rapido</span>
+                            <span class="aging-filter-title" data-tx="aging_filter_title">Tickets com aging maior que 10 dias</span>
+                            <span class="aging-filter-subtitle" id="aging-filter-subtitle">--</span>
+                        </span>
+                        <span class="aging-filter-action" id="aging-filter-action" data-tx="aging_filter_action">Filtrar tickets</span>
+                    </span>
+                </button>
+
+                <!-- Open tickets table -->
+                <section class="card table-card" style="margin-top:18px">
+                    <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                        <div>
+                            <h3 data-tx="table_title" style="margin:0 0 2px">Tickets em Aberto</h3>
+                            <span id="table-count" class="text-muted" style="font-size:.82rem;"></span>
+                            <span id="table-aging-filter-pill" class="table-filter-pill" data-tx="aging_filter_active">Filtro: aging &gt; 10 dias</span>
+                            <span id="table-aging-legend" class="table-aging-legend"><span class="legend-line-red"></span><span data-tx="aging_line_legend">Tickets com aging maior que 10 dias</span></span>
+                        </div>
+                        <input type="text" id="ticket-search-daily"
+                               style="padding:7px 12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);font-size:.84rem;width:220px;"
+                               data-tx-placeholder="search_placeholder" placeholder="Buscar ticket #..."
+                               oninput="updateSearch(this.value)">
+                    </div>
+                    <div class="table-scroll">
+                        <table class="daily-tickets-table" style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr>
+                                    <th data-tx="col_ticket">Ticket #</th>
+                                    <th data-tx="col_region">Região</th>
+                                    <th data-tx="col_priority">Prioridade</th>
+                                    <th data-tx="col_status">Status</th>
+                                    <th class="col-agente" data-tx="col_agent">Agente</th>
+                                    <th data-tx="col_mtfc">MTFC</th>
+                                    <th class="sort-active" data-tx="col_aging">Aging (dias)<span class="sort-icon">↓</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="open-tickets-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <span id="pagination-info">--</span>
+                        <button type="button" class="btn btn-ghost btn-sm" id="page-prev" data-tx="prev">Anterior</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="page-next" data-tx="next">Proximo</button>
+                    </div>
+                </section>
 
                 <!-- Charts -->
                 <section class="page-grid-2col" style="margin-top:18px">
@@ -235,42 +341,6 @@
                         <h3 data-tx="chart_priority">Backlog por Prioridade</h3>
                         <div class="chart-canvas-wrap"><canvas id="chart-backlog-priority"></canvas></div>
                     </article>
-                </section>
-
-                <!-- Open tickets table -->
-                <section class="card table-card" style="margin-top:18px">
-                    <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-                        <div>
-                            <h3 data-tx="table_title" style="margin:0 0 2px">Tickets em Aberto</h3>
-                            <span id="table-count" class="text-muted" style="font-size:.82rem;"></span>
-                        </div>
-                        <input type="text" id="ticket-search-daily"
-                               style="padding:7px 12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);font-size:.84rem;width:220px;"
-                               data-tx-placeholder="search_placeholder" placeholder="Buscar ticket #..."
-                               oninput="updateSearch(this.value)">
-                    </div>
-                    <div class="table-scroll">
-                        <table class="daily-tickets-table" style="width:100%;border-collapse:collapse;">
-                            <thead>
-                                <tr>
-                                    <th class="sortable" data-sort="ticket_number" data-tx="col_ticket">Ticket #<span class="sort-icon">↕</span></th>
-                                    <th class="sortable" data-sort="region" data-tx="col_region">Região<span class="sort-icon">↕</span></th>
-                                    <th class="sortable" data-sort="priority" data-tx="col_priority">Prioridade<span class="sort-icon">↕</span></th>
-                                    <th class="sortable" data-sort="status" data-tx="col_status">Status<span class="sort-icon">↕</span></th>
-                                    <th class="sortable col-agente" data-sort="agent_name" data-tx="col_agent">Agente<span class="sort-icon">↕</span></th>
-                                    <th class="sortable" data-sort="mtfc" data-tx="col_mtfc">MTFC<span class="sort-icon">↕</span></th>
-                                    <th class="sortable sort-active" data-sort="aging" data-tx="col_aging">Aging (dias)<span class="sort-icon">↓</span></th>
-                                    <th data-tx="col_action">Acao</th>
-                                </tr>
-                            </thead>
-                            <tbody id="open-tickets-body"></tbody>
-                        </table>
-                    </div>
-                    <div class="pagination">
-                        <span id="pagination-info">--</span>
-                        <button type="button" class="btn btn-ghost btn-sm" id="page-prev" data-tx="prev">Anterior</button>
-                        <button type="button" class="btn btn-ghost btn-sm" id="page-next" data-tx="next">Proximo</button>
-                    </div>
                 </section>
             </div>
         </main>
@@ -306,21 +376,17 @@
             kpi_sub_dep: 'aguardando resposta externa',
             kpi_sub_p12: 'tickets urgentes/alta prioridade',
             kpi_sub_aging: 'dias em aberto em media',
-            decision_aging: 'Fila critica', decision_response: 'Primeira resposta', decision_dependency: 'Dependencias',
+            decision_response: 'Primeira resposta', decision_dependency: 'Dependencias',
             risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
             note_aging: '{n} tickets acima de 10 dias',
+            aging_filter_label: 'Filtro rapido', aging_filter_title: 'Tickets com aging maior que 10 dias', aging_filter_subtitle: 'Fila critica do recorte atual.', aging_filter_action: 'Filtrar tickets', aging_filter_action_active: 'Remover filtro', aging_filter_active: 'Filtro: aging > 10 dias', aging_line_legend: 'Tickets com aging maior que 10 dias',
             note_response: '{n} tickets ainda sem primeira resposta',
             note_dependency: '{n} tickets aguardando cliente, peca, terceiro ou visita',
             chart_status: 'Backlog por Status', chart_region: 'Backlog por Regiao e resposta',
             chart_aging: 'Aging Buckets', chart_priority: 'Backlog por Prioridade',
             table_title: 'Tickets em Aberto',
             col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridade',
-            col_region: 'Regiao', col_status: 'Status', col_agent: 'Agente', col_action: 'Acao', col_mtfc: 'MTFC',
-            action_first_response: 'Dar primeira resposta',
-            action_old_ticket: 'Revisar aging',
-            action_dependency: 'Verificar dependencia',
-            action_p12: 'Priorizar P1/P2',
-            action_monitor: 'Atualizar status',
+            col_region: 'Regiao', col_status: 'Status', col_agent: 'Agente', col_mtfc: 'MTFC',
             prev: 'Anterior', next: 'Proximo',
             page_info: 'Pagina {p} de {t} - {n} tickets',
             last_sync_label: 'Ultima atualizacao:',
@@ -349,21 +415,17 @@
             kpi_sub_dep: 'waiting external response',
             kpi_sub_p12: 'urgent/high priority tickets',
             kpi_sub_aging: 'avg days open',
-            decision_aging: 'Critical queue', decision_response: 'First response', decision_dependency: 'Dependencies',
+            decision_response: 'First response', decision_dependency: 'Dependencies',
             risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
             note_aging: '{n} tickets over 10 days',
+            aging_filter_label: 'Quick filter', aging_filter_title: 'Tickets with aging over 10 days', aging_filter_subtitle: 'Critical queue in the current selection.', aging_filter_action: 'Filter tickets', aging_filter_action_active: 'Clear filter', aging_filter_active: 'Filter: aging > 10 days', aging_line_legend: 'Tickets with aging over 10 days',
             note_response: '{n} tickets without first response',
             note_dependency: '{n} tickets waiting for customer, part, third party or visit',
             chart_status: 'Backlog by Status', chart_region: 'Backlog by Region and response',
             chart_aging: 'Aging Buckets', chart_priority: 'Backlog by Priority',
             table_title: 'Open Tickets',
             col_ticket: 'Ticket #', col_aging: 'Aging (days)', col_priority: 'Priority',
-            col_region: 'Region', col_status: 'Status', col_agent: 'Agent', col_action: 'Action', col_mtfc: 'MTFC',
-            action_first_response: 'Send first response',
-            action_old_ticket: 'Review aging',
-            action_dependency: 'Check dependency',
-            action_p12: 'Prioritize P1/P2',
-            action_monitor: 'Update status',
+            col_region: 'Region', col_status: 'Status', col_agent: 'Agent', col_mtfc: 'MTFC',
             prev: 'Previous', next: 'Next',
             page_info: 'Page {p} of {t} - {n} tickets',
             last_sync_label: 'Last updated:',
@@ -392,21 +454,17 @@
             kpi_sub_dep: 'esperando respuesta externa',
             kpi_sub_p12: 'tickets urgentes/alta prioridad',
             kpi_sub_aging: 'dias abierto en promedio',
-            decision_aging: 'Fila critica', decision_response: 'Primera respuesta', decision_dependency: 'Dependencias',
+            decision_response: 'Primera respuesta', decision_dependency: 'Dependencias',
             risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
             note_aging: '{n} tickets arriba de 10 dias',
+            aging_filter_label: 'Filtro rapido', aging_filter_title: 'Tickets con aging mayor que 10 dias', aging_filter_subtitle: 'Fila critica del recorte actual.', aging_filter_action: 'Filtrar tickets', aging_filter_action_active: 'Quitar filtro', aging_filter_active: 'Filtro: aging > 10 dias', aging_line_legend: 'Tickets con aging mayor que 10 dias',
             note_response: '{n} tickets sin primera respuesta',
             note_dependency: '{n} tickets esperando cliente, pieza, tercero o visita',
             chart_status: 'Backlog por Estado', chart_region: 'Backlog por Region y respuesta',
             chart_aging: 'Buckets de Aging', chart_priority: 'Backlog por Prioridad',
             table_title: 'Tickets Abiertos',
             col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridad',
-            col_region: 'Region', col_status: 'Estado', col_agent: 'Agente', col_action: 'Accion', col_mtfc: 'MTFC',
-            action_first_response: 'Dar primera respuesta',
-            action_old_ticket: 'Revisar aging',
-            action_dependency: 'Verificar dependencia',
-            action_p12: 'Priorizar P1/P2',
-            action_monitor: 'Actualizar estado',
+            col_region: 'Region', col_status: 'Estado', col_agent: 'Agente', col_mtfc: 'MTFC',
             prev: 'Anterior', next: 'Siguiente',
             page_info: 'Pagina {p} de {t} - {n} tickets',
             last_sync_label: 'Ultima actualizacion:',
@@ -458,8 +516,8 @@
     let openTickets = [];
     let allRowsSorted = [];
     let currentPage = 1;
-    let tableSortState = { column: 'risk', direction: 'desc' };
     let searchQuery = '';
+    let agingOver10FilterActive = false;
 
     // ──────────────────────────────────────────────────────────
     // UTILITY HELPERS
@@ -518,6 +576,31 @@
     function agingDays(row) {
         return Number(row.aging_backlog_dias ?? row.aging_days ?? row.aging_dias ?? 0);
     }
+    function setAgingFilterActive(active) {
+        agingOver10FilterActive = !!active;
+        currentPage = 1;
+        applyTableSort();
+        updateAgingFilterCard();
+        if (agingOver10FilterActive) {
+            document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+    function updateAgingFilterCard(over10Count) {
+        const card = document.getElementById('aging-filter-card');
+        if (!card) return;
+        if (Number.isFinite(over10Count)) setKpi('aging-filter-count', fmt(over10Count, 0));
+        card.classList.toggle('is-active', agingOver10FilterActive);
+        card.setAttribute('aria-pressed', agingOver10FilterActive ? 'true' : 'false');
+        const subtitle = document.getElementById('aging-filter-subtitle');
+        if (subtitle) subtitle.textContent = tx('aging_filter_subtitle');
+        const action = document.getElementById('aging-filter-action');
+        if (action) action.textContent = tx(agingOver10FilterActive ? 'aging_filter_action_active' : 'aging_filter_action');
+        const pill = document.getElementById('table-aging-filter-pill');
+        if (pill) {
+            pill.textContent = tx('aging_filter_active');
+            pill.classList.toggle('is-visible', agingOver10FilterActive);
+        }
+    }
     function hasFirstResponse(row) {
         return Number.isFinite(metricNumber(row.mtfc_horas_bi, row.mtfc_horas));
     }
@@ -560,14 +643,6 @@
         if (norm.includes('aguardando') && (norm.includes('terceiro') || norm.includes('visita'))) return `<span class="badge" style="background:rgba(92,42,191,.14);border:1px solid rgba(92,42,191,.4);color:#9e7eea">${status}</span>`;
         if (norm.includes('em atendimento') || norm.includes('in progress') || norm.includes('atendimento')) return `<span class="badge badge-blue">${status}</span>`;
         return `<span class="badge" style="background:rgba(31,111,235,.1);border:1px solid rgba(31,111,235,.3);color:#388bfd">${status}</span>`;
-    }
-
-    function actionFor(row) {
-        if (!hasFirstResponse(row)) return `<span class="action-badge action-badge-red">${tx('action_first_response')}</span>`;
-        if (agingDays(row) > 10) return `<span class="action-badge action-badge-yellow">${tx('action_old_ticket')}</span>`;
-        if (isDependencyStatusText(row.status)) return `<span class="action-badge action-badge-blue">${tx('action_dependency')}</span>`;
-        if (isP12(row)) return `<span class="action-badge action-badge-yellow">${tx('action_p12')}</span>`;
-        return `<span class="action-badge action-badge-gray">${tx('action_monitor')}</span>`;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -667,6 +742,7 @@
             FilterState.set(next);
         });
         document.getElementById('btn-clear').addEventListener('click', () => {
+            agingOver10FilterActive = false;
             FilterState.reset();
             FilterState.update('region', 'all');
             document.querySelectorAll('[data-filter]').forEach(input => {
@@ -674,8 +750,12 @@
             });
             renderCountryFilter();
             renderAgentGroupFilter();
+            updateAgingFilterCard();
         });
         document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+        document.getElementById('aging-filter-card')?.addEventListener('click', () => {
+            setAgingFilterActive(!agingOver10FilterActive);
+        });
         document.getElementById('page-prev').addEventListener('click', () => {
             if (currentPage > 1) { currentPage--; renderTable(); }
         });
@@ -688,79 +768,26 @@
     // ──────────────────────────────────────────────────────────
     // TABLE SORT
     // ──────────────────────────────────────────────────────────
-    function handleTableSort(column) {
-        if (tableSortState.column === column) {
-            if (tableSortState.direction === 'asc') tableSortState.direction = 'desc';
-            else tableSortState = { column: 'risk', direction: 'desc' };
-        } else {
-            tableSortState = { column, direction: 'asc' };
-        }
-        currentPage = 1;
-        applyTableSort();
-    }
-
     function applyTableSort() {
-        const base = searchQuery
+        let base = searchQuery
             ? allRowsSorted.filter(r => String(r.ticket_number || '').toLowerCase().includes(searchQuery.toLowerCase()))
             : allRowsSorted;
-
-        let sorted;
-        if (tableSortState.column === 'risk') {
-            sorted = [...base].sort((a, b) => getRiskScore(b) - getRiskScore(a));
-        } else {
-            sorted = [...base].sort((a, b) => {
-                let valA, valB;
-                switch (tableSortState.column) {
-                    case 'ticket_number': valA = Number(a.ticket_number)||0; valB = Number(b.ticket_number)||0; break;
-                    case 'region':   valA = (getTicketRegionGroup(a)||'').toLowerCase(); valB = (getTicketRegionGroup(b)||'').toLowerCase(); break;
-                    case 'priority': valA = SORT_PRIORITY[getTicketPriority(a)]||9; valB = SORT_PRIORITY[getTicketPriority(b)]||9; break;
-                    case 'status':   valA = (a.status||'').toLowerCase(); valB = (b.status||'').toLowerCase(); break;
-                    case 'agent_name':
-                        valA = getAgentDisplayName(a.agent_name) || 'zzz';
-                        valB = getAgentDisplayName(b.agent_name) || 'zzz';
-                        break;
-                    case 'mtfc':
-                        valA = Number.isFinite(metricNumber(a.mtfc_horas_bi, a.mtfc_horas)) ? metricNumber(a.mtfc_horas_bi, a.mtfc_horas) : 9999;
-                        valB = Number.isFinite(metricNumber(b.mtfc_horas_bi, b.mtfc_horas)) ? metricNumber(b.mtfc_horas_bi, b.mtfc_horas) : 9999;
-                        break;
-                    case 'aging': default: valA = agingDays(a); valB = agingDays(b); break;
-                }
-                if (valA < valB) return tableSortState.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return tableSortState.direction === 'asc' ? 1 : -1;
-                return 0;
-            });
+        if (agingOver10FilterActive) {
+            base = base.filter(row => agingDays(row) > 10);
         }
 
-        openTickets = sorted;
-        renderTable();
-        updateSortIcons();
-    }
-
-    function updateSortIcons() {
-        document.querySelectorAll('.daily-tickets-table th.sortable').forEach(th => {
-            const col = th.dataset.sort;
-            const icon = th.querySelector('.sort-icon');
-            if (!icon) return;
-            if (col === tableSortState.column) {
-                icon.textContent = tableSortState.direction === 'asc' ? ' ↑' : ' ↓';
-                th.classList.add('sort-active');
-            } else {
-                icon.textContent = ' ↕';
-                th.classList.remove('sort-active');
-            }
+        openTickets = [...base].sort((a, b) => {
+            const agingDelta = agingDays(b) - agingDays(a);
+            if (agingDelta !== 0) return agingDelta;
+            return getRiskScore(b) - getRiskScore(a);
         });
+        renderTable();
     }
 
     function updateSearch(query) {
         searchQuery = String(query || '').trim();
         currentPage = 1;
         applyTableSort();
-    }
-
-    function bindTableSort() {
-        document.querySelectorAll('.daily-tickets-table th.sortable').forEach(th => {
-            th.addEventListener('click', () => handleTableSort(th.dataset.sort));
-        });
     }
 
     // ──────────────────────────────────────────────────────────
@@ -779,18 +806,21 @@
 
         tbody.innerHTML = '';
         if (!slice.length) {
-            tbody.innerHTML = `<tr><td colspan="8" class="empty-state">${t('no_filter_data')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${t('no_filter_data')}</td></tr>`;
         } else {
             slice.forEach(row => {
                 const tr = document.createElement('tr');
                 const priority = getTicketPriority(row);
                 const pNorm = normalizeStatus(priority);
-                if (pNorm.includes('urgente') || pNorm === 'p1') {
+                const rowAging = agingDays(row);
+                if (rowAging > 10) {
+                    tr.classList.add('aging-critical-row');
+                } else if (pNorm.includes('urgente') || pNorm === 'p1') {
                     tr.style.borderLeft = '3px solid #E31424';
                 } else if (pNorm.includes('alta') || pNorm === 'p2') {
                     tr.style.borderLeft = '3px solid #E4A014';
                 }
-                if (!hasFirstResponse(row)) {
+                if (!hasFirstResponse(row) && rowAging <= 10) {
                     tr.style.background = 'rgba(227,20,36,0.05)';
                 }
 
@@ -803,7 +833,7 @@
                     ? `<span style="color:${colorHex(mtfc <= mtfcTarget ? 'green' : 'red')}">${fmt(mtfc, 1)} h</span>`
                     : `<span style="color:${colorHex('red')};font-weight:600">${tx('no_response_label')}</span>`;
 
-                const aging = agingDays(row);
+                const aging = rowAging;
                 const agingColor = aging < 5 ? 'green' : aging <= 10 ? 'yellow' : 'red';
                 const agingStr = aging > 10
                     ? `<strong style="color:${colorHex('red')}">${fmt(aging, 0)}</strong>`
@@ -824,39 +854,13 @@
                     <td>${statusBadgeFor(row.status)}</td>
                     ${agentCell}
                     <td>${mtfcStr}</td>
-                    <td>${agingStr}</td>
-                    <td>${actionFor(row)}</td>`;
+                    <td>${agingStr}</td>`;
                 tbody.appendChild(tr);
             });
         }
 
         document.getElementById('pagination-info').textContent =
             tx('page_info').replace('{p}', currentPage).replace('{t}', totalPages).replace('{n}', total);
-    }
-
-    // ──────────────────────────────────────────────────────────
-    // ALERTS
-    // ──────────────────────────────────────────────────────────
-    function renderAlerts(rows) {
-        const container = document.getElementById('daily-alerts');
-        if (!container) return;
-
-        const noResponse = rows.filter(r => !hasFirstResponse(r));
-        const urgent     = rows.filter(r => (r.priority_standard || r.priority) === 'Urgente');
-        const over15     = rows.filter(r => agingDays(r) > 15);
-        const slaRisk    = rows.filter(r => isP12(r) && !hasFirstResponse(r));
-
-        const alerts = [];
-        if (noResponse.length) alerts.push({ type: 'red',    msg: `⚡ ${tx('alert_no_response').replace('{n}', noResponse.length)}` });
-        if (urgent.length)     alerts.push({ type: 'red',    msg: `🔴 ${tx('alert_urgent').replace('{n}', urgent.length)}` });
-        if (over15.length)     alerts.push({ type: 'yellow', msg: `⏰ ${tx('alert_aging15').replace('{n}', over15.length)}` });
-        if (slaRisk.length)    alerts.push({ type: 'yellow', msg: `⚠️ ${tx('alert_sla_risk').replace('{n}', slaRisk.length)}` });
-
-        if (!alerts.length) {
-            container.innerHTML = `<div class="alert-card alert-card-green">✅ ${tx('alert_ok')}</div>`;
-            return;
-        }
-        container.innerHTML = alerts.map(a => `<div class="alert-card alert-card-${a.type}">${a.msg}</div>`).join('');
     }
 
     // ──────────────────────────────────────────────────────────
@@ -914,32 +918,23 @@
 
         setKpi('kpi-open-total',   fmt(rows.length, 0));
         setKpi('kpi-without-resp', fmt(noResponse.length, 0));
-        setKpi('kpi-over-10',      fmt(over10.length, 0));
+
         setKpi('kpi-dependency',   fmt(dependencies.length, 0));
-        setKpi('kpi-p12',          fmt(p12.length, 0));
+
         setKpi('kpi-avg-aging',    fmt(avgAging, 1));
+        updateAgingFilterCard(over10.length);
 
         colorKpiTopBar('kpi-open-total',   rows.length < 100 ? 'green' : rows.length <= 200 ? 'yellow' : 'red');
         colorKpiTopBar('kpi-without-resp', noResponse.length === 0 ? 'green' : noResponse.length <= 5 ? 'yellow' : 'red');
-        colorKpiTopBar('kpi-over-10',      over10.length === 0 ? 'green' : over10.length <= 10 ? 'yellow' : 'red');
+
         colorKpiTopBar('kpi-dependency',   dependencies.length === 0 ? 'green' : dependencies.length <= 5 ? 'yellow' : 'red');
-        colorKpiTopBar('kpi-p12',          p12.length === 0 ? 'green' : p12.length <= 3 ? 'yellow' : 'red');
+
         colorKpiTopBar('kpi-avg-aging',    avgAging < 5 ? 'green' : avgAging <= 10 ? 'yellow' : 'red');
 
         const riskLevel = p12.length > 0 ? 'critical' : (over10.length > 0 || noResponse.length > 0 ? 'attention' : 'ok');
         document.getElementById('daily-risk-badge').textContent = tx('risk_' + riskLevel);
         document.getElementById('daily-risk-badge').className =
             riskLevel === 'ok' ? 'badge badge-green' : riskLevel === 'attention' ? 'badge badge-yellow' : 'badge badge-red';
-
-        setKpi('decision-aging-value',      fmt(over10.length, 0));
-        setKpi('decision-response-value',   fmt(noResponse.length, 0));
-        setKpi('decision-dependency-value', fmt(dependencies.length, 0));
-        setKpi('decision-aging-note',       tx('note_aging').replace('{n}', fmt(over10.length, 0)));
-        setKpi('decision-response-note',    tx('note_response').replace('{n}', fmt(noResponse.length, 0)));
-        setKpi('decision-dependency-note',  tx('note_dependency').replace('{n}', fmt(dependencies.length, 0)));
-
-        // Alerts (new)
-        renderAlerts(rows);
 
         // Charts
         renderCountBar('chart-backlog-status', rows, row => row.status || '--', tx('chart_status'));
@@ -948,7 +943,6 @@
         renderCountBar('chart-backlog-priority', rows, row => row.priority_standard || row.priority || '--', tx('chart_priority'), label => (normalizeStatus(label).includes('urgent') || normalizeStatus(label).includes('urgente')) ? colorHex('red') : '#1f6feb');
 
         // Table — reset sort and search on new filter
-        tableSortState = { column: 'risk', direction: 'desc' };
         searchQuery = '';
         const searchInput = document.getElementById('ticket-search-daily');
         if (searchInput) searchInput.value = '';
@@ -976,7 +970,6 @@
         hideError();
         showLoading(true);
         bindFilterControls();
-        bindTableSort();
         try {
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
@@ -1006,3 +999,7 @@
     </script>
 </body>
 </html>
+
+
+
+

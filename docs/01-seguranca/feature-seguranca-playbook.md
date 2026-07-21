@@ -1,6 +1,6 @@
-# Feature de segurança do Playbook Global
+﻿# Feature de segurança do Playbook Global
 
-Documento historico de uma abordagem anterior. O procedimento operacional vigente esta em docs/seguranca-playbook.md.
+Documento historico de uma abordagem anterior. O procedimento operacional vigente esta em docs/01-seguranca/seguranca-playbook.md.
 
 ## Objetivo
 
@@ -173,3 +173,4 @@ O cliente KPI V2 deixou de usar o anon key como `Authorization` e passa a enviar
 - Operações administrativas sensíveis passam pela Edge Function `playbook-admin`.
 - O admin não consegue suspender/alterar o próprio status pela área administrativa.
 - Status e alterações são auditados em `playbook_profile_audit`.
+

@@ -1,7 +1,7 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $workspace = Split-Path -Parent $PSScriptRoot
-$outputDir = Join-Path $workspace 'docs'
+$outputDir = Join-Path $workspace 'docs\02-operacao\daily-backlog'
 $outputFile = Join-Path $outputDir 'Daily Backlog Global - Documentacao Operacional.docx'
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('daily-backlog-docx-' + [guid]::NewGuid().ToString('N'))
 
@@ -366,8 +366,8 @@ try {
     foreach ($item in @(
         'tools/run-daily-backlog-report.js',
         'reports/daily-backlog-YYYY-MM-DD_HH-mm',
-        'docs/automacao-daily-backlog-global-contexto.md',
-        'docs/automacao-daily-backlog-global-processo.md',
+        'docs/02-operacao/daily-backlog/automacao-daily-backlog-global-contexto.md',
+        'docs/02-operacao/daily-backlog/automacao-daily-backlog-global-processo.md',
         'C:\Users\guilherme.alamino\.codex\automations\daily-backlog-global-pdf\memory.md'
     )) {
         $bodyParts += New-BulletXml -Text $item
@@ -410,3 +410,5 @@ finally {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force
     }
 }
+
+

@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from pathlib import Path
 
 from docx import Document
@@ -597,7 +597,7 @@ def build_deliverables(doc):
         ("4", "Dashboard global KPIv2", "Indicadores regionais não comparáveis.", "Abas Daily, Weekly, Monthly e Sync Health.", "01_KPI/KPI_V2", PENDENTE),
         ("5", "Global Playbook", "Dependência de conhecimento informal.", "Plataforma de referência multilíngue por módulos.", "README e módulos do playbook", PENDENTE),
         ("6", "Governança operacional", "Ausência de cadência e owner para análise.", "Daily, quinzenal, mensal e quarterly.", "06_Governanca", PENDENTE),
-        ("7", "Rotina de backlog", "Backlog sem leitura comum e baixa visibilidade de risco.", "Daily Backlog Global e PDFs por região.", "reports/ e docs/automacao", PENDENTE),
+        ("7", "Rotina de backlog", "Backlog sem leitura comum e baixa visibilidade de risco.", "Daily Backlog Global e PDFs por região.", "reports/ e docs/02-operacao/daily-backlog", PENDENTE),
         ("8", "Treinamentos regionais", "Adoção desigual do modelo.", "Materiais e evidências de treinamento.", f"{PENDENTE}", PENDENTE),
         ("9", "Auditoria de dados", "Campos e status sem validação prática.", "Método de amostragem e plano de melhoria.", "06_Governanca/auditoria", PENDENTE),
         ("10", "Base para IA / Knowledge Base", "Atendimento inicial sem base estruturada.", "Arquitetura e limites definidos.", f"{PENDENTE}", PENDENTE),
@@ -1028,3 +1028,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
