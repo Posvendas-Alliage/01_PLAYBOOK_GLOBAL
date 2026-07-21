@@ -280,6 +280,64 @@ async function fetchCountryOptions(supabase: any, limit: number) {
   return { rows: rows.slice(0, limit), error: null };
 }
 
+function backlogTicketKey(row: Record<string, unknown>): string {
+  return String(row.ticket_id ?? row.id ?? "").trim();
+}
+
+async function fetchBiBacklogWithObservations(supabase: any, limit: number) {
+  const { data, error } = await supabase
+    .from("vw_dashboard_bi_backlog")
+    .select("*")
+    .order("aging_backlog_dias", { ascending: false })
+    .limit(limit);
+
+  if (error) return { rows: [], error };
+
+  const rows = Array.isArray(data) ? data as Record<string, unknown>[] : [];
+  const ticketIds = [...new Set(rows.map(backlogTicketKey).filter(Boolean))];
+
+  if (!ticketIds.length) return { rows, error: null };
+
+  const observationsResult = await supabase
+    .from("playbook_ticket_observations")
+    .select("ticket_id,observation,updated_at,updated_by")
+    .in("ticket_id", ticketIds);
+
+  if (observationsResult.error) {
+    console.warn("dashboard-read: observacoes do backlog indisponiveis", observationsResult.error.message);
+    return {
+      rows: rows.map((row) => ({
+        ...row,
+        backlog_observation: null,
+        observation: null,
+        observation_updated_at: null,
+        observation_updated_by: null,
+      })),
+      error: null,
+    };
+  }
+
+  const observations = new Map(
+    (Array.isArray(observationsResult.data) ? observationsResult.data : [])
+      .map((item: Record<string, unknown>) => [String(item.ticket_id || ""), item])
+  );
+
+  return {
+    rows: rows.map((row) => {
+      const item = observations.get(backlogTicketKey(row));
+      const observation = item ? textValue(item.observation) : null;
+      return {
+        ...row,
+        backlog_observation: observation,
+        observation,
+        observation_updated_at: item?.updated_at ?? null,
+        observation_updated_by: item?.updated_by ?? null,
+      };
+    }),
+    error: null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -471,6 +529,25 @@ Deno.serve(async (req) => {
         return jsonResponse({
           success: false,
           error: `Erro ao consultar ${type}: ${error.message}`,
+        }, 500);
+      }
+
+      return jsonResponse({
+        success: true,
+        type,
+        count: rows.length,
+        data: rows,
+      });
+    }
+
+    if (type === "bi-backlog") {
+      const limit = parseLimit(url.searchParams.get("limit"), 100, 500);
+      const { rows, error } = await fetchBiBacklogWithObservations(supabase, limit);
+
+      if (error) {
+        return jsonResponse({
+          success: false,
+          error: "Erro ao consultar " + type + ": " + error.message,
         }, 500);
       }
 

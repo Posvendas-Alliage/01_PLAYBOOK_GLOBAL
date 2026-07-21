@@ -214,6 +214,75 @@ async function supabaseHeaders(source) {
     };
 }
 
+function clearDashboardCacheForType(type) {
+    const marker = `:type=${type}`;
+    Object.keys(_dashboardCache).forEach(key => {
+        if (key.includes(marker)) {
+            delete _dashboardCache[key];
+            delete _dashboardCacheTime[key];
+        }
+    });
+}
+
+function postgrestInValue(value) {
+    return String(value).replace(/,/g, "").trim();
+}
+
+async function fetchBacklogTicketObservations(ticketIds, options = {}) {
+    const ids = [...new Set((ticketIds || []).map(id => String(id || "").trim()).filter(Boolean))];
+    if (!ids.length) return new Map();
+
+    const source = resolveDashboardSource(options);
+    if (!source.url || !source.anonKey) return new Map();
+
+    const observations = new Map();
+    const chunkSize = 80;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const search = new URLSearchParams({ select: "ticket_id,observation,updated_at,updated_by" });
+        search.set("ticket_id", `in.(${chunk.map(postgrestInValue).join(",")})`);
+        const res = await fetch(`${source.url}/rest/v1/playbook_ticket_observations?${search.toString()}`, {
+            headers: await supabaseHeaders(source)
+        });
+
+        if (!res.ok) {
+            console.warn(`[Supabase] Observacoes do backlog indisponiveis: ${res.status}`);
+            return observations;
+        }
+
+        const rows = await res.json();
+        if (Array.isArray(rows)) {
+            rows.forEach(row => observations.set(String(row.ticket_id), row));
+        }
+    }
+    return observations;
+}
+
+async function saveBacklogTicketObservation(ticketId, observation, options = {}) {
+    const id = String(ticketId || "").trim();
+    if (!id) throw new Error("Ticket invalido para salvar observacao.");
+
+    const source = resolveDashboardSource(options);
+    if (!source.url || !source.anonKey) throw new Error("SUPABASE_URL / SUPABASE_ANON_KEY ausentes.");
+
+    const res = await fetch(`${source.url}/rest/v1/playbook_ticket_observations`, {
+        method: "POST",
+        headers: {
+            ...(await supabaseHeaders(source)),
+            Prefer: "resolution=merge-duplicates,return=representation"
+        },
+        body: JSON.stringify({
+            ticket_id: id,
+            observation: String(observation || "").trim()
+        })
+    });
+
+    if (!res.ok) throw new Error(`Falha ao salvar observacao (${res.status}).`);
+    clearDashboardCacheForType("bi-backlog");
+    const payload = await res.json();
+    return Array.isArray(payload) ? payload[0] : payload;
+}
+
 async function fetchDashboard(type, params = {}, options = {}) {
     if (!BI_DASHBOARD_TYPES.includes(type)) {
         throw new Error(`Dashboard endpoint nao permitido: ${type}`);

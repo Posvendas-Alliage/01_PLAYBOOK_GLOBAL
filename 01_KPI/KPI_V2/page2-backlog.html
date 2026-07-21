@@ -23,8 +23,11 @@
         .daily-tickets-table .sort-icon { margin-left: 4px; font-size: 11px; color: #1f6feb; }
         .daily-tickets-table thead th { color: var(--color-text-muted); font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--color-surface); padding: 9px 11px; border-bottom: 1px solid var(--color-border); text-align: left; }
         .daily-tickets-table td { padding: 11px 12px; border-bottom: 1px solid var(--color-border); text-align: left; font-size: 0.98rem; vertical-align: middle; }
-        .daily-tickets-table tbody tr { transition: background-color 0.12s; }
+        .daily-tickets-table tbody tr { transition: background-color 0.12s; cursor: pointer; }
         .daily-tickets-table tbody tr:hover { background: rgba(31,111,235,0.05) !important; }
+        .daily-tickets-table .col-observation { max-width: 260px; min-width: 180px; }
+        .observation-preview { display: inline-flex; align-items: center; max-width: 100%; min-height: 26px; padding: 4px 8px; border-radius: 7px; background: rgba(31,111,235,.08); color: var(--color-text); font-size: .86rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .observation-preview.is-empty { background: rgba(125,133,144,.10); color: var(--color-text-muted); font-style: italic; }
         .daily-tickets-table tr.aging-critical-row { border-left: 4px solid #E31424; background: rgba(227,20,36,0.045); }
         .daily-tickets-table tr.aging-critical-row:hover { background: rgba(227,20,36,0.075) !important; }
         .table-aging-legend { display:inline-flex; align-items:center; gap:7px; margin-left:8px; color:var(--color-text-muted); font-size:.74rem; font-weight:600; }
@@ -124,6 +127,25 @@
         }
         .table-filter-pill.is-visible { display: inline-flex; }
 
+        .ticket-modal-backdrop { position: fixed; inset: 0; z-index: 90; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,.48); }
+        .ticket-modal-backdrop.is-open { display: flex; }
+        .ticket-modal { width: min(860px, 100%); max-height: min(86vh, 760px); overflow: auto; border-radius: 10px; border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: 0 24px 70px rgba(15,23,42,.35); }
+        .ticket-modal-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:20px 22px 14px; border-bottom:1px solid var(--color-border); }
+        .ticket-modal-title { margin: 0; font-size: 1.25rem; line-height:1.2; }
+        .ticket-modal-subtitle { margin: 4px 0 0; color: var(--color-text-muted); font-size: .88rem; }
+        .ticket-modal-close { border:1px solid var(--color-border); background:var(--color-bg); color:var(--color-text); width:34px; height:34px; border-radius:8px; cursor:pointer; font-size:1.2rem; line-height:1; }
+        .ticket-modal-body { padding: 18px 22px 20px; }
+        .ticket-detail-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+        .ticket-detail-item { border:1px solid var(--color-border); border-radius:8px; padding:10px 11px; background:var(--color-bg); }
+        .ticket-detail-label { display:block; color:var(--color-text-muted); font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+        .ticket-detail-value { font-weight:700; font-size:.96rem; word-break:break-word; }
+        .ticket-modal-subject { margin: 0 0 14px; padding: 11px 12px; border-left: 4px solid #1f6feb; background: rgba(31,111,235,.08); border-radius: 7px; color: var(--color-text); }
+        .ticket-observation-label { display:block; margin: 0 0 7px; font-weight:800; }
+        .ticket-observation-input { width:100%; min-height: 126px; resize: vertical; border:1px solid var(--color-border); border-radius:8px; padding:11px 12px; background:var(--color-bg); color:var(--color-text); font: inherit; line-height:1.4; }
+        .ticket-modal-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; flex-wrap:wrap; }
+        .ticket-modal-status { color:var(--color-text-muted); font-size:.84rem; }
+        @media (max-width: 768px) { .ticket-detail-grid { grid-template-columns: 1fr; } .ticket-modal-backdrop { padding: 12px; align-items:flex-end; } .ticket-modal { max-height: 92vh; } }
+
         /* ── Misc ──────────────────────────────────────── */
         @media (max-width: 768px) {
             .daily-kpi-strip { grid-template-columns: repeat(2, 1fr) !important; }
@@ -133,6 +155,7 @@
             .daily-tickets-table td:nth-child(2),
             .daily-tickets-table th:nth-child(3),
             .daily-tickets-table td:nth-child(3),
+            .daily-tickets-table .col-observation,
             .col-agente { display: none; }
         }
 
@@ -279,7 +302,7 @@
                         <span class="aging-filter-number mono" id="aging-filter-count">--</span>
                         <span class="aging-filter-copy">
                             <span class="aging-filter-label" data-tx="aging_filter_label">Filtro rapido</span>
-                            <span class="aging-filter-title" data-tx="aging_filter_title">Tickets com aging maior que 10 dias</span>
+                            <span class="aging-filter-title" data-tx="aging_filter_title">Tickets com aging 10+ dias uteis / corridos</span>
                             <span class="aging-filter-subtitle" id="aging-filter-subtitle">--</span>
                         </span>
                         <span class="aging-filter-action" id="aging-filter-action" data-tx="aging_filter_action">Filtrar tickets</span>
@@ -292,8 +315,8 @@
                         <div>
                             <h3 data-tx="table_title" style="margin:0 0 2px">Tickets em Aberto</h3>
                             <span id="table-count" class="text-muted" style="font-size:.82rem;"></span>
-                            <span id="table-aging-filter-pill" class="table-filter-pill" data-tx="aging_filter_active">Filtro: aging &gt; 10 dias</span>
-                            <span id="table-aging-legend" class="table-aging-legend"><span class="legend-line-red"></span><span data-tx="aging_line_legend">Tickets com aging maior que 10 dias</span></span>
+                            <span id="table-aging-filter-pill" class="table-filter-pill" data-tx="aging_filter_active">Filtro: aging 10+ dias uteis / corridos</span>
+                            <span id="table-aging-legend" class="table-aging-legend"><span class="legend-line-red"></span><span data-tx="aging_line_legend">Tickets com aging 10+ dias uteis / corridos</span></span>
                         </div>
                         <input type="text" id="ticket-search-daily"
                                style="padding:7px 12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);font-size:.84rem;width:220px;"
@@ -311,6 +334,7 @@
                                     <th class="col-agente" data-tx="col_agent">Agente</th>
                                     <th data-tx="col_mtfc">MTFC</th>
                                     <th class="sort-active" data-tx="col_aging">Aging (dias)<span class="sort-icon">↓</span></th>
+                                    <th class="col-observation" data-tx="col_observation">Observacao</th>
                                 </tr>
                             </thead>
                             <tbody id="open-tickets-body"></tbody>
@@ -344,6 +368,30 @@
                 </section>
             </div>
         </main>
+        <div id="ticket-detail-modal" class="ticket-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ticket-modal-title">
+            <div class="ticket-modal">
+                <div class="ticket-modal-header">
+                    <div>
+                        <h3 id="ticket-modal-title" class="ticket-modal-title">--</h3>
+                        <p id="ticket-modal-subtitle" class="ticket-modal-subtitle">--</p>
+                    </div>
+                    <button type="button" id="ticket-modal-close" class="ticket-modal-close" aria-label="Fechar">×</button>
+                </div>
+                <div class="ticket-modal-body">
+                    <p id="ticket-modal-subject" class="ticket-modal-subject" style="display:none"></p>
+                    <div id="ticket-modal-details" class="ticket-detail-grid"></div>
+                    <label for="ticket-observation-input" class="ticket-observation-label" data-tx="modal_observation_label">Motivo do atraso / observacao</label>
+                    <textarea id="ticket-observation-input" class="ticket-observation-input" maxlength="4000" data-tx-placeholder="modal_observation_placeholder" placeholder="Descreva o motivo do atraso, dependencia ou plano de acao..."></textarea>
+                    <div class="ticket-modal-actions">
+                        <span id="ticket-modal-status" class="ticket-modal-status"></span>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <a id="ticket-modal-zoho" class="btn btn-ghost btn-sm" href="#" target="_blank" rel="noopener noreferrer" data-tx="modal_open_zoho">Abrir no Zoho</a>
+                            <button type="button" id="ticket-modal-save" class="btn btn-primary btn-sm" data-tx="modal_save_observation">Salvar observacao</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <footer class="app-footer" data-tx="footer">Playbook Global - Global Service - KPI</footer>
     </div>
@@ -372,21 +420,22 @@
             kpi_over_10: 'Fila critica (>10d)', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abertos',
             kpi_sub_backlog: 'tickets em aberto agora',
             kpi_sub_no_resp: 'aguardando primeiro contato',
-            kpi_sub_over10: 'tickets acima de 10 dias',
+            kpi_sub_over10: 'tickets com 10+ dias uteis / corridos',
             kpi_sub_dep: 'aguardando resposta externa',
             kpi_sub_p12: 'tickets urgentes/alta prioridade',
             kpi_sub_aging: 'dias em aberto em media',
             decision_response: 'Primeira resposta', decision_dependency: 'Dependencias',
             risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
-            note_aging: '{n} tickets acima de 10 dias',
-            aging_filter_label: 'Filtro rapido', aging_filter_title: 'Tickets com aging maior que 10 dias', aging_filter_subtitle: 'Fila critica do recorte atual.', aging_filter_action: 'Filtrar tickets', aging_filter_action_active: 'Remover filtro', aging_filter_active: 'Filtro: aging > 10 dias', aging_line_legend: 'Tickets com aging maior que 10 dias',
+            note_aging: '{n} tickets com 10+ dias uteis / corridos',
+            aging_filter_label: 'Filtro rapido', aging_filter_title: 'Tickets com aging 10+ dias uteis / corridos', aging_filter_subtitle: 'Fila critica do recorte atual.', aging_filter_action: 'Filtrar tickets', aging_filter_action_active: 'Remover filtro', aging_filter_active: 'Filtro: aging 10+ dias uteis / corridos', aging_line_legend: 'Tickets com aging 10+ dias uteis / corridos',
             note_response: '{n} tickets ainda sem primeira resposta',
             note_dependency: '{n} tickets aguardando cliente, peca, terceiro ou visita',
             chart_status: 'Backlog por Status', chart_region: 'Backlog por Regiao e resposta',
             chart_aging: 'Aging Buckets', chart_priority: 'Backlog por Prioridade',
             table_title: 'Tickets em Aberto',
             col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridade',
-            col_region: 'Regiao', col_status: 'Status', col_agent: 'Agente', col_mtfc: 'MTFC',
+            col_region: 'Regiao', col_status: 'Status', col_agent: 'Agente', col_mtfc: 'MTFC', col_observation: 'Observacao',
+            modal_observation_label: 'Motivo do atraso / observacao', modal_observation_placeholder: 'Descreva o motivo do atraso, dependencia ou plano de acao...', modal_open_zoho: 'Abrir no Zoho', modal_save_observation: 'Salvar observacao', modal_saved: 'Observacao salva.', modal_saving: 'Salvando...', modal_save_error: 'Nao foi possivel salvar a observacao.', modal_no_observation: 'Sem observacao',
             prev: 'Anterior', next: 'Proximo',
             page_info: 'Pagina {p} de {t} - {n} tickets',
             last_sync_label: 'Ultima atualizacao:',
@@ -411,21 +460,22 @@
             kpi_over_10: 'Critical queue (>10d)', kpi_dependency: 'External dependency', kpi_p12: 'Open P1/P2',
             kpi_sub_backlog: 'open tickets now',
             kpi_sub_no_resp: 'waiting first contact',
-            kpi_sub_over10: 'tickets over 10 days',
+            kpi_sub_over10: 'tickets with 10+ business / calendar days',
             kpi_sub_dep: 'waiting external response',
             kpi_sub_p12: 'urgent/high priority tickets',
             kpi_sub_aging: 'avg days open',
             decision_response: 'First response', decision_dependency: 'Dependencies',
             risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
-            note_aging: '{n} tickets over 10 days',
-            aging_filter_label: 'Quick filter', aging_filter_title: 'Tickets with aging over 10 days', aging_filter_subtitle: 'Critical queue in the current selection.', aging_filter_action: 'Filter tickets', aging_filter_action_active: 'Clear filter', aging_filter_active: 'Filter: aging > 10 days', aging_line_legend: 'Tickets with aging over 10 days',
+            note_aging: '{n} tickets with 10+ business / calendar days',
+            aging_filter_label: 'Quick filter', aging_filter_title: 'Tickets with 10+ business / calendar days aging', aging_filter_subtitle: 'Critical queue in the current selection.', aging_filter_action: 'Filter tickets', aging_filter_action_active: 'Clear filter', aging_filter_active: 'Filter: aging 10+ business / calendar days', aging_line_legend: 'Tickets with 10+ business / calendar days aging',
             note_response: '{n} tickets without first response',
             note_dependency: '{n} tickets waiting for customer, part, third party or visit',
             chart_status: 'Backlog by Status', chart_region: 'Backlog by Region and response',
             chart_aging: 'Aging Buckets', chart_priority: 'Backlog by Priority',
             table_title: 'Open Tickets',
             col_ticket: 'Ticket #', col_aging: 'Aging (days)', col_priority: 'Priority',
-            col_region: 'Region', col_status: 'Status', col_agent: 'Agent', col_mtfc: 'MTFC',
+            col_region: 'Region', col_status: 'Status', col_agent: 'Agent', col_mtfc: 'MTFC', col_observation: 'Observation',
+            modal_observation_label: 'Delay reason / observation', modal_observation_placeholder: 'Describe the delay reason, dependency or action plan...', modal_open_zoho: 'Open in Zoho', modal_save_observation: 'Save observation', modal_saved: 'Observation saved.', modal_saving: 'Saving...', modal_save_error: 'Could not save the observation.', modal_no_observation: 'No observation',
             prev: 'Previous', next: 'Next',
             page_info: 'Page {p} of {t} - {n} tickets',
             last_sync_label: 'Last updated:',
@@ -450,21 +500,22 @@
             kpi_over_10: 'Fila critica (>10d)', kpi_dependency: 'Dependencia externa', kpi_p12: 'P1/P2 abiertos',
             kpi_sub_backlog: 'tickets abiertos ahora',
             kpi_sub_no_resp: 'esperando primer contacto',
-            kpi_sub_over10: 'tickets arriba de 10 dias',
+            kpi_sub_over10: 'tickets con 10+ dias habiles / corridos',
             kpi_sub_dep: 'esperando respuesta externa',
             kpi_sub_p12: 'tickets urgentes/alta prioridad',
             kpi_sub_aging: 'dias abierto en promedio',
             decision_response: 'Primera respuesta', decision_dependency: 'Dependencias',
             risk_ok: 'ON TARGET', risk_attention: 'ATTENTION', risk_critical: 'CRITICAL',
-            note_aging: '{n} tickets arriba de 10 dias',
-            aging_filter_label: 'Filtro rapido', aging_filter_title: 'Tickets con aging mayor que 10 dias', aging_filter_subtitle: 'Fila critica del recorte actual.', aging_filter_action: 'Filtrar tickets', aging_filter_action_active: 'Quitar filtro', aging_filter_active: 'Filtro: aging > 10 dias', aging_line_legend: 'Tickets con aging mayor que 10 dias',
+            note_aging: '{n} tickets con 10+ dias habiles / corridos',
+            aging_filter_label: 'Filtro rapido', aging_filter_title: 'Tickets con aging de 10+ dias habiles / corridos', aging_filter_subtitle: 'Fila critica del recorte actual.', aging_filter_action: 'Filtrar tickets', aging_filter_action_active: 'Quitar filtro', aging_filter_active: 'Filtro: aging 10+ dias uteis / corridos', aging_line_legend: 'Tickets con aging de 10+ dias habiles / corridos',
             note_response: '{n} tickets sin primera respuesta',
             note_dependency: '{n} tickets esperando cliente, pieza, tercero o visita',
             chart_status: 'Backlog por Estado', chart_region: 'Backlog por Region y respuesta',
             chart_aging: 'Buckets de Aging', chart_priority: 'Backlog por Prioridad',
             table_title: 'Tickets Abiertos',
             col_ticket: 'Ticket #', col_aging: 'Aging (dias)', col_priority: 'Prioridad',
-            col_region: 'Region', col_status: 'Estado', col_agent: 'Agente', col_mtfc: 'MTFC',
+            col_region: 'Region', col_status: 'Estado', col_agent: 'Agente', col_mtfc: 'MTFC', col_observation: 'Observacion',
+            modal_observation_label: 'Motivo del atraso / observacion', modal_observation_placeholder: 'Describe el motivo del atraso, dependencia o plan de accion...', modal_open_zoho: 'Abrir en Zoho', modal_save_observation: 'Guardar observacion', modal_saved: 'Observacion guardada.', modal_saving: 'Guardando...', modal_save_error: 'No fue posible guardar la observacion.', modal_no_observation: 'Sin observacion',
             prev: 'Anterior', next: 'Siguiente',
             page_info: 'Pagina {p} de {t} - {n} tickets',
             last_sync_label: 'Ultima actualizacion:',
@@ -512,12 +563,14 @@
     const SORT_PRIORITY = { 'Urgente': 1, 'Alta': 2, 'Média': 3, 'Baixa': 4, 'Muito Baixa': 5 };
 
     const PAGE_SIZE = 50;
+    const AGING_DELAYED_CALENDAR_DAYS = 10;
     let rawData = [];
     let openTickets = [];
     let allRowsSorted = [];
     let currentPage = 1;
     let searchQuery = '';
     let agingOver10FilterActive = false;
+    let currentTicketModalRow = null;
 
     // ──────────────────────────────────────────────────────────
     // UTILITY HELPERS
@@ -575,6 +628,29 @@
 
     function agingDays(row) {
         return Number(row.aging_backlog_dias ?? row.aging_days ?? row.aging_dias ?? 0);
+    }
+    function isDelayedTicket(row) {
+        return agingDays(row) >= AGING_DELAYED_CALENDAR_DAYS;
+    }
+    function ticketId(row) {
+        return String(row.ticket_id || row.id || "").trim();
+    }
+    function ticketObservation(row) {
+        return String(row.backlog_observation ?? row.observation ?? "").trim();
+    }
+    function updateTicketObservationInMemory(ticketIdValue, observationRow) {
+        const id = String(ticketIdValue || "").trim();
+        const text = String(observationRow?.observation || "").trim();
+        [rawData, allRowsSorted, openTickets].forEach(collection => {
+            collection.forEach(row => {
+                if (ticketId(row) === id) {
+                    row.backlog_observation = text;
+                    row.observation = text;
+                    row.observation_updated_at = observationRow?.updated_at || new Date().toISOString();
+                    row.observation_updated_by = observationRow?.updated_by || row.observation_updated_by || null;
+                }
+            });
+        });
     }
     function setAgingFilterActive(active) {
         agingOver10FilterActive = !!active;
@@ -753,6 +829,10 @@
             updateAgingFilterCard();
         });
         document.getElementById('btn-retry').addEventListener('click', () => { hideError(); init(); });
+        document.getElementById('ticket-modal-close')?.addEventListener('click', closeTicketModal);
+        document.getElementById('ticket-modal-save')?.addEventListener('click', saveTicketModalObservation);
+        document.getElementById('ticket-detail-modal')?.addEventListener('click', event => { if (event.target.id === 'ticket-detail-modal') closeTicketModal(); });
+        document.addEventListener('keydown', event => { if (event.key === 'Escape') closeTicketModal(); });
         document.getElementById('aging-filter-card')?.addEventListener('click', () => {
             setAgingFilterActive(!agingOver10FilterActive);
         });
@@ -773,7 +853,7 @@
             ? allRowsSorted.filter(r => String(r.ticket_number || '').toLowerCase().includes(searchQuery.toLowerCase()))
             : allRowsSorted;
         if (agingOver10FilterActive) {
-            base = base.filter(row => agingDays(row) > 10);
+            base = base.filter(row => isDelayedTicket(row));
         }
 
         openTickets = [...base].sort((a, b) => {
@@ -806,21 +886,24 @@
 
         tbody.innerHTML = '';
         if (!slice.length) {
-            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${t('no_filter_data')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="empty-state">${t('no_filter_data')}</td></tr>`;
         } else {
             slice.forEach(row => {
                 const tr = document.createElement('tr');
+                tr.tabIndex = 0;
+                tr.setAttribute('role', 'button');
+                tr.setAttribute('aria-label', `Abrir detalhes do ticket #${row.ticket_number || row.id || '--'}`);
                 const priority = getTicketPriority(row);
                 const pNorm = normalizeStatus(priority);
                 const rowAging = agingDays(row);
-                if (rowAging > 10) {
+                if (isDelayedTicket(row)) {
                     tr.classList.add('aging-critical-row');
                 } else if (pNorm.includes('urgente') || pNorm === 'p1') {
                     tr.style.borderLeft = '3px solid #E31424';
                 } else if (pNorm.includes('alta') || pNorm === 'p2') {
                     tr.style.borderLeft = '3px solid #E4A014';
                 }
-                if (!hasFirstResponse(row) && rowAging <= 10) {
+                if (!hasFirstResponse(row) && !isDelayedTicket(row)) {
                     tr.style.background = 'rgba(227,20,36,0.05)';
                 }
 
@@ -834,10 +917,14 @@
                     : `<span style="color:${colorHex('red')};font-weight:600">${tx('no_response_label')}</span>`;
 
                 const aging = rowAging;
-                const agingColor = aging < 5 ? 'green' : aging <= 10 ? 'yellow' : 'red';
-                const agingStr = aging > 10
+                const agingColor = aging < 5 ? 'green' : aging < AGING_DELAYED_CALENDAR_DAYS ? 'yellow' : 'red';
+                const agingStr = isDelayedTicket(row)
                     ? `<strong style="color:${colorHex('red')}">${fmt(aging, 0)}</strong>`
                     : `<span style="color:${colorHex(agingColor)}">${fmt(aging, 0)}</span>`;
+
+                const observation = ticketObservation(row);
+                const observationText = observation || tx('modal_no_observation');
+                const observationCell = `<td class="col-observation"><span class="observation-preview ${observation ? '' : 'is-empty'}" title="${escapeHtml(observationText)}">${escapeHtml(observationText)}</span></td>`;
 
                 const agentDisplay = getAgentDisplayName(row.agent_name);
                 const agentCell = agentDisplay
@@ -848,19 +935,95 @@
                     ">${tx('no_owner_label')}</span></td>`;
 
                 tr.innerHTML = `
-                    <td><a href="${getZohoTicketUrl(row)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Abrir #${row.ticket_number} no Zoho Desk">#${row.ticket_number || row.id || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
+                    <td><a href="${getZohoTicketUrl(row)}" target="_blank" rel="noopener noreferrer" class="ticket-link" onclick="event.stopPropagation()" title="Abrir #${row.ticket_number} no Zoho Desk">#${row.ticket_number || row.id || '--'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></td>
                     <td>${regionStr}</td>
                     <td>${priorityBadge(priority)}</td>
                     <td>${statusBadgeFor(row.status)}</td>
                     ${agentCell}
                     <td>${mtfcStr}</td>
-                    <td>${agingStr}</td>`;
+                    <td>${agingStr}</td>
+                    ${observationCell}`;
+                tr.addEventListener('click', () => openTicketModal(row));
+                tr.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openTicketModal(row); } });
                 tbody.appendChild(tr);
             });
         }
 
         document.getElementById('pagination-info').textContent =
             tx('page_info').replace('{p}', currentPage).replace('{t}', totalPages).replace('{n}', total);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // TICKET DETAIL MODAL
+    // ──────────────────────────────────────────────────────────
+    function detailItem(label, value) {
+        return `<div class="ticket-detail-item"><span class="ticket-detail-label">${escapeHtml(label)}</span><span class="ticket-detail-value">${escapeHtml(value || '--')}</span></div>`;
+    }
+
+    function openTicketModal(row) {
+        currentTicketModalRow = row;
+        const modal = document.getElementById('ticket-detail-modal');
+        const title = document.getElementById('ticket-modal-title');
+        const subtitle = document.getElementById('ticket-modal-subtitle');
+        const subject = document.getElementById('ticket-modal-subject');
+        const details = document.getElementById('ticket-modal-details');
+        const input = document.getElementById('ticket-observation-input');
+        const status = document.getElementById('ticket-modal-status');
+        const zoho = document.getElementById('ticket-modal-zoho');
+        if (!modal || !title || !subtitle || !details || !input) return;
+
+        const id = ticketId(row);
+        const priority = getTicketPriority(row);
+        const region = getTicketRegionGroup(row);
+        const mtfc = metricNumber(row.mtfc_horas_bi, row.mtfc_horas);
+        title.textContent = `#${row.ticket_number || id || '--'}`;
+        subtitle.textContent = isDelayedTicket(row) ? tx('aging_filter_title') : tx('table_title');
+        if (subject) {
+            const value = String(row.subject || '').trim();
+            subject.textContent = value;
+            subject.style.display = value ? '' : 'none';
+        }
+        details.innerHTML = [
+            detailItem(tx('col_region'), `${REGION_FLAGS[region] || ''} ${regionLabel(region)}`.trim()),
+            detailItem(tx('col_priority'), priority || '--'),
+            detailItem(tx('col_status'), row.status || '--'),
+            detailItem(tx('col_agent'), getAgentDisplayName(row.agent_name) || tx('no_owner_label')),
+            detailItem(tx('col_mtfc'), Number.isFinite(mtfc) ? `${fmt(mtfc, 1)} h` : tx('no_response_label')),
+            detailItem(tx('col_aging'), `${fmt(agingDays(row), 0)} dias uteis / corridos`)
+        ].join('');
+        input.value = ticketObservation(row);
+        if (status) status.textContent = row.observation_updated_at ? `Atualizado: ${new Date(row.observation_updated_at).toLocaleString('pt-BR')}` : '';
+        if (zoho) zoho.href = getZohoTicketUrl(row);
+        modal.classList.add('is-open');
+        input.focus();
+    }
+
+    function closeTicketModal() {
+        document.getElementById('ticket-detail-modal')?.classList.remove('is-open');
+        currentTicketModalRow = null;
+    }
+
+    async function saveTicketModalObservation() {
+        if (!currentTicketModalRow) return;
+        const id = ticketId(currentTicketModalRow);
+        const input = document.getElementById('ticket-observation-input');
+        const button = document.getElementById('ticket-modal-save');
+        const status = document.getElementById('ticket-modal-status');
+        if (!input || !id) return;
+        try {
+            if (button) button.disabled = true;
+            if (status) status.textContent = tx('modal_saving');
+            const saved = await saveBacklogTicketObservation(id, input.value);
+            updateTicketObservationInMemory(id, saved || { observation: input.value, updated_at: new Date().toISOString() });
+            currentTicketModalRow = openTickets.find(row => ticketId(row) === id) || currentTicketModalRow;
+            renderTable();
+            if (status) status.textContent = tx('modal_saved');
+        } catch (error) {
+            console.error(error);
+            if (status) status.textContent = tx('modal_save_error');
+        } finally {
+            if (button) button.disabled = false;
+        }
     }
 
     // ──────────────────────────────────────────────────────────
@@ -911,7 +1074,7 @@
     // ──────────────────────────────────────────────────────────
     function renderPage(rows) {
         const noResponse  = rows.filter(row => !hasFirstResponse(row));
-        const over10      = rows.filter(row => agingDays(row) > 10);
+        const over10      = rows.filter(isDelayedTicket);
         const dependencies = rows.filter(row => isDependencyStatusText(row.status));
         const p12         = rows.filter(isP12);
         const avgAging    = rows.length ? rows.reduce((sum, row) => sum + agingDays(row), 0) / rows.length : 0;
@@ -957,6 +1120,22 @@
         if (pMeta) pMeta.textContent = `Backlog: ${rows.length} | ${tx('no_response_label')}: ${noResponse.length} | P1/P2: ${p12.length}`;
     }
 
+    async function enrichBacklogRowsWithManualObservations(rows) {
+        if (typeof fetchBacklogTicketObservations !== 'function') return rows;
+        const missingIds = rows
+            .filter(row => ticketId(row) && row.backlog_observation === undefined && row.observation === undefined)
+            .map(ticketId);
+        if (!missingIds.length) return rows;
+        const observations = await fetchBacklogTicketObservations(missingIds).catch(error => {
+            console.warn('[Supabase] Nao foi possivel carregar observacoes do backlog.', error);
+            return new Map();
+        });
+        return rows.map(row => {
+            const item = observations.get(ticketId(row));
+            return item ? { ...row, backlog_observation: item.observation || '', observation: item.observation || '', observation_updated_at: item.updated_at || null, observation_updated_by: item.updated_by || null } : row;
+        });
+    }
+
     // ──────────────────────────────────────────────────────────
     // APP LIFECYCLE
     // ──────────────────────────────────────────────────────────
@@ -973,7 +1152,7 @@
         try {
             if (typeof hasSupabaseCredentials === 'function' && !hasSupabaseCredentials())
                 throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY ausentes.');
-            rawData = (await fetchDashboardBiBacklog()).backlog;
+            rawData = await enrichBacklogRowsWithManualObservations((await fetchDashboardBiBacklog()).backlog);
             populateFilterOptions(rawData);
             applyExtraI18n();
             showLoading(false);
