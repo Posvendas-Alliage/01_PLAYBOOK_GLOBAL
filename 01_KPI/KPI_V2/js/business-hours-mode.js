@@ -441,17 +441,77 @@
     return n <= t ? '#12DF34' : '#E31424';
   }
 
+  function firstBusinessNumber() {
+    for (let i = 0; i < arguments.length; i += 1) {
+      const value = businessNumber(arguments[i]);
+      if (value !== null) return value;
+    }
+    return null;
+  }
+
+  function ticketRegionKey(metric) {
+    return canonicalRegion(metric && (metric.region || metric.regiao_grupo || metric.region_group || metric.business_source_region));
+  }
+
+  function ticketPriorityKey(metric) {
+    return metric && (metric.priority_standard || metric.priority) || '';
+  }
+
   function ticketMtfcTarget(metric) {
-    const direct = businessNumber(metric && metric.business_hours && metric.business_hours.mtfc_target_h);
+    const bh = metric && metric.business_hours || {};
+    const direct = firstBusinessNumber(bh.mtfc_target_h, metric && metric.meta_mtfc_horas);
     if (direct !== null) return direct;
-    return TICKET_MTFC_TARGETS[normalizePlain(metric && metric.priority)] || null;
+    return TICKET_MTFC_TARGETS[normalizePlain(ticketPriorityKey(metric))] || null;
   }
 
   function ticketMttsTarget(metric) {
     const bh = metric && metric.business_hours || {};
-    const direct = businessNumber(bh.mtts_target_business_days || bh.mtts_target_d);
+    const direct = firstBusinessNumber(bh.mtts_target_business_days, bh.mtts_target_d, metric && metric.meta_mtts_dias);
     if (direct !== null) return direct;
-    return TICKET_MTTS_TARGETS[canonicalRegion(metric && metric.region)] || null;
+    return TICKET_MTTS_TARGETS[ticketRegionKey(metric)] || null;
+  }
+
+  function isBusinessEligibleFallback(ticket) {
+    if (Object.prototype.hasOwnProperty.call(ticket || {}, 'is_sla_eligible')) return ticket.is_sla_eligible === true;
+    return !!(ticket && (ticket.closed_time || ticket.status) && ticketRegionKey(ticket) && ticketPriorityKey(ticket));
+  }
+
+  function commonSlaWithinFallback(ticket, mtfc, mtts) {
+    const status = String(ticket && ticket.sla_status_bi || '');
+    if (status === 'Dentro SLA') return true;
+    if (status === 'Fora SLA') return false;
+    const mtfcTarget = ticketMtfcTarget(ticket);
+    const mttsTarget = ticketMttsTarget(ticket);
+    return mtfcTarget !== null && mttsTarget !== null && mtfc !== null && mtts !== null
+      ? mtfc <= mtfcTarget && mtts <= mttsTarget
+      : null;
+  }
+
+  function fallbackBusinessHoursFromCommonTicket(ticket) {
+    const resolutionHours = businessNumber(ticket && ticket.resolution_horas);
+    const mtfc = firstBusinessNumber(ticket && ticket.mtfc_horas_bi, ticket && ticket.mtfc_horas);
+    const mtts = firstBusinessNumber(
+      ticket && ticket.mtts_dias_bi,
+      ticket && ticket.mtts_dias,
+      resolutionHours === null ? null : resolutionHours / 24
+    );
+    const eligible = isBusinessEligibleFallback(ticket);
+    const within = eligible ? commonSlaWithinFallback(ticket, mtfc, mtts) : null;
+    return {
+      eligible,
+      within: within === true,
+      sla_status: !eligible || within === null ? 'N/A' : (within ? 'Dentro SLA' : 'Fora SLA'),
+      mtfc_h: mtfc,
+      mtts_business_days: mtts,
+      mtfc_target_h: ticketMtfcTarget(ticket),
+      mtts_target_business_days: ticketMttsTarget(ticket),
+      fallback_common: true
+    };
+  }
+
+  function businessHoursForTicket(ticket) {
+    if (ticket && ticket.business_hours) return ticket.business_hours;
+    return fallbackBusinessHoursFromCommonTicket(ticket);
   }
 
   function commercialTicketMetricHtml(metric, kind) {
@@ -705,6 +765,49 @@
   function filterWeeklyBusinessTickets(rows) {
     return filterBusinessTicketRows(rows);
   }
+  function ticketNumberKey(row) {
+    return String(row && (row.ticket_number || row.ticket_id || row.id) || '').replace(/[^0-9]/g, '');
+  }
+
+  function weeklyBusinessMetricMap(period) {
+    const map = new Map();
+    weeklyTicketRows(period).forEach(row => {
+      const key = ticketNumberKey(row);
+      if (key) map.set(key, row);
+    });
+    return map;
+  }
+
+  function commonWeeklyStateRows(key) {
+    const state = window.PlaybookWeeklyState || {};
+    return Array.isArray(state[key]) ? state[key] : [];
+  }
+
+  function mergeWeeklyCommonRowsWithBusinessMetrics(commonRows, period) {
+    const metricsByTicket = weeklyBusinessMetricMap(period);
+    return (commonRows || []).map(row => {
+      const metric = metricsByTicket.get(ticketNumberKey(row));
+      const merged = { ...row };
+      merged.business_source_region = metric && metric.region ? metric.region : null;
+      merged.business_hours = metric && metric.business_hours
+        ? { ...metric.business_hours }
+        : businessHoursForTicket(row);
+      return merged;
+    });
+  }
+
+  function currentWeeklyBusinessRows(period) {
+    const commonRows = commonWeeklyStateRows('currentClosedWeek');
+    if (commonRows.length) return mergeWeeklyCommonRowsWithBusinessMetrics(commonRows, period);
+    return filterWeeklyBusinessTickets(weeklyTicketRows(period));
+  }
+
+  function previousWeeklyBusinessRows(period) {
+    const commonRows = commonWeeklyStateRows('previousClosedWeek');
+    if (commonRows.length) return mergeWeeklyCommonRowsWithBusinessMetrics(commonRows, period);
+    return filterWeeklyBusinessTickets(weeklyTicketRows(period));
+  }
+
   function averageBusiness(values) {
     const nums = values.map(businessNumber).filter(value => value !== null);
     return nums.length ? nums.reduce((sum, value) => sum + value, 0) / nums.length : null;
@@ -716,15 +819,16 @@
   }
 
   function computeBusinessTicketMetrics(rows) {
-    const eligible = rows.filter(row => row.business_hours && row.business_hours.eligible === true);
+    const hydrated = (rows || []).map(row => ({ ...row, business_hours: businessHoursForTicket(row) }));
+    const eligible = hydrated.filter(row => row.business_hours && row.business_hours.eligible === true);
     const within = eligible.filter(row => row.business_hours && row.business_hours.within === true);
     return {
-      closed: rows.length,
+      closed: hydrated.length,
       eligible: eligible.length,
       within: within.length,
       sla_pct: eligible.length ? within.length / eligible.length * 100 : null,
-      avg_mtfc_h: averageBusiness(rows.map(row => row.business_hours && row.business_hours.mtfc_h)),
-      avg_mtts_business_days: averageBusiness(rows.map(row => row.business_hours && row.business_hours.mtts_business_days))
+      avg_mtfc_h: averageBusiness(hydrated.map(row => row.business_hours && row.business_hours.mtfc_h)),
+      avg_mtts_business_days: averageBusiness(hydrated.map(row => row.business_hours && row.business_hours.mtts_business_days))
     };
   }
 
@@ -787,7 +891,7 @@
     renderBusinessChart('chart-rg-mtfc', regionSig + ':mtfc', () => createBarChart('chart-rg-mtfc', regionLabels, regionMtfc, regionMtfc.map(colorForMtfc), 'MTFC por Região - Comercial'));
     renderBusinessChart('chart-rg-mtts', regionSig + ':mtts', () => createBarChart('chart-rg-mtts', regionLabels, regionMtts, regionMtts.map(colorForMtts), 'MTTS por Região - Comercial'));
 
-    const byPriority = businessRowsBy(rows, row => row.priority);
+    const byPriority = businessRowsBy(rows, row => row.priority_standard || row.priority);
     const priorities = ['Urgente', 'Alta', 'Média', 'Baixa', 'Muito Baixa'];
     const priorityMetrics = priorities.map(priority => computeBusinessTicketMetrics(byPriority.get(priority) || []));
     const prioritySla = priorityMetrics.map(m => chartBusinessValue(m.sla_pct));
@@ -1060,7 +1164,7 @@
     const prev = index >= 0 ? audit.weekly_periods[index + 1] : null;
     if (!prev) return;
     const currBh = period.metrics && period.metrics.business_hours || {};
-    const prevRows = filterWeeklyBusinessTickets(weeklyTicketRows(prev));
+    const prevRows = previousWeeklyBusinessRows(prev);
     const prevBh = computeBusinessTicketMetrics(prevRows);
     setWeeklyDelta('sla', currBh.sla_pct, prevBh.sla_pct, false, '%');
     setWeeklyDelta('mtfc', currBh.avg_mtfc_h, prevBh.avg_mtfc_h, true, 'h');
@@ -1102,7 +1206,7 @@
           return;
         }
         const period = selectedWeeklyPeriodObject(audit);
-        const ticketRows = filterWeeklyBusinessTickets(weeklyTicketRows(period));
+        const ticketRows = currentWeeklyBusinessRows(period);
         setWeeklyBusinessTicketMap(ticketRows);
         if (ticketRows.length) {
           const metrics = computeBusinessTicketMetrics(ticketRows);
@@ -1115,7 +1219,7 @@
           renderWeeklyCommercialChartsFromTickets(ticketRows);
           updateWeeklyClosedTicketTable(ticketRows);
           updateWeeklyCommercialTrend(audit, { key: period.key, metrics: { business_hours: metrics }, by_region: {} });
-          decorateNote('Modo comercial: Criados, Fechados e Backlog permanecem comuns; SLA, MTFC, MTTS, graficos e tabela de fechados usam metricas comerciais por ticket no recorte filtrado.');
+          decorateNote('Modo uteis: Criados, Fechados e Backlog permanecem iguais ao modo Corridas; apenas SLA, MTFC e MTTS trocam para tempos uteis por ticket no mesmo recorte.');
         } else {
           setWeeklyBusinessTicketMap([]);
           clearBadges(weeklyMetricIds);

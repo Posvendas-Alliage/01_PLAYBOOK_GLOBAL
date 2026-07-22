@@ -1387,6 +1387,15 @@
         // Closed tickets table (new, no-print)
         sortStateWeekly = { column: 'closed_time', direction: 'desc' };
         weeklyClosedList = [...currentClosedWeek];
+        window.PlaybookWeeklyState = {
+            currentClosedWeek: [...currentClosedWeek],
+            previousClosedWeek: [...previousClosedWeek],
+            currentCreatedWeek: [...currentCreatedWeek],
+            open: [...open],
+            period,
+            filters: { ...(filters || {}) },
+            backlogCount: globalBacklogCount
+        };
         weeklyClosedPage = 1;
         weeklySearchQuery = '';
         const wsInput = document.getElementById('weekly-ticket-search');
