@@ -2128,6 +2128,7 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
         actions: {
             filter: "Aplicar filtros",
             makeAdmin: "Hacer admin",
+            resetPassword: "Resetear contrasena",
             removeAdmin: "Quitar admin"
         },
         roles: {
@@ -2136,6 +2137,9 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
         },
         confirmMakeAdmin: "Confirmar la promocion de este usuario a administrador?",
         confirmRemoveAdmin: "Confirmar la remocion del perfil administrador de este usuario?",
+        confirmResetPassword: "Generar una contrasena temporal para este usuario? La contrasena actual dejara de funcionar.",
+        passwordResetSuccess: "Contrasena temporal generada. Enviala por un canal seguro e indica el cambio en el primer inicio.",
+        temporaryPassword: "Contrasena temporal",
         roleChanged: "Perfil actualizado con exito.",
         table: {
             email: "E-mail",

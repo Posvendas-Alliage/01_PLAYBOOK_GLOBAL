@@ -2722,6 +2722,7 @@ window.PLAYBOOK_I18N_LOCALES["pt-BR"] = {
         actions: {
             filter: "Aplicar filtros",
             makeAdmin: "Tornar admin",
+            resetPassword: "Resetar senha",
             removeAdmin: "Remover admin"
         },
         roles: {
@@ -2730,6 +2731,9 @@ window.PLAYBOOK_I18N_LOCALES["pt-BR"] = {
         },
         confirmMakeAdmin: "Confirmar promocao deste usuario para administrador?",
         confirmRemoveAdmin: "Confirmar remocao do perfil administrador deste usuario?",
+        confirmResetPassword: "Gerar uma senha temporaria para este usuario? A senha atual deixara de funcionar.",
+        passwordResetSuccess: "Senha temporaria gerada. Envie por canal seguro e oriente troca no primeiro login.",
+        temporaryPassword: "Senha temporaria",
         roleChanged: "Perfil atualizado com sucesso.",
         table: {
             email: "E-mail",

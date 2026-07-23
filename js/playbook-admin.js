@@ -112,8 +112,11 @@
             if (!window.confirm(confirmation)) return;
             button.disabled = true;
             try {
-                await callAdmin(action, { user_id: userId });
-                showMessage(settings.success || tr("security.admin.statusChanged", "Status atualizado com sucesso."), "success");
+                const result = await callAdmin(action, { user_id: userId });
+                const successMessage = typeof settings.success === "function"
+                    ? settings.success(result)
+                    : (settings.success || tr("security.admin.statusChanged", "Status atualizado com sucesso."));
+                showMessage(successMessage, "success");
                 await loadUsers();
             } catch (error) {
                 showMessage(error && error.message ? error.message : "Falha ao atualizar status.", "error");
@@ -142,6 +145,18 @@
         }
         if (status === "approved") {
             row.appendChild(actionButton(tr("security.admin.actions.suspend", "Suspender"), "suspend", user.user_id));
+            row.appendChild(actionButton(
+                tr("security.admin.actions.resetPassword", "Resetar senha"),
+                "reset_password",
+                user.user_id,
+                {
+                    confirm: tr("security.admin.confirmResetPassword", "Gerar uma senha temporaria para este usuario? A senha atual deixara de funcionar."),
+                    success: function (result) {
+                        const password = result && result.temporary_password ? result.temporary_password : "";
+                        return tr("security.admin.passwordResetSuccess", "Senha temporaria gerada. Envie por canal seguro e oriente troca no primeiro login.") + (password ? " " + tr("security.admin.temporaryPassword", "Senha temporaria") + ": " + password : "");
+                    }
+                }
+            ));
         }
         if (status === "rejected" || status === "suspended") {
             row.appendChild(actionButton(tr("security.admin.actions.reactivate", "Reativar"), "reactivate", user.user_id));

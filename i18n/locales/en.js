@@ -2128,6 +2128,7 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
         actions: {
             filter: "Apply filters",
             makeAdmin: "Make admin",
+            resetPassword: "Reset password",
             removeAdmin: "Remove admin"
         },
         roles: {
@@ -2136,6 +2137,9 @@ window.PLAYBOOK_I18N_LOCALES = window.PLAYBOOK_I18N_LOCALES || {};
         },
         confirmMakeAdmin: "Confirm promoting this user to administrator?",
         confirmRemoveAdmin: "Confirm removing this user's administrator profile?",
+        confirmResetPassword: "Generate a temporary password for this user? The current password will stop working.",
+        passwordResetSuccess: "Temporary password generated. Send it through a secure channel and require a change on first sign-in.",
+        temporaryPassword: "Temporary password",
         roleChanged: "Profile updated successfully.",
         table: {
             email: "Email",
